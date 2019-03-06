@@ -1,0 +1,9 @@
+run
+-ifmt MIXED
+-top SysPLL_exdes
+-p xc6slx25-csg324-3
+-ifn xst.prj
+-ofn SysPLL_exdes
+-keep_hierarchy soft 
+-equivalent_register_removal no 
+-max_fanout 65535

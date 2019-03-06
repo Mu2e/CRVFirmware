@@ -1,0 +1,230 @@
+
+
+NET "LPDDRCtrl/memc3_infrastructure_inst/sys_clk_ibufg" KEEP = "TRUE";
+
+NET "AFEClk_P[1]" LOC = B2;
+NET "AFEClk_P[0]" LOC = B16;
+NET "AFEClk_P[1]" IOSTANDARD = LVDS_25;
+NET "AFEClk_P[0]" IOSTANDARD = LVDS_25;
+NET "AFEDat0_P[7]" LOC = F15;
+NET "AFEDat0_P[6]" LOC = C17;
+NET "AFEDat0_P[5]" LOC = D17;
+NET "AFEDat0_P[4]" LOC = F14;
+NET "AFEDat0_P[3]" LOC = H15;
+NET "AFEDat0_P[2]" LOC = F17;
+NET "AFEDat0_P[1]" LOC = H13;
+NET "AFEDat0_P[0]" LOC = E16;
+NET "AFEDat1_P[7]" LOC = B12;
+NET "AFEDat1_P[6]" LOC = B11;
+NET "AFEDat1_P[5]" LOC = F11;
+NET "AFEDat1_P[4]" LOC = G9;
+NET "AFEDat1_P[3]" LOC = C15;
+NET "AFEDat1_P[2]" LOC = B14;
+NET "AFEDat1_P[1]" LOC = D14;
+NET "AFEDat1_P[0]" LOC = C13;
+NET "AFEDCO_P[1]" LOC = C10;
+NET "AFEDCO_P[0]" LOC = K15;
+NET "AFEFR_P[1]" LOC = D11;
+NET "AFEFR_P[0]" LOC = G16;
+
+NET "Debug[10]" LOC = M14;
+NET "Debug[9]" LOC = N14;
+NET "Debug[8]" LOC = U15;
+NET "Debug[7]" LOC = M13;
+NET "Debug[6]" LOC = V16;
+NET "Debug[5]" LOC = V4;
+NET "Debug[4]" LOC = V15;
+NET "Debug[3]" LOC = A5;
+NET "Debug[2]" LOC = B8;
+NET "Debug[1]" LOC = A8;
+
+NET "DACCS[2]" LOC = A3;
+NET "DACCS[1]" LOC = H17;
+NET "DACCS[0]" LOC = L14;
+NET "DACClk" LOC = A4;
+NET "DACDat" LOC = B3;
+NET "DACLd" LOC = B4;
+
+NET "GA[1]" LOC = L13;
+NET "GA[0]" LOC = L12;
+
+NET "GPI0_P" LOC = M8;
+NET "GPI1" LOC = R10;
+NET "LVDSTX" LOC = A6;
+NET "A7" LOC = A7;
+
+NET "Pulse" LOC = H18;
+NET "PulseSel" LOC = L18;
+
+NET "Muxad[1]" LOC = J16;
+NET "Muxad[0]" LOC = J18;
+
+NET "MuxEn[3]" LOC = C5;
+NET "MuxEn[2]" LOC = B6;
+NET "MuxEn[1]" LOC = M18;
+NET "MuxEn[0]" LOC = L17;
+
+NET "Temp[3]" LOC = K18;
+NET "Temp[2]" LOC = K17;
+NET "Temp[1]" LOC = N17;
+NET "Temp[0]" LOC = P16;
+
+NET "AFERst" LOC = U17;
+NET "AFEPDn[1]" LOC = N18;
+NET "AFEPDn[0]" LOC = P18;
+NET "AFECS[1]" LOC = P17;
+NET "AFECS[0]" LOC = T18;
+NET "AFESClk" LOC = U18;
+NET "AFESDI" LOC = T17;
+NET "AFESDO" LOC = C1;
+NET "AFESDO" IOSTANDARD = LVCMOS18;
+
+NET "BA[1]" LOC = F1;
+NET "BA[0]" LOC = F2;
+NET "BA[*]" IOSTANDARD = MOBILE_DDR;
+
+NET "SDA[13]" LOC = F6;
+NET "SDA[12]" LOC = G6;
+NET "SDA[11]" LOC = D3;
+NET "SDA[10]" LOC = F4;
+NET "SDA[9]" LOC = D1;
+NET "SDA[8]" LOC = D2;
+NET "SDA[7]" LOC = H6;
+NET "SDA[6]" LOC = H3;
+NET "SDA[5]" LOC = H4;
+NET "SDA[4]" LOC = F3;
+NET "SDA[3]" LOC = L7;
+NET "SDA[2]" LOC = H5;
+NET "SDA[1]" LOC = J6;
+NET "SDA[0]" LOC = J7;
+NET "SDA[*]" IOSTANDARD = MOBILE_DDR;
+                          
+NET "SDD[15]" LOC = U1;
+NET "SDD[14]" LOC = U2;
+NET "SDD[13]" LOC = T1;
+NET "SDD[12]" LOC = T2;
+NET "SDD[11]" LOC = N1;
+NET "SDD[10]" LOC = N2;
+NET "SDD[9]" LOC = M1;
+NET "SDD[8]" LOC = M3;
+NET "SDD[7]" LOC = J1;
+NET "SDD[6]" LOC = J3;
+NET "SDD[5]" LOC = H1;
+NET "SDD[4]" LOC = H2;
+NET "SDD[3]" LOC = K1;
+NET "SDD[2]" LOC = K2;
+NET "SDD[1]" LOC = L1;
+NET "SDD[0]" LOC = L2;
+NET "SDD[*]" IOSTANDARD = MOBILE_DDR;
+
+NET "LDM" IOSTANDARD = MOBILE_DDR;
+NET "LDM" LOC = K3;
+
+NET "LDQS" LOC = L4;
+NET "LDQS" IOSTANDARD = MOBILE_DDR;
+
+NET "RAS" LOC = L5;
+NET "RAS" IOSTANDARD = MOBILE_DDR;
+
+NET "SDCKE" LOC = H7;
+NET "SDCKE" IOSTANDARD = MOBILE_DDR;
+
+NET "SDWE" LOC = E3;
+NET "SDWE" IOSTANDARD = MOBILE_DDR;
+
+NET "SDClk_P" LOC = G3;
+NET "SDClk_P" IOSTANDARD = DIFF_MOBILE_DDR;
+NET "SDClk_N" LOC = G1;
+NET "SDClk_N" IOSTANDARD = DIFF_MOBILE_DDR;
+
+NET "SDRzq" LOC = N4;
+NET "SDRzq" IOSTANDARD = MOBILE_DDR;
+
+NET "CAS" IOSTANDARD = MOBILE_DDR;
+NET "CAS" LOC = K5;
+
+NET "UDM" LOC = K4;
+NET "UDM" IOSTANDARD = MOBILE_DDR;
+
+NET "UDQS" LOC = P2;
+NET "UDQS" IOSTANDARD = MOBILE_DDR;
+
+NET "uCA[11]" LOC = V7;
+NET "uCA[10]" LOC = U7;
+NET "uCA[9]" LOC = V8;
+NET "uCA[8]" LOC = U8;
+NET "uCA[7]" LOC = V9;
+NET "uCA[6]" LOC = V10;
+NET "uCA[5]" LOC = T10;
+NET "uCA[4]" LOC = V11;
+NET "uCA[3]" LOC = U11;
+NET "uCA[2]" LOC = V12;
+NET "uCA[1]" LOC = T12;
+NET "uCA[0]" LOC = V6;
+
+NET "uCD[15]" LOC = T8;
+NET "uCD[14]" LOC = R8;
+NET "uCD[13]" LOC = U10;
+NET "uCD[12]" LOC = V13;
+NET "uCD[11]" LOC = U13;
+NET "uCD[10]" LOC = P12;
+NET "uCD[9]" LOC = P6;
+NET "uCD[8]" LOC = N5;
+NET "uCD[7]" LOC = R5;
+NET "uCD[6]" LOC = T3;
+NET "uCD[5]" LOC = R3;
+NET "uCD[4]" LOC = V5;
+NET "uCD[3]" LOC = U5;
+NET "uCD[2]" LOC = V14;
+NET "uCD[1]" LOC = T14;
+NET "uCD[0]" LOC = R13;
+
+NET "CpldCS" LOC = U16;
+NET "CpldRst" LOC = U3;
+
+NET "uCRd" LOC = R15;
+NET "uCWr" LOC = V3;
+
+NET "VXO_P" LOC = B9;
+NET "ClkB_P" LOC = D9;
+
+# Specifiying clock rates
+
+# VXO clock inputs
+NET "ClkB_P" TNM_NET = "ClkB_P";
+TIMESPEC "TS_ClkB_P" = PERIOD "ClkB_P" 10.00 ns HIGH 50%;
+NET "VXO_P" TNM_NET = "VXO_P";
+TIMESPEC "TS_VXO_P" = PERIOD "VXO_P" 10.00 ns HIGH 50%;
+
+# Specifying AFE data clock period
+NET "AFEDCO_P[0]" TNM_NET = "AFEDCO_P[0]";
+TIMESPEC "TS_AFEDCO_P0" = PERIOD "AFEDCO_P[0]" 2.083 ns HIGH 50%;
+NET "AFEDCO_P[1]" TNM_NET = "AFEDCO_P[1]";
+TIMESPEC "TS_AFEDCO_P1" = PERIOD "AFEDCO_P[1]" 2.083 ns HIGH 50%;
+
+# Ignore timing from static registers to the RxOutClk domains
+
+NET "RxOutClk[0]" TNM_NET = FFS "GRP_1";
+NET "RxOutClk[1]" TNM_NET = FFS "GRP_2";
+NET "Clk200MHz" TNM_NET = FFS "GRP_3";
+NET "SysClk" TNM_NET = FFS "GRP_4";
+ 
+NET "HistChan*" 		TNM_NET = "HistChan";
+NET "HistMode" 		TNM_NET = "HistMode";
+NET "BinningSel*" 	TNM_NET = "BinningSel";
+NET "ControllerNo*" 	TNM_NET = "ControllerNo";
+NET "PortNo*" 			TNM_NET = "PortNo";
+NET "Rx1Dat*" 			TNM_NET = "Rx1Dat";
+NET "uBunch*" 			TNM_NET = "uBunch";
+
+TIMESPEC TS_CrossDomain0 = FROM "HistChan"   TO "GRP_1" TIG;
+TIMESPEC TS_CrossDomain1 = FROM "HistMode"   TO "GRP_1" TIG;
+TIMESPEC TS_CrossDomain2 = FROM "BinningSel" TO "GRP_1" TIG;
+TIMESPEC TS_CrossDomain3 = FROM "HistChan"   TO "GRP_2" TIG;
+TIMESPEC TS_CrossDomain4 = FROM "HistMode"   TO "GRP_2" TIG;
+TIMESPEC TS_CrossDomain5 = FROM "BinningSel" TO "GRP_2" TIG;
+TIMESPEC TS_CrossDomain6 = FROM "ControllerNo" TO "GRP_1" TIG;
+TIMESPEC TS_CrossDomain7 = FROM "ControllerNo" TO "GRP_2" TIG;
+TIMESPEC TS_CrossDomain8 = FROM "PortNo" TO "GRP_1" TIG;
+TIMESPEC TS_CrossDomain9 = FROM "PortNo" TO "GRP_2" TIG;
+TIMESPEC TS_CrossDomain10 = FROM "Rx1Dat" TO "GRP_4" TIG;

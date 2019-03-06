@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IMPORTANT: This is an internal file that has been generated
+     by the Xilinx ISE software.  Any direct editing or
+     changes made to this file may result in unpredictable
+     behavior or data corruption.  It is strongly advised that
+     users do not edit the contents of this file. -->
+<messages>
+<msg type="info" file="NgdBuild" num="889" delta="new" >Pad net &apos;<arg fmt="%s" index="1">memc3_mcb_raw_wrapper_inst/mcbx_dram_dqs_n</arg>&apos; is not connected to an external port in this design.  A new port &apos;<arg fmt="%s" index="2">memc3_mcb_raw_wrapper_inst/mcbx_dram_dqs_n</arg>&apos; has been added and is connected to this signal.
+</msg>
+
+<msg type="info" file="NgdBuild" num="889" delta="new" >Pad net &apos;<arg fmt="%s" index="1">memc3_mcb_raw_wrapper_inst/gen_term_calib.mcb_soft_calibration_top_inst/gen_zio.IOBUF_ZIO/IO</arg>&apos; is not connected to an external port in this design.  A new port &apos;<arg fmt="%s" index="2">IO</arg>&apos; has been added and is connected to this signal.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="58" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET &quot;memc?_wrapper_inst/memc?_mcb_raw_wrapper_inst/selfrefresh_mcb_mode&quot; TIG;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(38)]</arg>: <arg fmt="%s" index="2">NET &quot;memc?_wrapper_inst/memc?_mcb_raw_wrapper_inst/selfrefresh_mcb_mode&quot;</arg> does not match any design objects.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="58" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET &quot;c?_pll_lock&quot; TIG;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(39)]</arg>: <arg fmt="%s" index="2">NET &quot;c?_pll_lock&quot;</arg> does not match any design objects.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="58" delta="new" >Constraint <arg fmt="%s" index="1">&lt;INST &quot;memc?_wrapper_inst/memc?_mcb_raw_wrapper_inst/gen_term_calib.mcb_soft_calibration_top_inst/mcb_soft_calibration_inst/DONE_SOFTANDHARD_CAL*&quot; TIG;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(40)]</arg>: <arg fmt="%s" index="2">INST &quot;memc?_wrapper_inst/memc?_mcb_raw_wrapper_inst/gen_term_calib.mcb_soft_calibration_top_inst/mcb_soft_calibration_inst/DONE_SOFTANDHARD_CAL*&quot;</arg> does not match any design objects.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET &quot;memc3_infrastructure_inst/sys_clk_ibufg&quot; TNM_NET = &quot;SYS_CLK3&quot;;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(65)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">memc3_infrastructure_inst/sys_clk_ibufg</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="56" delta="new" >Constraint <arg fmt="%s" index="1">&lt;TIMESPEC &quot;TS_SYS_CLK3&quot; = PERIOD &quot;SYS_CLK3&quot;  6.28  ns HIGH 50 %;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(66)]</arg>: Unable to find an active <arg fmt="%s" index="2">&apos;TNM&apos; or &apos;TimeGrp&apos;</arg> constraint named &apos;<arg fmt="%s" index="3">SYS_CLK3</arg>&apos;.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;error&quot;                                    IOSTANDARD = LVCMOS18 ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(73)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">error</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;error&quot;                                    LOC = &quot;A2&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(76)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">error</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;error&quot;                                    LOC = &quot;A2&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(76)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;c3_sys_clk_p&quot;                                IOSTANDARD = LVDS_25 ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(96)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">c3_sys_clk_p</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;c3_sys_clk_n&quot;                                IOSTANDARD = LVDS_25 ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(97)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">c3_sys_clk_n</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;c3_sys_rst_i&quot;                                IOSTANDARD = LVCMOS18 ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(98)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">c3_sys_rst_i</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;mcb3_dram_dq[10]&quot;                          LOC = &quot;N2&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(126)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">mcb3_dram_dq[10]</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;mcb3_dram_dq[10]&quot;                          LOC = &quot;N2&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(126)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;mcb3_dram_dq[11]&quot;                          LOC = &quot;N1&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(127)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">mcb3_dram_dq[11]</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;mcb3_dram_dq[11]&quot;                          LOC = &quot;N1&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(127)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;mcb3_dram_dq[12]&quot;                          LOC = &quot;T2&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(128)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">mcb3_dram_dq[12]</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;mcb3_dram_dq[12]&quot;                          LOC = &quot;T2&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(128)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;mcb3_dram_dq[13]&quot;                          LOC = &quot;T1&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(129)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">mcb3_dram_dq[13]</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;mcb3_dram_dq[13]&quot;                          LOC = &quot;T1&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(129)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;mcb3_dram_dq[14]&quot;                          LOC = &quot;U2&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(130)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">mcb3_dram_dq[14]</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;mcb3_dram_dq[14]&quot;                          LOC = &quot;U2&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(130)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;mcb3_dram_dq[15]&quot;                          LOC = &quot;U1&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(131)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">mcb3_dram_dq[15]</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;mcb3_dram_dq[15]&quot;                          LOC = &quot;U1&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(131)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;mcb3_dram_dq[4]&quot;                           LOC = &quot;H2&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(135)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">mcb3_dram_dq[4]</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;mcb3_dram_dq[4]&quot;                           LOC = &quot;H2&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(135)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;mcb3_dram_dq[5]&quot;                           LOC = &quot;H1&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(136)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">mcb3_dram_dq[5]</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;mcb3_dram_dq[5]&quot;                           LOC = &quot;H1&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(136)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;mcb3_dram_dq[6]&quot;                           LOC = &quot;J3&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(137)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">mcb3_dram_dq[6]</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;mcb3_dram_dq[6]&quot;                           LOC = &quot;J3&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(137)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;mcb3_dram_dq[7]&quot;                           LOC = &quot;J1&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(138)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">mcb3_dram_dq[7]</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;mcb3_dram_dq[7]&quot;                           LOC = &quot;J1&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(138)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;mcb3_dram_dq[8]&quot;                           LOC = &quot;M3&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(139)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">mcb3_dram_dq[8]</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;mcb3_dram_dq[8]&quot;                           LOC = &quot;M3&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(139)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;mcb3_dram_dq[9]&quot;                           LOC = &quot;M1&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(140)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">mcb3_dram_dq[9]</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;mcb3_dram_dq[9]&quot;                           LOC = &quot;M1&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(140)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;c3_sys_clk_n&quot;                              LOC = &quot;T10&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(143)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">c3_sys_clk_n</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;c3_sys_clk_n&quot;                              LOC = &quot;T10&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(143)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;c3_sys_clk_p&quot;                              LOC = &quot;R10&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(144)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">c3_sys_clk_p</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;c3_sys_clk_p&quot;                              LOC = &quot;R10&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(144)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="error" file="ConstraintSystem" num="59" delta="new" >Constraint <arg fmt="%s" index="1">&lt;NET  &quot;c3_sys_rst_i&quot;                              LOC = &quot;M8&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(145)]</arg>: <arg fmt="%s" index="2">NET</arg> &quot;<arg fmt="%s" index="3">c3_sys_rst_i</arg>&quot; not found.  Please verify that:
+1. The specified design element actually exists in the original design.
+2. The specified object is spelled correctly in the constraint source file.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="0" >A target design object for the Locate constraint &apos;&lt;NET  &quot;c3_sys_rst_i&quot;                              LOC = &quot;M8&quot; ;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(145)]&apos; could not be found and so the Locate constraint will be removed.
+</msg>
+
+<msg type="warning" file="ConstraintSystem" num="191" delta="new" >The <arg fmt="%s" index="1">TNM</arg> &apos;<arg fmt="%s" index="2">SYS_CLK3</arg>&apos;, does not directly or indirectly drive any flip-flops, latches and/or RAMS and cannot be actively used by the referencing <arg fmt="%s" index="3">Period</arg> constraint &apos;<arg fmt="%s" index="4">TS_SYS_CLK3</arg>&apos;. If clock manager blocks are directly or indirectly driven, a new TNM constraint will not be derived even though the referencing constraint is a PERIOD constraint unless an output of the clock manager drives flip-flops, latches or RAMs. This TNM is used in the following user PERIOD specification:
+<arg fmt="%s" index="5">&lt;TIMESPEC &quot;TS_SYS_CLK3&quot; = PERIOD &quot;SYS_CLK3&quot;  6.28  ns HIGH 50 %;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(66)]
+</arg></msg>
+
+<msg type="warning" file="ConstraintSystem" num="197" delta="new" >The following specification is invalid because the referenced TNM constraint was removed:
+<arg fmt="%s" index="1">&lt;TIMESPEC &quot;TS_SYS_CLK3&quot; = PERIOD &quot;SYS_CLK3&quot;  6.28  ns HIGH 50 %;&gt; [C:/Experiments/mu2e/SiPMFE/FPGA/AFE_Fpga_A/ipcore_dir/LPDDR_Ctrl/example_design/par/example_top.ucf(66)]</arg>
+</msg>
+
+<msg type="warning" file="NgdBuild" num="435" delta="new" >TRI primitive &apos;<arg fmt="%s" index="1">memc3_mcb_raw_wrapper_inst/gen_dram_odt.iob_odt</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="470" delta="new" ><arg fmt="%s" index="1">bidirect</arg> pad net &apos;<arg fmt="%s" index="2">mcb3_dram_udqs</arg>&apos; has no legal driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N341</arg>&apos; has no driver
+</msg>
+
+</messages>
+
