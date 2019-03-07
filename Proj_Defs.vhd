@@ -125,6 +125,10 @@ constant AFE1ArrayMin : AddrPtr  := "10" & X"00";
 constant AFE1ArrayMax : AddrPtr  := "10" & X"66";
 
 ---------------------- Broadcast addresses ------------------------------
+-- DDR macro command codes
+constant ReadCmd : std_logic_vector (2 downto 0) := "001";
+constant WriteCmd : std_logic_vector (2 downto 0) := "000";
+
 -- Flash gate control register
 constant FlashCtrlAddr : AddrPtr := "11" & X"00";
 -- Flash gate on time and off time
