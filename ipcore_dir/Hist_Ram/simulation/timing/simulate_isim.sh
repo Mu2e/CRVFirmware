@@ -1,3 +1,4 @@
+#!/bin/sh
 # (c) Copyright 2009 - 2010 Xilinx, Inc. All rights reserved.
 # 
 # This file contains confidential and proprietary information
@@ -44,26 +45,24 @@
 # THIS COPYRIGHT NOTICE AND DISCLAIMER MUST BE RETAINED AS
 # PART OF THIS FILE AT ALL TIMES.
 #--------------------------------------------------------------------------------
-#!/bin/sh
-rm -rf simv* csrc DVEfiles AN.DB
+
+
 
 echo "Compiling Core VHDL UNISIM/Behavioral model"
-vhdlan  ../../../Hist_Ram.vhd
-vhdlan  ../../example_design/Hist_Ram_exdes.vhd
+vhpcomp  -work work ../../implement/results/routed.vhd
 
 echo "Compiling Test Bench Files"
-vhdlan    ../bmg_tb_pkg.vhd
-vhdlan    ../random.vhd
-vhdlan    ../data_gen.vhd
-vhdlan    ../addr_gen.vhd
-vhdlan    ../checker.vhd
-vhdlan    ../bmg_stim_gen.vhd
-vhdlan    ../Hist_Ram_synth.vhd 
-vhdlan    ../Hist_Ram_tb.vhd
 
-echo "Elaborating Design"
-vcs +vcs+lic+wait -debug Hist_Ram_tb
+vhpcomp -work work    ../bmg_tb_pkg.vhd
+vhpcomp -work work    ../random.vhd
+vhpcomp -work work    ../data_gen.vhd
+vhpcomp -work work    ../addr_gen.vhd
+vhpcomp -work work    ../checker.vhd
+vhpcomp -work work    ../bmg_stim_gen.vhd
+vhpcomp -work work    ../Hist_Ram_synth.vhd 
+vhpcomp -work work    ../Hist_Ram_tb.vhd
 
-echo "Simulating Design"
-./simv -ucli -i ucli_commands.key
-dve -session vcs_session.tcl
+
+    fuse -L simprim work.Hist_Ram_tb -o Hist_Ram_tb.exe
+
+./Hist_Ram_tb.exe -sdftyp /Hist_Ram_tb/Hist_Ram_synth_inst/bmg_port=../../implement/results/routed.sdf -gui -tclbatch simcmds.tcl

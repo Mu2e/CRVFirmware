@@ -91,7 +91,7 @@ ENTITY Hist_Ram_exdes IS
     RSTA           : IN STD_LOGIC;  --opt port
   
     WEA            : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    ADDRA          : IN STD_LOGIC_VECTOR(8 DOWNTO 0);
+    ADDRA          : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
   
     DINA           : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
   
@@ -104,7 +104,7 @@ ENTITY Hist_Ram_exdes IS
     RSTB           : IN STD_LOGIC;  --opt port
   
     WEB            : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    ADDRB          : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+    ADDRB          : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
   
     DINB           : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
     DOUTB          : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
@@ -130,7 +130,7 @@ ARCHITECTURE xilinx OF Hist_Ram_exdes IS
     RSTA       : IN STD_LOGIC;  --opt port
   
     WEA        : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    ADDRA      : IN STD_LOGIC_VECTOR(8 DOWNTO 0);
+    ADDRA      : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
   
     DINA       : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
   
@@ -144,7 +144,7 @@ ARCHITECTURE xilinx OF Hist_Ram_exdes IS
     RSTB       : IN STD_LOGIC;  --opt port
   
     WEB        : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    ADDRB      : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+    ADDRB      : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
   
     DINB       : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
     DOUTB      : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);

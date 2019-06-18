@@ -22,7 +22,7 @@
 --    devices, or systems.  Use in such applications are expressly            --
 --    prohibited.                                                             --
 --                                                                            --
---    (c) Copyright 1995-2016 Xilinx, Inc.                                    --
+--    (c) Copyright 1995-2019 Xilinx, Inc.                                    --
 --    All rights reserved.                                                    --
 --------------------------------------------------------------------------------
 
@@ -50,13 +50,13 @@ COMPONENT Hist_Ram
     clka : IN STD_LOGIC;
     rsta : IN STD_LOGIC;
     wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addra : IN STD_LOGIC_VECTOR(8 DOWNTO 0);
+    addra : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
     dina : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
     douta : OUT STD_LOGIC_VECTOR(31 DOWNTO 0);
     clkb : IN STD_LOGIC;
     rstb : IN STD_LOGIC;
     web : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addrb : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+    addrb : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
     dinb : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
     doutb : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
   );

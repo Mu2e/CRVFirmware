@@ -211,10 +211,10 @@ NET "SysClk" TNM_NET = FFS "GRP_4";
  
 NET "HistChan*" 		TNM_NET = "HistChan";
 NET "HistMode" 		TNM_NET = "HistMode";
-NET "BinningSel*" 	TNM_NET = "BinningSel";
+#NET "BinningSel*" 	TNM_NET = "BinningSel";
 NET "ControllerNo*" 	TNM_NET = "ControllerNo";
 NET "PortNo*" 			TNM_NET = "PortNo";
-NET "Rx1Dat*" 			TNM_NET = "Rx1Dat";
+#NET "Rx1Dat*" 			TNM_NET = "Rx1Dat";
 NET "uBunch*" 			TNM_NET = "uBunch";
 
 TIMESPEC TS_CrossDomain0 = FROM "HistChan"   TO "GRP_1" TIG;

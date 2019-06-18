@@ -4,7 +4,7 @@
 
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
-use IEEE.std_logic_unsigned.all ;
+use IEEE.numeric_std.all;
 library unisim ;
 use unisim.vcomponents.all ;
 
@@ -12,7 +12,7 @@ package Proj_Defs is
 
 ----------------------- Address list -----------------------------
 
-Subtype AddrPtr is std_logic_vector(9 downto 0);
+Subtype AddrPtr is unsigned(9 downto 0);
 
 -- Control and status register
 constant CSRRegAddr : AddrPtr  := "00" & X"00";
@@ -50,8 +50,7 @@ constant InseqStatAd : AddrPtr := "00" & X"0F";
 -- Histogramming logic parameter adresses
 constant HistCtrlAd   : AddrPtr := "00" & X"10";
 constant HistIntvalAd : AddrPtr := "00" & X"11";
-constant HistOfstAd0 : AddrPtr := "00" & X"12";
-constant HistOfstAd1 : AddrPtr := "00" & X"13";
+constant HistOfstAd : AddrPtr := "00" & X"12";
 constant HistPtrAd0  : AddrPtr := "00" & X"14";
 constant HistPtrAd1  : AddrPtr := "00" & X"15";
 constant HistRd0Ad   : AddrPtr := "00" & X"16";
@@ -125,9 +124,6 @@ constant AFE1ArrayMin : AddrPtr  := "10" & X"00";
 constant AFE1ArrayMax : AddrPtr  := "10" & X"66";
 
 ---------------------- Broadcast addresses ------------------------------
--- DDR macro command codes
-constant ReadCmd : std_logic_vector (2 downto 0) := "001";
-constant WriteCmd : std_logic_vector (2 downto 0) := "000";
 
 -- Flash gate control register
 constant FlashCtrlAddr : AddrPtr := "11" & X"00";
@@ -177,18 +173,23 @@ constant ChanArray : PtrArrayType := (X"0",X"1",X"2",X"3",X"4",X"5",X"6",X"7",
 
 -- Timing constants assuming 160 MHz clock
 -- 1us timer
-constant Count1us : std_logic_vector (7 downto 0) := X"9F"; -- 159 D
+constant Count1us : unsigned (7 downto 0) := X"9F"; -- 159 D
 -- 10us timer
-constant Count10us : std_logic_vector (10 downto 0) := "110" & X"3F"; -- 1599 (10us)
+constant Count10us : unsigned (10 downto 0) := "110" & X"3F"; -- 1599 (10us)
 -- 1msec timer
-constant Count1ms : std_logic_vector (17 downto 0) := "10" & X"70FF"; -- 159999 (1ms)
+constant Count1ms : unsigned (17 downto 0) := "10" & X"70FF"; -- 159999 (1ms)
 -- use this for reasonable simulation times
 --constant Count1ms : std_logic_vector (17 downto 0) := "00" & X"0040"; -- 159999 (1ms)
 -- 1Second timer
-constant Count1s : std_logic_vector (27 downto 0) := X"98967FF"; -- 159,999,999 Decimal
+constant Count1s : unsigned (27 downto 0) := X"98967FF"; -- 159,999,999 Decimal
 -- Use this for debugging purposes
 -- constant Count1s : std_logic_vector (27 downto 0) := X"0000280"; -- 640 Decimal
 --  "000" & X"000037"; --  Value used for simulating test pulse generator
+
+-- DDR macro command codes
+constant RefreshCmd : std_logic_vector (2 downto 0) := "100";
+constant ReadCmd : std_logic_vector (2 downto 0) := "001";
+constant WriteCmd : std_logic_vector (2 downto 0) := "000";
 
 ----------------------------- Type Defs -------------------------------
 -- Inter-module link FM serializer and deserializer type declarations
@@ -351,21 +352,21 @@ end component;
 component Hist_Ram
   port (
     rsta,rstb,clka,clkb : in std_logic;
-    wea,web : in STD_LOGIC_VECTOR(0 downto 0);
-    addra : in STD_LOGIC_VECTOR(8 downto 0);
-	 addrb : in STD_LOGIC_VECTOR(9 downto 0);
-    dina : in STD_LOGIC_VECTOR(31 downto 0);
-	 dinb : in STD_LOGIC_VECTOR(15 downto 0);
-    douta : out STD_LOGIC_VECTOR(31 downto 0);
-	 doutb : out STD_LOGIC_VECTOR(15 downto 0)
+    wea,web : in std_logic_vector(0 downto 0);
+    addra : in std_logic_vector(9 downto 0);
+	 addrb : in std_logic_vector(10 downto 0);
+    dina : in std_logic_vector(31 downto 0);
+	 dinb : in std_logic_vector(15 downto 0);
+    douta : out std_logic_vector(31 downto 0);
+	 doutb : out std_logic_vector(15 downto 0)
   );
 end component;
 
 -- Fifo for buffering parallel data while it gets serialized
 component LVDSTxBuff
   port (rst,clk,wr_en,rd_en : in std_logic;
-        din : in STD_LOGIC_VECTOR(15 downto 0);
-		  dout : out STD_LOGIC_VECTOR(15 downto 0);
+        din : in std_logic_vector(15 downto 0);
+		  dout : out std_logic_vector(15 downto 0);
 		  full,empty : out std_logic);
 end component;
 
@@ -462,10 +463,10 @@ end component;
 
 component One_Wire is
 		 port(clock,reset : in std_logic;
-			GA,WRDL  : in std_logic_vector(1 downto 0);
-			uCA : in std_logic_vector(11 downto 0);
+			GA,WRDL  : in unsigned(1 downto 0);
+			uCA : in unsigned(11 downto 0);
 			uCD : in std_logic_vector(15 downto 0);
-			Counter1us : in std_logic_vector(7 downto 0);
+			Counter1us : in unsigned(7 downto 0);
 			Temp : in  std_logic_vector(3 downto 0);
 			TempEn : buffer std_logic;
 			TempCtrl : buffer std_logic_vector(3 downto 0);

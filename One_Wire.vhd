@@ -1,15 +1,14 @@
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
-use ieee.std_logic_unsigned.all;
+use IEEE.numeric_std.all;
 use work.Proj_Defs.all;
 
 entity One_Wire is
 	 port(clock,reset : in std_logic;
-			GA,WRDL : in std_logic_vector(1 downto 0);
-			uCA : in std_logic_vector(11 downto 0);
+			GA,WRDL : in unsigned(1 downto 0);
+			uCA : in unsigned(11 downto 0);
 			uCD : in std_logic_vector(15 downto 0);
-			Counter1us : in std_logic_vector(7 downto 0);
+			Counter1us : in unsigned(7 downto 0);
 			Temp : in  std_logic_vector(3 downto 0);
 			TempCtrl : buffer std_logic_vector(3 downto 0);
 			TempEn : buffer std_logic;
@@ -24,8 +23,9 @@ Type OneWireSeqType is (Idle,SendReset,ResetGap,WaitPresence,
 signal OneWireSeq : OneWireSeqType;
 
 signal OneWWrtByte : std_logic_vector(7 downto 0);
-signal OneWTimer : std_logic_vector(8 downto 0);
-signal OneWBitCount,OneWireCmdReg : std_logic_vector(7 downto 0);
+signal OneWTimer : unsigned(8 downto 0);
+signal OneWBitCount : unsigned(7 downto 0);
+signal OneWireCmdReg : std_logic_vector(7 downto 0);
 signal OneWStat,OneWRstReq,OneWWrtReq,OneWRdReq,ResponseBit,
 		 TempStat,ROMStat: std_logic;
 -- signal TempCtrl : std_logic_vector(3 downto 0);
@@ -206,7 +206,7 @@ end if;
 
 -- Serial bit counter
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = TempCtrlAd 
-then OneWBitCount <= uCD(15 downto 8);
+then OneWBitCount <= unsigned(uCD(15 downto 8));
 elsif OneWrRdTmp = LdSkpROMCmd1 or OneWrRdTmp = LdSkpROMCmd2
    or OneWrRdTmp = LDTempCvtCmd or OneWrRdTmp = LdRdScrtchPdCmd
 	or OneWrRdROM = LdRdROMCmd
