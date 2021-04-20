@@ -1,0 +1,13 @@
+run
+-ifmt VHDL
+-ent SCFIFO_1Kx28_exdes 
+-p xc6slx25-fgg484-3
+-ifn xst.prj
+-write_timing_constraints No
+-iobuf YES
+-max_fanout 100
+-ofn SCFIFO_1Kx28_exdes 
+-ofmt NGC
+-bus_delimiter ()
+-hierarchy_separator /
+-case Maintain

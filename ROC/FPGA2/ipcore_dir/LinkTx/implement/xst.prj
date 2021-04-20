@@ -1,0 +1,2 @@
+vhdl work ../../LinkTx.vhd
+vhdl work ../example_design/LinkTx_exdes.vhd

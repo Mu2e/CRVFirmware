@@ -67,11 +67,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 entity LPDDR_Ctrl is
 generic
-  ( C3_P0_MASK_SIZE         : integer := 4;
-    C3_P0_DATA_PORT_SIZE    : integer := 32;
-    C3_P1_MASK_SIZE         : integer := 4;
-    C3_P1_DATA_PORT_SIZE    : integer := 32;
-    C3_MEMCLK_PERIOD        : integer := 6250; 
+  (
+            C3_P0_MASK_SIZE           : integer := 4;
+          C3_P0_DATA_PORT_SIZE      : integer := 32;
+          C3_P1_MASK_SIZE           : integer := 4;
+          C3_P1_DATA_PORT_SIZE      : integer := 32;
+    C3_MEMCLK_PERIOD        : integer := 6277; 
                                        -- Memory data transfer clock period.
     C3_RST_ACT_LOW          : integer := 0; 
                                        -- # = 1 for active low reset,
@@ -333,8 +334,8 @@ component memc3_wrapper is
    constant C3_CLKOUT1_DIVIDE       : integer := 2; 
    constant C3_CLKOUT2_DIVIDE       : integer := 16; 
    constant C3_CLKOUT3_DIVIDE       : integer := 8; 
-   constant C3_CLKFBOUT_MULT        : integer := 32; 
-   constant C3_DIVCLK_DIVIDE        : integer := 5; 
+   constant C3_CLKFBOUT_MULT        : integer := 4; 
+   constant C3_DIVCLK_DIVIDE        : integer := 1; 
    constant C3_INCLK_PERIOD         : integer := ((C3_MEMCLK_PERIOD * C3_CLKFBOUT_MULT) / (C3_DIVCLK_DIVIDE * C3_CLKOUT0_DIVIDE * 2)); 
    constant C3_ARB_NUM_TIME_SLOTS   : integer := 12; 
    constant C3_ARB_TIME_SLOT_0      : bit_vector(5 downto 0) := o"23"; 

@@ -1,13 +1,12 @@
 ----------------------- FM Serializer  ------------------------
 
--- Transmits an FM serial stream at 1/6 the clock rate. 
--- A 150MHz clock encodes 25MHz FM serial data
+-- Transmits an FM serial stream at 1/4 the clock rate. 
+-- A 100MHz clock encodes 25MHz FM serial data
 -- In lieu of a start bit, a preamble of two 1.5 bit periods (like Mil-1553) 
 -- is appended to the FM bit stream
 
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 use work.Proj_Defs.all;
 
@@ -18,7 +17,7 @@ entity FM_Tx is
 				Tx_Out : buffer TxOutRec);
 end FM_Tx;
 
-architecture behavioural_Tx of FM_Tx is
+architecture FM_Behavioural of FM_Tx is
 
 -- Serializer state machine
 Type FMTx is (TxIdle,TxStrtA,TxStrtB,ShftTx,ParityTx);
@@ -26,7 +25,7 @@ signal Tx_State : FMTx;
 
 -- Shift register, bit width counter
 signal TxShft : std_logic_vector (Pwidth-1 downto 0);
-signal TxBitWdth : std_logic_vector (3 downto 0);
+signal TxBitWdth : std_logic_vector (2 downto 0);
 -- Transmitted FM data, running parity bit
 signal Parity,Tx_Req : std_logic;
 signal EnDL : std_logic_vector (1 downto 0);
@@ -43,7 +42,7 @@ begin
 	Tx_State <= TxIdle; Tx_Out.FM <= '0';
 	Tx_Out.Done <= '0'; Parity <= '0';
 	TxShft <= (others => '0'); Tx_Req <= '0';
-	TxBitWdth <= "0000"; TxBtCnt := 0;
+	TxBitWdth <= "000"; TxBtCnt := 0;
 	EnDL <= "00";
 
 elsif rising_edge(clock) then
@@ -57,69 +56,63 @@ elsif rising_edge(clock) then
 	end if;
 
    Case TxBitWdth is
-	When "0000" => TxBitWdth <= "0001"; 
-	When "0001" => TxBitWdth <= "0010";
-	When "0010" => if Tx_Req = '1' then TxBitWdth <= "0000"; else TxBitWdth <= "0011"; end if;
-	When "0011" => TxBitWdth <= "0100";
-	When "0100" => TxBitWdth <= "0101";
-	When "0101" => if Tx_State = TxStrtA or Tx_State = TxStrtB
-			  then TxBitWdth <= "0110";
-			  else TxBitWdth <= "0000";
+	When "000" => TxBitWdth <= "001"; 
+	When "001" => if Tx_Req = '1' then TxBitWdth <= "000"; else TxBitWdth <= "010"; end if;
+	When "010" => TxBitWdth <= "011";
+	When "011" => if Tx_State = TxStrtA or Tx_State = TxStrtB
+			  then TxBitWdth <= "100";
+			  else TxBitWdth <= "000";
 			  end if;
-	When "0110" => if Tx_State = TxStrtA or Tx_State = TxStrtB
-			  then TxBitWdth <= "0111";
-			  else TxBitWdth <= "0000";
+	When "100" => if Tx_State = TxStrtA or Tx_State = TxStrtB
+			  then TxBitWdth <= "101";
+			  else TxBitWdth <= "000";
 			  end if;
-	When "0111" => if Tx_State = TxStrtA or Tx_State = TxStrtB
-			  then TxBitWdth <= "1000";
-			  else TxBitWdth <= "0000";
-			  end if;
-	When others => TxBitWdth <= "0000";
+	When others => TxBitWdth <= "000";
   end Case;
 
 -- FMTx TxIdle,TxStrtA,TxStrtB,ShftTx,ParityTx
 Case Tx_State is
 -- Send data on start
         When TxIdle => 
-	 	 if Tx_Req = '1' and (TxBitWdth = "0010" or TxBitWdth = "0101")
+	 	 if Tx_Req = '1' and (TxBitWdth = "001" or TxBitWdth = "011")
 		  then Tx_State <= TxStrtA;
 			else Tx_State <= TxIdle;
 			end if;
 		When TxStrtA =>
-		 if TxBitWdth = "1000" then Tx_State <= TxStrtB;
+		 if TxBitWdth = "101" then Tx_State <= TxStrtB;
 		  else Tx_State <= TxStrtA;
 		 end if;
  		When TxStrtB =>
-		 if TxBitWdth = "1000" then Tx_State <= ShftTx;
+		 if TxBitWdth = "101" then Tx_State <= ShftTx;
 		  else Tx_State <= TxStrtB;
 		 end if;
           When ShftTx =>
-         if TxBitWdth = "0101" and TxBtCnt = 0 then Tx_State <= ParityTx;
+         if TxBitWdth = "011" and TxBtCnt = 0 then Tx_State <= ParityTx;
          else Tx_State <= ShftTx;
          end if;
            When ParityTx =>
-         if TxBitWdth = "0101" then Tx_State <= TxIdle;
+         if TxBitWdth = "011" then Tx_State <= TxIdle;
          else Tx_State <= ParityTx;
          end if;
 end case;
 
 -- Two transitions per bit period is a 1, one transition a 0
  -- default state is a string of 1's
-if ((TxBitWdth = "0010" or TxBitWdth = "0101") and Tx_State = TxIdle)
-		  or TxBitWdth = "1000" 	-- Start bit is defined 1 1/2 bit periods
+if ((TxBitWdth = "001" or TxBitWdth = "011") and Tx_State = TxIdle)
+		  or TxBitWdth = "101" 	-- Start bit is defined 1 1/2 bit periods
 					-- Number of data FM transitions is ShiftOut register data dependent
-          or (Tx_State = ShftTx and ((TxShft(Pwidth-1) = '1' and TxBitWdth = "0010") or TxBitWdth = "0101"))
+          or (Tx_State = ShftTx and ((TxShft(Pwidth-1) = '1' and TxBitWdth = "001") or TxBitWdth = "011"))
 					-- Number of parity FM transitions is parity bit dependent
-          or (Tx_State = ParityTx and ((Parity = '0' and TxBitWdth = "0010") or TxBitWdth = "0101"))
+          or (Tx_State = ParityTx and ((Parity = '0' and TxBitWdth = "001") or TxBitWdth = "011"))
 then Tx_Out.FM <= not Tx_Out.FM;
 else Tx_Out.FM <= Tx_Out.FM;
 end if;
 
 -- data frames are "width" bits long 
-if Tx_State = TxStrtB and TxBitWdth = "1000"
+if Tx_State = TxStrtB and TxBitWdth = "101"
   then TxBtCnt := (Pwidth-1);
 elsif Tx_State = TxIdle then TxBtCnt := 0;
-elsif Tx_State = ShftTx and TxBitWdth = "0101" and TxBtCnt /= 0
+elsif Tx_State = ShftTx and TxBitWdth = "011" and TxBtCnt /= 0
 	then TxBtCnt := TxBtCnt-1;
 else TxBtCnt := TxBtCnt;
 end if;
@@ -129,20 +122,20 @@ if Tx_State = TxIdle and EnDL = 1
   then TxShft <= Data;
 -- Shift one bit left (MSB first) during data portion of frame
 -- shift condition
-elsif Tx_State = ShftTx and TxBitWdth = "0101" 
+elsif Tx_State = ShftTx and TxBitWdth = "011" 
 	then TxShft <= (TxShft(Pwidth-2 downto 0) & '0');
 else TxShft <= TxShft;
 end if;
 
   if (Parity = '1' and Tx_State = TxIdle) -- reset parity at start
-  or (Tx_State = ShftTx and TxBitWdth = "0101" and TxShft(Pwidth-1) = '0')
+  or (Tx_State = ShftTx and TxBitWdth = "011" and TxShft(Pwidth-1) = '0')
 -- Toggle parity bit with each shifted out "0"
 then Parity <= not Parity;
 else Parity <= Parity;
 end if;
 
 -- Indicate when a frame has been shifted out
-if TxBitWdth = "0101" and Tx_State = ParityTx then Tx_Out.Done <= '1';
+if TxBitWdth = "011" and Tx_State = ParityTx then Tx_Out.Done <= '1';
 else Tx_Out.Done <= '0';
 end if;
 
@@ -150,7 +143,7 @@ end if; -- reset
 
 end process FM_Encode;
 
-end behavioural_Tx; -- of Serial_Tx
+end FM_behavioural; -- of Serial_Tx
 
 ------------------------------ FM Deserializer ----------------------------
 -- Receives an FM serial stream at 1/8 the clock rate. 
@@ -160,7 +153,6 @@ end behavioural_Tx; -- of Serial_Tx
 
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 USE work.Proj_Defs.all;
 
@@ -182,7 +174,7 @@ signal RxBitWdth : std_logic_vector (3 downto 0);
 -- Edge detector for incoming FM data
 signal RxDl : std_logic_vector (1 downto 0);
 -- Transmitted FM data, running parity bit
-signal RxParity,Rx_NRZ,Rx_Done_Req : std_logic;
+signal RxParity,Rx_NRZ : std_logic;
 
 begin
 
@@ -195,7 +187,7 @@ begin
  if reset = '1' then 
 
 	Rx_State <= RxIdle; RxDl <= "00"; 
-	Rx_Done_Req <= '0'; RxParity <= '0'; Rx_Out.Parity_Err <= '0';
+	RxParity <= '0'; Rx_Out.Parity_Err <= '0';
 	data <= (others => '0'); RxBtCnt := 0; 
 	Rx_NRZ <= '0'; RxBitWdth <= "0000";
 
@@ -278,23 +270,14 @@ else Rx_Out.Parity_Err <= Rx_Out.Parity_Err;
 end if;
 
 -- Hold Rx done high for one sysclck period.
-if Rx_State = ParityRx and RxBitWdth = 6 then Rx_Done_Req <= '1';
-elsif Rx_Out.Done = '1' then Rx_Done_Req <= '0';
-else Rx_Done_Req <= Rx_Done_Req;
+if Rx_State = ParityRx and RxBitWdth = 6 then Rx_Out.Done <= '1';
+else Rx_Out.Done <= '0';
 end if;
 
 end if; -- rising edge
 
 end process FM_Decode;
 
--- SendRxDone for one sysclk period
-Send_Rx_Done : process(SysClk, reset)
-begin
-if reset = '1' then Rx_Out.Done <= '0'; 
- elsif rising_edge(Sysclk) 
-	then Rx_Out.Done <= Rx_Done_Req and not Rx_Out.Done;
-end if; -- reset
-end process Send_Rx_Done;
 end behavioural_Rx; -- of Serial_Rx
 
 ---------------------- TClk encoder section ----------------------------
@@ -303,7 +286,6 @@ end behavioural_Rx; -- of Serial_Rx
 
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 USE work.Proj_Defs.all;
 
@@ -430,7 +412,6 @@ end behavioural_TTx; -- of TClk_Tx
 
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 USE work.Proj_Defs.all;
 
@@ -556,7 +537,6 @@ end behavioural_TRx; -- of TClk_Rx
 
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 USE work.Proj_Defs.all;
 

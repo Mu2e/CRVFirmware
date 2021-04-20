@@ -1,0 +1,2 @@
+vhdl work ../../SerialTx.vhd
+vhdl work ../example_design/SerialTx_exdes.vhd

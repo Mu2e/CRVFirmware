@@ -192,9 +192,9 @@ NET "ClkB_P" LOC = D9;
 
 # VXO clock inputs
 NET "ClkB_P" TNM_NET = "ClkB_P";
-TIMESPEC "TS_ClkB_P" = PERIOD "ClkB_P" 10.00 ns HIGH 50%;
+TIMESPEC "TS_ClkB_P" = PERIOD "ClkB_P" 6.25 ns HIGH 50%;
 NET "VXO_P" TNM_NET = "VXO_P";
-TIMESPEC "TS_VXO_P" = PERIOD "VXO_P" 10.00 ns HIGH 50%;
+TIMESPEC "TS_VXO_P" = PERIOD "VXO_P" 6.25 ns HIGH 50%;
 
 # Specifying AFE data clock period
 NET "AFEDCO_P[0]" TNM_NET = "AFEDCO_P[0]";
@@ -204,27 +204,28 @@ TIMESPEC "TS_AFEDCO_P1" = PERIOD "AFEDCO_P[1]" 2.083 ns HIGH 50%;
 
 # Ignore timing from static registers to the RxOutClk domains
 
-NET "RxOutClk[0]" TNM_NET = FFS "GRP_1";
-NET "RxOutClk[1]" TNM_NET = FFS "GRP_2";
-NET "Clk200MHz" TNM_NET = FFS "GRP_3";
-NET "SysClk" TNM_NET = FFS "GRP_4";
- 
-NET "HistChan*" 		TNM_NET = "HistChan";
-NET "HistMode" 		TNM_NET = "HistMode";
-#NET "BinningSel*" 	TNM_NET = "BinningSel";
-NET "ControllerNo*" 	TNM_NET = "ControllerNo";
-NET "PortNo*" 			TNM_NET = "PortNo";
+#NET "RxOutClk[0]" TNM_NET = FFS "GRP_1";
+#NET "RxOutClk[1]" TNM_NET = FFS "GRP_2";
+#NET "Clk200MHz" TNM_NET = FFS "GRP_3";
+#NET "SysClk" TNM_NET = FFS "GRP_4";
+#
+#NET "Hist_Offset_Reg*" TNM_NET = "Hist_Offset_Reg";
+#NET "HistChan*" 		TNM_NET = "HistChan";
+#NET "HistMode" 		TNM_NET = "HistMode";
+#NET "ControllerNo*" 	TNM_NET = "ControllerNo";
+#NET "PortNo*" 			TNM_NET = "PortNo";
 #NET "Rx1Dat*" 			TNM_NET = "Rx1Dat";
-NET "uBunch*" 			TNM_NET = "uBunch";
+#NET "uBunch*" 			TNM_NET = "uBunch";
 
-TIMESPEC TS_CrossDomain0 = FROM "HistChan"   TO "GRP_1" TIG;
-TIMESPEC TS_CrossDomain1 = FROM "HistMode"   TO "GRP_1" TIG;
-TIMESPEC TS_CrossDomain2 = FROM "BinningSel" TO "GRP_1" TIG;
-TIMESPEC TS_CrossDomain3 = FROM "HistChan"   TO "GRP_2" TIG;
-TIMESPEC TS_CrossDomain4 = FROM "HistMode"   TO "GRP_2" TIG;
-TIMESPEC TS_CrossDomain5 = FROM "BinningSel" TO "GRP_2" TIG;
-TIMESPEC TS_CrossDomain6 = FROM "ControllerNo" TO "GRP_1" TIG;
-TIMESPEC TS_CrossDomain7 = FROM "ControllerNo" TO "GRP_2" TIG;
-TIMESPEC TS_CrossDomain8 = FROM "PortNo" TO "GRP_1" TIG;
-TIMESPEC TS_CrossDomain9 = FROM "PortNo" TO "GRP_2" TIG;
-TIMESPEC TS_CrossDomain10 = FROM "Rx1Dat" TO "GRP_4" TIG;
+#TIMESPEC TS_CrossDomain0 = FROM "Hist_Offset_Reg" TO "GRP_1" TIG;
+#TIMESPEC TS_CrossDomain1 = FROM "HistChan"   TO "GRP_1" TIG;
+#TIMESPEC TS_CrossDomain2 = FROM "HistMode"   TO "GRP_1" TIG;
+#
+#TIMESPEC TS_CrossDomain3 = FROM "Hist_Offset_Reg" TO "GRP_2" TIG;
+#TIMESPEC TS_CrossDomain4 = FROM "HistChan"   TO "GRP_2" TIG;
+#TIMESPEC TS_CrossDomain5 = FROM "HistMode"   TO "GRP_2" TIG;
+#TIMESPEC TS_CrossDomain6 = FROM "ControllerNo" TO "GRP_1" TIG;
+#TIMESPEC TS_CrossDomain7 = FROM "ControllerNo" TO "GRP_2" TIG;
+#TIMESPEC TS_CrossDomain8 = FROM "PortNo" TO "GRP_1" TIG;
+#TIMESPEC TS_CrossDomain9 = FROM "PortNo" TO "GRP_2" TIG;
+#TIMESPEC TS_CrossDomain10 = FROM "Rx1Dat" TO "GRP_4" TIG;

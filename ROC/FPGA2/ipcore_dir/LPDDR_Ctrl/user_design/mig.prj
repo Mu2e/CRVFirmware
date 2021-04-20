@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project NoOfControllers="1" >
+    <ModuleName>LPDDR_Ctrl</ModuleName>
+    <TargetFPGA>xc6slx25-fgg484/-3</TargetFPGA>
+    <Version>3.92</Version>
+    <Controller number="3" >
+        <MemoryDevice>LPDDR/Components/MT46H64M16XXXX-6L-IT</MemoryDevice>
+        <TimePeriod>10000</TimePeriod>
+        <EnableVoltageRange>0</EnableVoltageRange>
+        <DataMask>1</DataMask>
+        <CustomPart>FALSE</CustomPart>
+        <NewPartName></NewPartName>
+        <RowAddress>14</RowAddress>
+        <ColAddress>10</ColAddress>
+        <BankAddress>2</BankAddress>
+        <TimingParameters>
+            <Parameters twtr="1" trefi="7.8" twr="15" trfc="110" trp="18" tras="42" trcd="18" />
+        </TimingParameters>
+        <mrBurstLength name="Burst Length" >4(010)</mrBurstLength>
+        <mrCasLatency name="CAS Latency" >3</mrCasLatency>
+        <emrDllEnable name="Partial-Array Self Refresh" >Full Array</emrDllEnable>
+        <emrOutputDriveStrength name="Drive Strength" >Half-Strength</emrOutputDriveStrength>
+        <emrOCD name="Operation" >Normal AR Operation </emrOCD>
+        <PortInterface>NATIVE,NATIVE,NATIVE,NATIVE,NATIVE,NATIVE</PortInterface>
+        <Class>Class II</Class>
+        <DataClass>Class II</DataClass>
+        <DataTermination>25 Ohms</DataTermination>
+        <CalibrationRowAddress></CalibrationRowAddress>
+        <CalibrationColumnAddress></CalibrationColumnAddress>
+        <CalibrationBankAddress></CalibrationBankAddress>
+        <SystemClock>Differential</SystemClock>
+        <BypassCalibration>1</BypassCalibration>
+        <DebugSignals>Disable</DebugSignals>
+        <SystemClock>Differential</SystemClock>
+        <Configuration>Two 32-bit bi-directional and four 32-bit unidirectional ports</Configuration>
+        <RzqPin>Y2</RzqPin>
+        <ZioPin>W3</ZioPin>
+        <PortsSelected>Port2,Port3</PortsSelected>
+        <PortDirections>none,none,Write,Read,none,none</PortDirections>
+        <UserMemoryAddressMap>BANK_ROW_COLUMN</UserMemoryAddressMap>
+        <ArbitrationAlgorithm>Round Robin</ArbitrationAlgorithm>
+        <TimeSlot0>23</TimeSlot0>
+        <TimeSlot1>32</TimeSlot1>
+        <TimeSlot2>23</TimeSlot2>
+        <TimeSlot3>32</TimeSlot3>
+        <TimeSlot4>23</TimeSlot4>
+        <TimeSlot5>32</TimeSlot5>
+        <TimeSlot6>23</TimeSlot6>
+        <TimeSlot7>32</TimeSlot7>
+        <TimeSlot8>23</TimeSlot8>
+        <TimeSlot9>32</TimeSlot9>
+        <TimeSlot10>23</TimeSlot10>
+        <TimeSlot11>32</TimeSlot11>
+    </Controller>
+</Project>

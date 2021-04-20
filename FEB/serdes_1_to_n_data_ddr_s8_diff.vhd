@@ -87,6 +87,7 @@ port 	(
 	data_out		: out std_logic_vector((S*D)-1 downto 0) ;  	-- Output data
 	debug_in		:  in std_logic_vector(1 downto 0) ;  		-- Debug Inputs, set to '0' if not required
 	debug			: out std_logic_vector((2*D)+6 downto 0)) ;  	-- Debug output bus, 2D+6 = 2 lines per input (from mux and ce) + 7, leave nc if debug not required
+--	FRSimonSync : out std_logic_vector(2 downto 0));
 end serdes_1_to_n_data_ddr_s8_diff ;
 
 architecture arch_serdes_1_to_n_data_ddr_s8_diff of serdes_1_to_n_data_ddr_s8_diff is
@@ -127,6 +128,11 @@ signal	valid_data_or 		: std_logic_vector(D downto 0) ;
 signal	valid_data_im 		: std_logic_vector(D-1 downto 0) ;
 signal	busy_data_or 		: std_logic_vector(D downto 0) ;
 signal	all_ce 			: std_logic_vector(D-1 downto 0) ;
+
+-- Simon
+--signal FRSimon : std_logic_vector(2 downto 0) ;
+--signal FRSimonSync_Out : std_logic_vector(2 downto 0) ;
+--signal rxioclk : std_logic ;
 
 constant RX_SWAP_MASK 		: std_logic_vector(D-1 downto 0) := (others => '0') ;	-- pinswap mask for input bits (0 = no swap (default), 1 = swap). Allows inputs to be connected the wrong way round to ease PCB routing.
 
@@ -393,5 +399,32 @@ port map (
 
 --end generate;
 end generate;
+
+-------------------------- Simons Tests ----------------------------------
+--iob_clk_in : IBUFGDS port map (
+--	I    			=> rxioclkp,
+--	IB       		=> rxioclkn,
+--	O         		=> rxioclk);
+--x1 : BUFG port map	(I => rxioclkp, O => rxioclk) ;
+--Simon : process(rxioclk)
+--begin
+--  if rising_edge(rxioclk) then
+--      FRSimon(0) <= rx_data_in(D-1);
+--		FRSimon(2 downto 1) <= FRSimon(1 downto 0);
+--  else
+--      FRSimon <= FRSimon;
+--  end if;
+--end process;
+--
+--SimonSync : process(gclk)
+--begin
+--  if rising_edge(gclk) then
+--      FRSimonSync_Out <= FRSimon;
+--  else
+--      FRSimonSync_Out <= FRSimonSync_Out;
+--  end if;
+--end process;
+--FRSimonSync <= FRSimonSync_Out;
+-------------------------- end Simons Tests ------------------------------
 
 end arch_serdes_1_to_n_data_ddr_s8_diff ;

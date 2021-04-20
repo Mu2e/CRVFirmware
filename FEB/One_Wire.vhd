@@ -1,21 +1,23 @@
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
 use IEEE.numeric_std.all;
 use work.Proj_Defs.all;
 
 entity One_Wire is
-	 port(clock,reset : in std_logic;
-			GA,WRDL : in unsigned(1 downto 0);
-			uCA : in unsigned(11 downto 0);
+	 port(clock,reset,CpldCS,uCWr : in std_logic;
+			GA : in std_logic_vector(1 downto 0);
+			uCA : in std_logic_vector(11 downto 0);
 			uCD : in std_logic_vector(15 downto 0);
-			Counter1us : in unsigned(7 downto 0);
 			Temp : in  std_logic_vector(3 downto 0);
 			TempCtrl : buffer std_logic_vector(3 downto 0);
 			TempEn : buffer std_logic;
 			One_Wire_Out : buffer std_logic_vector(15 downto 0));
 end One_Wire;
 
-architecture behavioural of One_Wire is
+architecture onewire_behave of One_Wire is
+
+signal Counter1us : std_logic_vector(7 downto 0);
 
 -- Signals used by 1 the wire interface
 Type OneWireSeqType is (Idle,SendReset,ResetGap,WaitPresence,
@@ -23,8 +25,9 @@ Type OneWireSeqType is (Idle,SendReset,ResetGap,WaitPresence,
 signal OneWireSeq : OneWireSeqType;
 
 signal OneWWrtByte : std_logic_vector(7 downto 0);
-signal OneWTimer : unsigned(8 downto 0);
-signal OneWBitCount : unsigned(7 downto 0);
+signal WRDL : std_logic_vector(1 downto 0);
+signal OneWTimer : std_logic_vector(8 downto 0);
+signal OneWBitCount : std_logic_vector(7 downto 0);
 signal OneWireCmdReg : std_logic_vector(7 downto 0);
 signal OneWStat,OneWRstReq,OneWWrtReq,OneWRdReq,ResponseBit,
 		 TempStat,ROMStat: std_logic;
@@ -51,7 +54,7 @@ OneWire : process(clock, reset)
 
 begin
 
- if reset = '1' then 
+ if reset = '0' then 
 
 	OneWWrtByte <= X"00"; OneWTimer <= (others => '0'); OneWStat <= '0';
 	OneWBitCount <= (others => '0'); TempCtrl <= (others => '0'); 
@@ -59,10 +62,20 @@ begin
 	TempDat <= (others => '0'); OneWireCmdReg <= X"00"; 
 	OneWRstReq <= '0'; OneWrRdROM <= Idle;  OneWrRdTmp <= Idle;
 	OneWireSeq <= Idle; TempStat <= '0';  ROMStat <= '0'; 
+	Counter1us <= X"00"; WRDL <= "00";
 
 elsif rising_edge(clock) then
 
 ------------------ One wire temperature sensor logic ------------------
+
+	WRDL(0) <= not uCWr and not CpldCS;
+	WRDL(1) <= WRDL(0);
+
+-- 1us time base
+	if Counter1us /= Count1us then 
+		Counter1us <= Counter1us + 1;
+	else Counter1us <= X"00";
+	end if;
 
 -- Idle,SendReset,ResetGap,WaitPresence,SendWrite,WriteGap,SendRead,ReadGap);
 Case OneWireSeq is
@@ -114,7 +127,7 @@ if OneWireSeq /= Idle or OneWTimer /= 0 then OneWStat <= '1';
 else OneWStat <= '0'; 
 end if;
 
--- Laatch the response bit from the appropriate CMB
+-- Latch the response bit from the appropriate CMB
  if OneWireSeq = WaitPresence and OneWTimer = 0 
 	then 
 		Case TempCtrl is 
@@ -206,7 +219,7 @@ end if;
 
 -- Serial bit counter
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = TempCtrlAd 
-then OneWBitCount <= unsigned(uCD(15 downto 8));
+then OneWBitCount <= uCD(15 downto 8);
 elsif OneWrRdTmp = LdSkpROMCmd1 or OneWrRdTmp = LdSkpROMCmd2
    or OneWrRdTmp = LDTempCvtCmd or OneWrRdTmp = LdRdScrtchPdCmd
 	or OneWrRdROM = LdRdROMCmd
@@ -218,8 +231,8 @@ then OneWBitCount <= OneWBitCount - 1;
 end if;
 
 -- Timer. Different operations have different timing requirements
-   if OneWWrtReq = '1' and OneWRstReq = '0' and OneWireSeq = Idle then OneWTimer <= '0' & X"3D"; 
-elsif OneWRdReq = '1' and OneWRstReq = '0' and OneWireSeq = Idle then OneWTimer <= '0' & X"3D"; 
+   if (OneWRdReq = '1' or OneWWrtReq = '1') 
+   and OneWRstReq = '0' and OneWireSeq = Idle then OneWTimer <= '0' & X"3D"; 
 elsif OneWRstReq = '1' and OneWireSeq = Idle then OneWTimer <= '1' & X"E0";
 elsif OneWireSeq = SendReset    and OneWTimer = 0 then OneWTimer <= '0' & X"3D"; 
 elsif OneWireSeq = ResetGap     and OneWTimer = 0 then OneWTimer <= '1' & X"E0";
@@ -381,4 +394,4 @@ One_Wire_Out <= X"0" & "00" & ROMStat & TempStat & OneWireCmdReg when OneWireCmd
 				TempDat(15 downto 0) when TempDat4Ad,
 				X"0000" when others;
 
-end behavioural;
+end onewire_behave;

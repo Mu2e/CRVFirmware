@@ -1,0 +1,275 @@
+NET "Debug[10]" LOC = A19;
+NET "Debug[9]" LOC = A18;
+NET "Debug[8]" LOC = B18;
+NET "Debug[7]" LOC = A20;
+NET "Debug[6]" LOC = C19;
+NET "Debug[5]" LOC = B20;
+NET "Debug[4]" LOC = D19;
+NET "Debug[3]" LOC = C18;
+NET "Debug[2]" LOC = D17;
+NET "Debug[1]" LOC = D18;
+NET "Debug[10]" FAST;
+NET "Debug[9]" FAST;
+NET "Debug[8]" FAST;
+NET "Debug[7]" FAST;
+NET "Debug[6]" FAST;
+NET "Debug[5]" FAST;
+NET "Debug[4]" FAST;
+NET "Debug[3]" FAST;
+NET "Debug[2]" FAST;
+NET "Debug[1]" FAST;
+
+NET "LINKClk_P[0]" LOC = M5;
+NET "LinkFR_P[0]" LOC = C1;
+NET "LinkSDat_P[0]" LOC = F3;
+NET "LinkSDat_P[1]" LOC = D2;
+
+NET "LINKClk_P[1]" LOC = Y11;
+NET "LinkFR_P[1]" LOC = AA10;
+NET "LinkSDat_P[2]" LOC = Y9;
+NET "LinkSDat_P[3]" LOC = AA8;
+
+NET "LINKClk_P[2]" LOC = P20;
+NET "LinkFR_P[2]" LOC = L20;
+NET "LinkSDat_P[4]" LOC = M21;
+NET "LinkSDat_P[5]" LOC = N20;
+
+NET "GA[1]" LOC = K17;
+NET "GA[0]" LOC = L17;
+
+NET "uCA[11]" LOC = Y12;
+NET "uCA[10]" LOC = W12;
+NET "uCA[9]" LOC = AB13;
+NET "uCA[8]" LOC = AB7;
+NET "uCA[7]" LOC = Y7;
+NET "uCA[6]" LOC = Y10;
+NET "uCA[5]" LOC = W10;
+NET "uCA[4]" LOC = W11;
+NET "uCA[3]" LOC = AB15;
+NET "uCA[2]" LOC = Y14;
+NET "uCA[1]" LOC = AB16;
+NET "uCA[0]" LOC = W8;
+
+NET "uCD[15]" LOC = AB12;
+NET "uCD[14]" LOC = AA12;
+NET "uCD[13]" LOC = Y13;
+NET "uCD[12]" LOC = AB18;
+NET "uCD[11]" LOC = AA18;
+NET "uCD[10]" LOC = AB19;
+NET "uCD[9]" LOC = U6;
+NET "uCD[8]" LOC = T7;
+NET "uCD[7]" LOC = W9;
+NET "uCD[6]" LOC = AB5;
+NET "uCD[5]" LOC = Y5;
+NET "uCD[4]" LOC = AB6;
+NET "uCD[3]" LOC = AA6;
+NET "uCD[2]" LOC = T14;
+NET "uCD[1]" LOC = R13;
+NET "uCD[0]" LOC = AA20;
+
+NET "uCD[15]" FAST;
+NET "uCD[14]" FAST;
+NET "uCD[13]" FAST;
+NET "uCD[12]" FAST;
+NET "uCD[11]" FAST;
+NET "uCD[10]" FAST;
+NET "uCD[9]" FAST;
+NET "uCD[8]" FAST;
+NET "uCD[7]" FAST;
+NET "uCD[6]" FAST;
+NET "uCD[5]" FAST;
+NET "uCD[4]" FAST;
+NET "uCD[3]" FAST;
+NET "uCD[2]" FAST;
+NET "uCD[1]" FAST;
+NET "uCD[0]" FAST;
+
+NET "CpldCS" LOC = W15;
+NET "CpldRst" LOC = AB4;
+NET "CpldRst" PULLUP = TRUE;
+NET "uCRd" LOC = Y20;
+NET "uCWr" LOC = R7;
+
+# Orange tree Ethernet connections
+
+NET "EthCS" LOC = Y1;
+
+NET "DQ[15]" LOC = K4;
+NET "DQ[14]" LOC = L1;
+NET "DQ[13]" LOC = K3;
+NET "DQ[12]" LOC = K2;
+NET "DQ[11]" LOC = K1;
+NET "DQ[10]" LOC = J1;
+NET "DQ[9]" LOC = J3;
+NET "DQ[8]" LOC = H1;
+NET "DQ[7]" LOC = H2;
+NET "DQ[6]" LOC = H3;
+NET "DQ[5]" LOC = G3;
+NET "DQ[4]" LOC = G1;
+NET "DQ[3]" LOC = F2;
+NET "DQ[2]" LOC = F1;
+NET "DQ[1]" LOC = E3;
+NET "DQ[0]" LOC = E1;
+
+NET "DQ[15]" FAST;
+NET "DQ[14]" FAST;
+NET "DQ[13]" FAST;
+NET "DQ[12]" FAST;
+NET "DQ[11]" FAST;
+NET "DQ[10]" FAST;
+NET "DQ[9]" FAST;
+NET "DQ[8]" FAST;
+NET "DQ[7]" FAST;
+NET "DQ[6]" FAST;
+NET "DQ[5]" FAST;
+NET "DQ[4]" FAST;
+NET "DQ[3]" FAST;
+NET "DQ[2]" FAST;
+NET "DQ[1]" FAST;
+NET "DQ[0]" FAST;
+
+NET "ZEthA[8]" LOC = R3;
+NET "ZEthA[7]" LOC = N3;
+NET "ZEthA[6]" LOC = R1;
+NET "ZEthA[5]" LOC = T1;
+NET "ZEthA[4]" LOC = T2;
+NET "ZEthA[3]" LOC = L3;
+NET "ZEthA[2]" LOC = L6;
+NET "ZEthA[1]" LOC = U1;
+NET "ZEthA[0]" LOC = V1;
+
+NET "ZEthA[8]" FAST;
+NET "ZEthA[7]" FAST;
+NET "ZEthA[6]" FAST;
+NET "ZEthA[5]" FAST;
+NET "ZEthA[4]" FAST;
+NET "ZEthA[3]" FAST;
+NET "ZEthA[2]" FAST;
+NET "ZEthA[1]" FAST;
+NET "ZEthA[0]" FAST;
+
+NET "ZEthCS" LOC = M1;
+NET "ZEthWE" LOC = M2;
+NET "ZEthClk" LOC = U3;
+NET "ZEthBE[1]" LOC = W1;
+NET "ZEthBE[0]" LOC = N1;
+NET "ZEthEOF[1]" LOC = P2;
+NET "ZEthEOF[0]" LOC = V2;
+NET "ZEthLen" LOC = P1;
+
+NET "ZEthCS" FAST;
+NET "ZEthWE" FAST;
+NET "ZEthClk" FAST;
+NET "ZEthBE[1]" FAST;
+NET "ZEthBE[0]" FAST;
+
+# Pll serial link, control, status lines
+NET "PllSClk" LOC = F21;
+NET "PllSDat" LOC = F22;
+NET "PllLd" LOC = G22;
+NET "PllPDn" LOC = P22;
+NET "PllStat" LOC = H22;
+
+# Harmonica jack LED serial link
+NET "LEDRst" LOC = V19;
+NET "LEDSClk[2]" LOC = R22;
+NET "LEDSClk[1]" LOC = U22;
+NET "LEDSClk[0]" LOC = W22; 
+
+NET "LEDSDat[2]" LOC = T21;
+NET "LEDSDat[1]" LOC = V22;
+NET "LEDSDat[0]" LOC = Y22;
+
+NET "LEDLd[5]" LOC = P19;
+NET "LEDLd[4]" LOC = T22;
+NET "LEDLd[3]" LOC = U20;
+NET "LEDLd[2]" LOC = V21;
+NET "LEDLd[1]" LOC = W20;
+NET "LEDLd[0]" LOC = Y21;
+
+# Back panel LEMOs
+NET "GPO[1]" LOC = F9;
+NET "GPO[0]" LOC = G8;
+NET "GPI" LOC = C22;
+NET "NimTrig" LOC = E20;
+
+# FM tramsmitters for trigger and timing fanout
+NET "HeartBeatFM" LOC = P4;
+NET "HeartBeatFM" SLEW = "FAST";
+NET "HeartBeatFM" DRIVE = "16";
+
+NET "TrigFM" LOC = P5;
+NET "TrigFM" SLEW = "FAST";
+NET "TrigFM" DRIVE = "16";
+
+# Status LEDs
+NET "uBunchLED" LOC = T20;
+NET "TrigLED" LOC = V20;
+
+NET "VXO_P" LOC = M3;
+NET "ClkB_P" LOC = P3;
+
+NET "Clk50MHz" LOC = M20;
+NET "BnchClk" LOC = E22;
+
+# Optical transceiver connections
+NET "TDisA" LOC = D4;
+NET "TDisB" LOC = B3;
+NET "SD_A" LOC = D5;
+NET "SD_B" LOC = A3;
+
+NET "GTPClk_P(0)" LOC = A10;
+NET "GTPClk_N(0)" LOC = B10;
+NET "GTPClk_P(1)" LOC = C11;
+NET "GTPClk_N(1)" LOC = D11;
+
+NET "GTPRx_P(0)" LOC = D7;
+NET "GTPRx_N(0)" LOC = C7;
+NET "GTPRx_P(1)" LOC = D9;
+NET "GTPRx_N(1)" LOC = C9;
+
+NET "GTPTx_P(0)" LOC = B6;
+NET "GTPTx_N(0)" LOC = A6;
+NET "GTPTx_P(1)" LOC = B8;
+NET "GTPTx_N(1)" LOC = A8;
+
+##---------- Set placement for tile0_rocketio_wrapper_i/GTPA1_DUAL ------
+
+INST GTP_Xcvr_i/tile0_GTP_Xcvr_i/gtpa1_dual_i LOC=GTPA1_DUAL_X0Y0;
+
+## Specifiying clock rates
+TIMESPEC TS_GTPClk_P0 = PERIOD "GTPClk_P0" 6.4 ns HIGH 50%;
+NET "GTPClk_P[0]" TNM_NET = "GTPClk_P0";
+#
+TIMESPEC TS_GTPClk_P1 = PERIOD "GTPClk_P1" 6.4 ns HIGH 50%;
+NET "GTPClk_P[1]" TNM_NET = "GTPClk_P1";
+
+# User Clock Constraints
+NET "UsrClk[0]" TNM_NET = "tile0_txusrclk0_i";
+TIMESPEC "TS_tile0_txusrclk0_i" = PERIOD "tile0_txusrclk0_i" 3.2 ns;
+
+NET "UsrClk2[0]" TNM_NET = "tile0_txusrclk20_i";
+TIMESPEC "TS_tile0_txusrclk20_i" = PERIOD "tile0_txusrclk20_i" 6.4 ns;
+
+NET "UsrClk[1]" TNM_NET = "tile0_txusrclk1_i";
+TIMESPEC "TS_tile0_txusrclk1_i" = PERIOD "tile0_txusrclk1_i" 3.2 ns;
+
+NET "UsrClk2[1]" TNM_NET = "tile0_txusrclk21_i";
+TIMESPEC "TS_tile0_txusrclk21_i" = PERIOD "tile0_txusrclk21_i" 6.4 ns;
+
+TIMESPEC TS_ClkB_P = PERIOD "ClkB_P" 9.4 ns HIGH 50%;
+NET "ClkB_P" TNM_NET = "ClkB_P";
+
+TIMESPEC TS_VXO_P = PERIOD "VXO_P" 9.4 ns HIGH 50%;
+NET "VXO_P" TNM_NET = "VXO_P";
+
+# Specifying Inter FPGA Link source synchronous timing
+TIMESPEC TS_LINKClk_P0 = PERIOD "LINKClk_P0" 4 ns HIGH 50%;
+NET "LINKClk_P[0]" TNM_NET = "LINKClk_P0";
+
+TIMESPEC TS_LINKClk_P1 = PERIOD "LINKClk_P1" 4 ns HIGH 50%;
+NET "LINKClk_P[1]" TNM_NET = "LINKClk_P1";
+
+TIMESPEC TS_LINKClk_P2 = PERIOD "LINKClk_P2" 4 ns HIGH 50%;
+NET "LINKClk_P[2]" TNM_NET = "LINKClk_P2";
+

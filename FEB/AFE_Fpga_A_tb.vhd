@@ -14,7 +14,7 @@ use work.Proj_Defs.all;
 --entity FM_Tx is
 --	generic (Pwidth : positive);
 --		 port(clock,reset,Enable : in std_logic;
---				Data : in std_logic_vector(Pwidth - 1 downto 0);
+--				Data : in Pwidth - 1 downto 0;
 --				Tx_Out : buffer TxOutRec);
 --end FM_Tx;
 
@@ -261,12 +261,12 @@ END COMPONENT;
    signal AFEDat1_P : std_logic_vector(7 downto 0) := (others => '0');
    signal AFEDat1_N : std_logic_vector(7 downto 0) := (others => '0');
    signal GPI1,GPI0_N,GPI0_P : std_logic;
-   signal A7,R10, N8 : std_logic;
+   signal A7 : std_logic;
 
 	--BiDirs
    signal uCD : std_logic_vector(15 downto 0);
    signal SDD : std_logic_vector(15 downto 0);
-   signal UDQS,LDQS,SDRzq : std_logic;
+   signal UDQS,LDQS,SDRzq,Trig : std_logic;
    signal Temp : std_logic_vector(3 downto 0);
  
  	--Outputs
@@ -315,16 +315,15 @@ Type DDR_LSFR_Array is Array(0 to 7) of std_logic_vector(23 downto 0);
 signal DDR_LSFR0,DDR_LSFR1 : DDR_LSFR_Array;
 
    -- Clock period definitions
-	constant VXO_period : time := 10 ns; -- 6.277 ns;
-	constant DCO_period : time := 2.083333 ns;
-	constant RF_Period : time := 18.831 ns;
+	constant VXO_period : time := 6.25 ns; -- 6.277 ns;
 
 signal iAFEFR : std_logic_vector(11 downto 0);
 signal AFEDCODL : std_logic_vector(1 downto 0);
 
 signal Gap_Count : std_logic_vector(3 downto 0);
+signal BusTimer : std_logic_vector(4 downto 0);
 
-signal IntDQSClk,iDQS : std_logic;
+signal IntDQSClk,iDQS,IntDCOClk,IntClr : std_logic;
 signal BurstCount : std_logic_vector(3 downto 0);
 signal DDR_LSFR : std_logic_vector(23 downto 0);
 signal DDR_Tap : std_logic_vector(3 downto 0);
@@ -332,17 +331,19 @@ Type DDR_Rx is (Idle,WaitCS0,WaitCS1,WaitCS2,WaitCS3,EnableDQS,DisableDQS);
 signal DDR_Rx_State : DDR_Rx;
 
 signal BitCount : std_logic_vector(3 downto 0);
-signal RdReg : std_logic_vector(15 downto 0);
-signal FMWord : std_logic_vector(23 downto 0);  
+signal RdReg,FMTxData : std_logic_vector(15 downto 0);
+signal FMWord : std_logic_vector(23 downto 0);
 signal PresentAD : AddrPtr;
-signal ResetHi,TxEn,Clk53,TxReq,TxAck : std_logic;
-signal uBunchWidth : std_logic_vector(7 downto 0);  
+signal ResetHi,TxEn,Clk80,Clk53,TxReq,TxAck : std_logic;
+signal uBunchWidth : std_logic_vector(7 downto 0);
 signal Tx1_Out : TxOutRec;
 
 Type FM_State is (Idle, SetEnable, WaitEn, ClrEn);
 signal Tx_State : FM_State;
 
 signal FM_Index : integer range 0 to FM_size;
+
+signal uuCA : std_logic_vector(11 downto 0);
 
 component FM_Tx is
 	generic (Pwidth : positive);
@@ -382,8 +383,8 @@ BEGIN
 	GPI1 => GPI1,GPI0_N => GPI0_N ,GPI0_P => GPI0_P);
 
 FMTx1 : FM_Tx 
-	generic map (Pwidth => 24)
-	 port map(clock => VXO_P,
+	generic map (Pwidth => 24) --was 16
+	 port map(clock => Clk80,
 				reset => ResetHi,
 				Enable => TxEn,
 				Data => FMWord,
@@ -393,7 +394,7 @@ GPI0_N <= not Tx1_Out.FM;
 
 Initproc : process
 	begin
-	 CpldRst <= '0'; Gap_Count <= X"0"; GPI1 <= '0';
+	 CpldRst <= '0'; Gap_Count <= X"0";
 	 ResetHi <= '1';
 	wait for 100 ns;
 	 CpldRst <= '1';
@@ -401,50 +402,60 @@ Initproc : process
 	 wait;
 end process;
 
-ExtTrig : process
-	begin
-	 N8 <= '1'; 
-	wait for 3 us;
-	 N8 <= '0';
-	wait for 50 ns;
-	 N8 <= '1'; 
-	wait for 13.2 us;
-	 N8 <= '0';
-	wait for 50 ns;
-	 N8 <= '1'; 
-	wait for 15.71 us;
-	 N8 <= '0';
-	wait for 50 ns;
-	 N8 <= '1'; 
-	wait for 13.39 us;
-	 N8 <= '0';
-	wait for 50 ns;
-	 N8 <= '1'; 
-	 wait;
-end process;
+--ExtTrig : process
+--	begin
+--	 GPI0_P <= '0'; 
+--	 GPI0_N <= '1'; 
+--	wait for 3 us;
+--	 GPI0_P <= '1';
+--	 GPI0_N <= '0'; 
+--	wait for 50 ns;
+--	 GPI0_P <= '0'; 
+--	 GPI0_N <= '1'; 
+--	wait for 13.2 us;
+--	 GPI0_P <= '1';
+--	 GPI0_N <= '0'; 
+--	wait for 50 ns;
+--	 GPI0_P <= '0'; 
+--	 GPI0_N <= '1'; 
+--	wait for 15.71 us;
+--	 GPI0_P <= '1';
+--	 GPI0_N <= '0'; 
+--	wait for 50 ns;
+--	 GPI0_P <= '0'; 
+--	 GPI0_N <= '1'; 
+--	wait for 13.39 us;
+--	 GPI0_P <= '1';
+--	 GPI0_N <= '0'; 
+--	wait for 50 ns;
+--	 GPI0_P <= '0'; 
+--	 GPI0_N <= '1'; 
+--	 wait;
+--end process;
+--
+--ExtGate : process
+--	begin
+--	 GPI1 <= '0'; 
+--	wait for 1 us;
+--	 GPI1 <= '1';
+--	wait for 14 us;
+--	 GPI1 <= '0'; 
+--	wait for 1 us;
+--	 GPI1 <= '1';
+--	wait for 50 us;
+--	 GPI1 <= '0'; 
+--	 wait;
+--end process;
 
-ExtGate : process
-	begin
-	 R10 <= '0'; 
-	wait for 1 us;
-	 R10 <= '1';
-	wait for 14 us;
-	 R10 <= '0'; 
-	wait for 1 us;
-	 R10 <= '1';
-	wait for 50 us;
-	 R10 <= '0'; 
-	 wait;
-end process;
-
+-- The DCO frequency is 480 MHz, 160 * 3, the width is 6.25ns/6
  AFEDCO_process : process
   begin
 	AFEDCO_P <= "00";
 	AFEDCO_N <= "11";
-		wait for VXO_Period/9.6;
+		wait for VXO_Period/6;
 	AFEDCO_P <= "11";
 	AFEDCO_N <= "00";
-		wait for VXO_Period/9.6;
+		wait for VXO_Period/6;
    end process;
 
 VXO_process : process
@@ -461,26 +472,36 @@ VXO_process : process
  wait for VXO_period/2;
 end process;
 
+
 --GPI0_process : process
 -- begin
 --	GPI0_P <= '0';
 --	GPI0_N <= '1';
+---- wait for 19.9 ns;
+--   wait for 2us;
+--	GPI0_P <= '1';
+--	GPI0_N <= '0';
+---- wait for 19.9 ns;
+--	wait for 50 ns;
 --	GPI0_P <= '0';
 --	GPI0_N <= '1';
--- wait for 19.9 ns;
---	GPI0_P <= '1';
---	GPI0_N <= '0';
---	GPI0_P <= '1';
---	GPI0_N <= '0';
--- wait for 19.9 ns;
+-- wait;	
 --end process;
+
+Clk80_process : process
+ begin
+  Clk80 <= '0';
+  wait for 6.25ns;
+  Clk80 <= '1';
+  wait for 6.25ns;
+end process;
 
 RF_process : process
  begin
   Clk53 <= '0';
-  wait for RF_Period/2;
+  wait for 9.4159 ns;
   Clk53 <= '1';
-  wait for  RF_Period/2;
+  wait for 9.4159 ns;
 end process;
 
 uBunchWidthproc : process (Clk53,CpldRst)
@@ -508,8 +529,7 @@ uBunchWidthproc : process (Clk53,CpldRst)
 	
 end process;
 
-
-FMTx : Process(VXO_P,CpldRst)
+FMTx : Process(Clk80,CpldRst)
 
  begin
 
@@ -517,10 +537,10 @@ if CpldRst = '0' then
 
 FM_Index <= 0; TxAck <= '0';
 TxEn <= '0'; 
-FMWord <= X"112345"; -- Set bit 20 to iondicate beam on heartbeats
+FMWord <= X"112345"; -- Set bit 20 to indicate beam on heartbeats
 Tx_State <= Idle; 
 
-elsif rising_edge(VXO_P )
+elsif rising_edge(Clk80)
 
 then
 
@@ -612,14 +632,14 @@ then
 	AFEDCODL(1) <= AFEDCODL(0);
 	if AFEDCODL = "01" then 
 -- The framing signal is high at the beginning of the serial word
-   iAFEFR <= X"FC0";
+   iAFEFR <= X"FC0"; -- 111111000000
 -- Load a random value, then shift out
 	TxReg0(i) <= DDR_LSFR0(i)(5) & DDR_LSFR0(i)(5) & DDR_LSFR0(i)(5) & DDR_LSFR0(i)(5) & DDR_LSFR0(i)(5) & DDR_LSFR0(i)(5) 
 	           & DDR_LSFR0(i)(5) & DDR_LSFR0(i)(4 downto 0);
-	TxReg1(i) <= DDR_LSFR1(i)(5) & DDR_LSFR1(i)(5) & DDR_LSFR1(i)(5) & DDR_LSFR1(i)(5) & DDR_LSFR1(i)(5) & DDR_LSFR1(i)(5)  
-	           & DDR_LSFR1(i)(5) & DDR_LSFR1(i)(4 downto 0);
+	TxReg1(i) <= DDR_LSFR1(i)(12) & DDR_LSFR1(i)(12) & DDR_LSFR1(i)(12) & DDR_LSFR1(i)(12) & DDR_LSFR1(i)(12) & DDR_LSFR1(i)(12)  
+	           & DDR_LSFR1(i)(12) & DDR_LSFR1(i)(11 downto 7);
 	else TxReg0(i) <= '0' & TxReg0(i)(11 downto 1);
-	     TxReg1(i) <= '0' & TxReg1(i)(11 downto 1);
+	     TxReg1(i) <= TxReg1(i)(10 downto 0) & '0';
 	iAFEFR <= iAFEFR(10 downto 0) & iAFEFR(11);
 	end if;
 
@@ -650,7 +670,7 @@ DDRCmd : process
 	  uCA(11 downto 10) <= "00";
  	  uCD <= (others => 'Z');
 --	  PresentAD <= FIFORdAddr0(0);
-	  
+
 	wait for 200 ns;
 
 -- Issue a DDR reset
@@ -669,7 +689,7 @@ DDRCmd : process
 
 		  wait for 50 ns;
 
-		  uCA(9 downto 0) <= TrigCtrlAddr;
+		  uCA(9 downto 0) <= Inttrgenaddr;
  		  wait for 5 ns;
 		  CpldCS <= '0';
 		  wait for 10 ns;
@@ -681,10 +701,84 @@ DDRCmd : process
 		  wait for 10 ns;
 		  uCA(9 downto 0) <= (Others => 'Z');
 		  uCD <= (others => 'Z');
+		  
+		  wait for 15 ns;
+		  
+		  uCA(9 downto 0) <=  SlipCntRegAd;
+ 		  wait for 5 ns;
+		  CpldCS <= '0';
+		  uCD <= X"0000";
+		  uCWr <= '0';
+		  wait for 30 ns;
+		  uCWr <= '1';
+		  CpldCS <= '1';
+		  wait for 10 ns;
+		  uCA(9 downto 0) <= (Others => 'Z');
+		  uCD <= (others => 'Z');
+		  wait for 100 ns;
+
+		  uCA(9 downto 0) <=  SlipCtrlAd;
+ 		  wait for 5 ns;
+		  CpldCS <= '0';
+		  uCD <= X"0000";
+		  uCWr <= '0';
+		  wait for 30 ns;
+		  uCWr <= '1';
+		  CpldCS <= '1';
+		  wait for 10 ns;
+		  uCA(9 downto 0) <= (Others => 'Z');
+		  uCD <= (others => 'Z');
+		  wait for 100 ns;
+	
+--		  uCA(9 downto 0) <= "00" & X"41";
+-- 	  wait for 5 ns;
+--		  CpldCS <= '0';
+--		  wait for 10 ns;
+--      uCD <= X"0123";
+--		  uCWr <= '0';
+--		  wait for 30 ns;
+--		  uCWr <= '1';
+--		  CpldCS <= '1';
+--		  wait for 10 ns;
+--		  uCA(9 downto 0) <= (Others => 'Z');
+--		  uCD <= (others => 'Z');
+--		  wait for 50 ns;
+
 
 		  wait for 50 ns;
 
- 	     uCA(9 downto 0) <= GateAddr;
+		  uCA(9 downto 0) <=  InputMaskAddr;
+        uCD <= X"0002";
+		  wait for 5 ns;
+		  CpldCS <= '0';
+		  wait for 10 ns;
+ 		  uCWr <= '0';
+		  wait for 30 ns;
+		  uCWr <= '1';
+		  CpldCS <= '1';
+		  wait for 10 ns;
+		  uCA(9 downto 0) <= (Others => 'Z');
+		  uCD <= (others => 'Z');
+
+		  wait for 50 ns;
+
+		  wait for 50 ns;
+		  uCA(9 downto 0) <=  TrigCtrlAddr;
+ 		  wait for 5 ns;
+		  CpldCS <= '0';
+		  wait for 10 ns;
+        uCD <= X"0000"; -- uCD <= X"0300";
+		  uCWr <= '0';
+		  wait for 30 ns;
+		  uCWr <= '1';
+		  CpldCS <= '1';
+		  wait for 10 ns;
+		  uCA(9 downto 0) <= (Others => 'Z');
+		  uCD <= (others => 'Z');
+
+		  wait for 50 ns;
+
+ 	     uCA(9 downto 0) <=  GateAddr;
  		  wait for 5 ns;
 		  CpldCS <= '0';
 		  uCD <= X"0020";
@@ -698,7 +792,7 @@ DDRCmd : process
 
 		  wait for 50 ns;
 
- 	     uCA(9 downto 0) <= HistCtrlAd;
+ 	     uCA(9 downto 0) <=  HistCtrlAd;
  		  wait for 5 ns;
 		  CpldCS <= '0';
 		  uCD <= X"0020";
@@ -711,7 +805,7 @@ DDRCmd : process
 		  uCD <= (others => 'Z');
 
 		  wait for 50 ns;
- 	     uCA(9 downto 0) <= HistIntvalAd;
+ 	     uCA(9 downto 0) <=  HistIntvalAd;
  		  wait for 5 ns;
 		  CpldCS <= '0';
 		  uCD <= X"0080";
@@ -725,7 +819,6 @@ DDRCmd : process
 
 		  wait for 50 ns;
 
---  issue low word write
  	     uCA(9 downto 0) <= PipeLineAddr;
  		  wait for 5 ns;
 		  CpldCS <= '0';
@@ -739,12 +832,11 @@ DDRCmd : process
 		  uCD <= (others => 'Z');
 
 		  wait for 100 ns;
-
-		  uCA(9 downto 0) <= CSRRegAddr;
+		  
+		  uCA(9 downto 0) <= BeamOnLengthAd;
  		  wait for 5 ns;
 		  CpldCS <= '0';
-		  wait for 10 ns;
-        uCD <= X"0100";
+        uCD <= X"0070";
 		  uCWr <= '0';
 		  wait for 30 ns;
 		  uCWr <= '1';
@@ -753,7 +845,21 @@ DDRCmd : process
 		  uCA(9 downto 0) <= (Others => 'Z');
 		  uCD <= (others => 'Z');
 
-		  wait for 100 ns;
+		  wait for 50 ns;
+		  
+		  uCA(9 downto 0) <= BeamOffLengthAd;
+ 		  wait for 5 ns;
+		  CpldCS <= '0';
+        uCD <= X"0200";
+		  uCWr <= '0';
+		  wait for 30 ns;
+		  uCWr <= '1';
+		  CpldCS <= '1';
+		  wait for 10 ns;
+		  uCA(9 downto 0) <= (Others => 'Z');
+		  uCD <= (others => 'Z');
+
+		  wait for 50 ns;
 
 
 		 uCA(9 downto 0) <= "00" & X"30";
@@ -761,10 +867,10 @@ DDRCmd : process
 --for Loop_Index in 0 to 31 loop
 
 --  issue low word write
- 	     uCA(9 downto 0) <= InputMaskAddr;
+ 	     uCA(9 downto 0) <=  InputMaskAddr;
  		  wait for 5 ns;
 		  CpldCS <= '0';
-		  uCD <= X"FFFF";
+		  uCD <= X"000F";
 		  uCWr <= '0';
 		  wait for 30 ns;
 		  uCWr <= '1';
@@ -772,38 +878,11 @@ DDRCmd : process
 		  wait for 10 ns;
 		  uCA(9 downto 0) <= (Others => 'Z');
 		  uCD <= (others => 'Z');
-
 		  wait for 100 ns;
-
---  Enable self trigger
- 	    uCA(9 downto 0) <= IntTrgEnAddr; 
- 		  wait for 5 ns;
-		  CpldCS <= '0';
-        uCD <= X"0002";
-		  uCWr <= '0';
-		  wait for 30 ns;
-		  uCWr <= '1';
-		  CpldCS <= '1';
-		  wait for 10 ns;
-		  uCA(9 downto 0) <= (Others => 'Z');
-		  uCD <= (others => 'Z');
-
-	wait for 200 ns;
--- 	     uCA(9 downto 0) <= IntTrgThreshAd; 
--- 		  wait for 5 ns;
---		  CpldCS <= '0';
---        uCD <= X"001E";
---		  uCWr <= '0';
---		  wait for 30 ns;
---		  uCWr <= '1';
---		  CpldCS <= '1';
---		  wait for 10 ns;
---		  uCA(9 downto 0) <= (Others => 'Z');
---		  uCD <= (others => 'Z');
 
 	wait for 13071 ns;
 	
-	 	  uCA(9 downto 0) <= GateAddr;
+	 	  uCA(9 downto 0) <=  GateAddr;
  		  wait for 5 ns;
 		  CpldCS <= '0';
 		  uCD <= X"0020";
@@ -815,11 +894,11 @@ DDRCmd : process
 		  uCA(9 downto 0) <= (Others => 'Z');
 		  uCD <= (others => 'Z');
 
-		  uCA(9 downto 0) <= CSRRegAddr;
+		  uCA(9 downto 0) <=  CSRRegAddr;
  		  wait for 5 ns;
 		  CpldCS <= '0';
 		  wait for 10 ns;
-        uCD <= X"0000";
+        uCD <= X"0020";
 		  uCWr <= '0';
 		  wait for 30 ns;
 		  uCWr <= '1';
@@ -831,7 +910,7 @@ DDRCmd : process
 --end loop;		
 
 --  issue high word write
- 	     uCA(9 downto 0) <= TempDat0Ad; --SDRamRdPtrHiAd;
+ 	     uCA(9 downto 0) <=  TempDat0Ad; 
  		  wait for 5 ns;
 		  CpldCS <= '0';
         uCD <= X"0044";
@@ -846,7 +925,7 @@ DDRCmd : process
 		  wait for 50 ns;
 
 --  issue low word write
- 	     uCA(9 downto 0) <= TempCtrlAd; --SDRamRdPtrLoAd;
+ 	     uCA(9 downto 0) <=  TempCtrlAd; 
  		  wait for 5 ns;
 		  CpldCS <= '0';
         if Loop_Index = 0 then uCD <= X"0711"; -- X"FED0"; 
@@ -863,37 +942,54 @@ DDRCmd : process
 --end loop;		
 		  uCD <= (others => 'Z');
 
+		  FMTxData <= X"1234";
+ 
 for Loop_Index in 0 to 31 loop
 
- 	    uCA(9 downto 0) <= HistRd0Ad;
- 	    wait for 5 ns;
-		 CpldCS <= '0';
-		 uCRd <= '0';
-		 wait for 30 ns;
-		 uCRd <= '1';
-		 CpldCS <= '1';
-		 wait for 10 ns;
-		 uCA(9 downto 0) <= (Others => 'Z');
-		 wait for 50 ns;
+--  issue low word write
+	     uCA(9 downto 0) <=  LVDSTxFIFOAd; 
+ 		  wait for 5 ns;
+		  CpldCS <= '0';
+ 		  uCD <= FMTxData;
+		  uCWr <= '0';
+		  wait for 30 ns;
+  		  uCWr <= '1';
+		  CpldCS <= '1';
+		  FMTxData <= FMTxData + X"1111";
+	     wait for 10 ns;
+		  uCA(9 downto 0) <= (Others => 'Z');
+		  uCD <= (others => 'Z');
 
- 	    uCA(9 downto 0) <= HistRd1Ad;
- 	    wait for 5 ns;
-		 CpldCS <= '0';
-		 uCRd <= '0';
-		 wait for 30 ns;
-		 uCRd <= '1';
-		 CpldCS <= '1';
-		 wait for 10 ns;
-		 uCA(9 downto 0) <= (Others => 'Z');
-		 wait for 50 ns;
+
+-- 	    uCA(9 downto 0) <=  HistRd0Ad;
+-- 	    wait for 5 ns;
+--		 CpldCS <= '0';
+--		 uCRd <= '0';
+--		 wait for 30 ns;
+--		 uCRd <= '1';
+--		 CpldCS <= '1';
+--		 wait for 10 ns;
+--		 uCA(9 downto 0) <= (Others => 'Z');
+--		 wait for 50 ns;
+--
+-- 	    uCA(9 downto 0) <=  HistRd1Ad;
+-- 	    wait for 5 ns;
+--		 CpldCS <= '0';
+--		 uCRd <= '0';
+--		 wait for 30 ns;
+--		 uCRd <= '1';
+--		 CpldCS <= '1';
+--		 wait for 10 ns;
+--		 uCA(9 downto 0) <= (Others => 'Z');
+--		 wait for 50 ns;
 
 end loop;
 
 --  issue low word write
- 	     uCA(9 downto 0) <= "00" & X"0B"; --SDRamRdPtrLoAd;
+ 	     uCA(9 downto 0) <= "00" & X"0B"; 
  		  wait for 5 ns;
 		  CpldCS <= '0';
-		  uCD <= X"0050";
+		  uCD <= X"FF10";
 		  uCWr <= '0';
 		  wait for 30 ns;
 		  uCWr <= '1';
@@ -902,38 +998,7 @@ end loop;
 		  uCA(9 downto 0) <= (Others => 'Z');
 		  uCD <= (others => 'Z');
 	
-
---  issue low word write
--- 	  uCA(9 downto 0) <= AFEFifoStatAd;
--- 	  wait for 5 ns;
---		  CpldCS <= '0';
---		  uCRd <= '0';
---		  wait for 30 ns;
---		  uCRd <= '1';
---		  CpldCS <= '1';
---		  wait for 10 ns;
---		  uCA(9 downto 0) <= (Others => 'Z');
---		  wait for 50 ns;
---
---		  PresentAD <= PresentAD + 1;
-
---end loop;		
-		 wait for 15 us;
-
---  Enable self trigger
- 	    uCA(9 downto 0) <= IntTrgEnAddr; 
- 		  wait for 5 ns;
-		  CpldCS <= '0';
-        uCD <= X"0000";
-		  uCWr <= '0';
-		  wait for 30 ns;
-		  uCWr <= '1';
-		  CpldCS <= '1';
-		  wait for 10 ns;
-		  uCA(9 downto 0) <= (Others => 'Z');
-		  uCD <= (others => 'Z');
-
-		wait;
+	wait;
 			
 end process;
 

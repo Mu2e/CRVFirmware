@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<symbol version="7" name="SerialTx">
+    <symboltype>BLOCK</symboltype>
+    <timestamp>2015-10-20T19:0:41</timestamp>
+    <pin polarity="Output" x="0" y="368" name="data_out_to_pins_p[2:0]" />
+    <pin polarity="Output" x="0" y="400" name="data_out_to_pins_n[2:0]" />
+    <pin polarity="Input" x="0" y="496" name="clk_in_p" />
+    <pin polarity="Input" x="0" y="528" name="clk_in_n" />
+    <pin polarity="Input" x="0" y="656" name="clk_reset" />
+    <pin polarity="Input" x="0" y="688" name="io_reset" />
+    <pin polarity="Input" x="704" y="336" name="data_out_from_device[11:0]" />
+    <pin polarity="Output" x="704" y="496" name="clk_div_out" />
+    <graph>
+        <text style="fontsize:40;fontname:Arial" x="32" y="32">SerialTx</text>
+        <rect width="640" x="32" y="32" height="928" />
+        <line x2="32" y1="368" y2="368" style="linewidth:W" x1="0" />
+        <attrtext style="fontsize:24;fontname:Arial" attrname="PinName" x="36" y="368" type="pin data_out_to_pins_p[2:0]" />
+        <line x2="32" y1="400" y2="400" style="linewidth:W" x1="0" />
+        <attrtext style="fontsize:24;fontname:Arial" attrname="PinName" x="36" y="400" type="pin data_out_to_pins_n[2:0]" />
+        <line x2="32" y1="496" y2="496" x1="0" />
+        <attrtext style="fontsize:24;fontname:Arial" attrname="PinName" x="36" y="496" type="pin clk_in_p" />
+        <line x2="32" y1="528" y2="528" x1="0" />
+        <attrtext style="fontsize:24;fontname:Arial" attrname="PinName" x="36" y="528" type="pin clk_in_n" />
+        <line x2="32" y1="656" y2="656" x1="0" />
+        <attrtext style="fontsize:24;fontname:Arial" attrname="PinName" x="36" y="656" type="pin clk_reset" />
+        <line x2="32" y1="688" y2="688" x1="0" />
+        <attrtext style="fontsize:24;fontname:Arial" attrname="PinName" x="36" y="688" type="pin io_reset" />
+        <line x2="672" y1="336" y2="336" style="linewidth:W" x1="704" />
+        <attrtext style="alignment:RIGHT;fontsize:24;fontname:Arial" attrname="PinName" x="668" y="336" type="pin data_out_from_device[11:0]" />
+        <line x2="672" y1="496" y2="496" x1="704" />
+        <attrtext style="alignment:RIGHT;fontsize:24;fontname:Arial" attrname="PinName" x="668" y="496" type="pin clk_div_out" />
+    </graph>
+</symbol>

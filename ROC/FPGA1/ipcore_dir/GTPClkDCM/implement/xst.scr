@@ -1,0 +1,9 @@
+run
+-ifmt MIXED
+-top GTPClkDCM_exdes
+-p xc6slx25t-fgg484-3
+-ifn xst.prj
+-ofn GTPClkDCM_exdes
+-keep_hierarchy soft 
+-equivalent_register_removal no 
+-max_fanout 65535

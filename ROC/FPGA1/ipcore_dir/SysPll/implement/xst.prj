@@ -1,0 +1,2 @@
+vhdl work ../../SysPll.vhd
+vhdl work ../example_design/SysPll_exdes.vhd

@@ -82,7 +82,7 @@ architecture test of SysPLL_tb is
 
 
   -- we'll be using the period in many locations
-  constant PER1        : time := 10.0 ns;
+  constant PER1        : time := 6.25 ns;
 
 
   -- Declare the input clock signals
@@ -90,14 +90,14 @@ architecture test of SysPLL_tb is
   signal CLK_IN1_P     : std_logic := '1';
   signal CLK_IN1_N     : std_logic := '0';
   -- The high bits of the sampling counters
-  signal COUNT         : std_logic_vector(3 downto 1);
+  signal COUNT         : std_logic_vector(2 downto 1);
   -- Status and control signals
   signal RESET         : std_logic := '0';
   signal COUNTER_RESET : std_logic := '0';
   signal timeout_counter : std_logic_vector (13 downto 0) := (others => '0');
 --  signal defined to stop mti simulation without severity failure in the report
   signal end_of_sim : std_logic := '0';
-  signal CLK_OUT : std_logic_vector(3 downto 1);
+  signal CLK_OUT : std_logic_vector(2 downto 1);
 --Freq Check using the M & D values setting and actual Frequency generated
 
 component SysPLL_exdes
@@ -107,9 +107,9 @@ port
   CLK_IN1_N         : in  std_logic;
   -- Reset that only drives logic in example design
   COUNTER_RESET     : in  std_logic;
-  CLK_OUT           : out std_logic_vector(3 downto 1) ;
+  CLK_OUT           : out std_logic_vector(2 downto 1) ;
   -- High bits of counters driven by clocks
-  COUNT             : out std_logic_vector(3 downto 1);
+  COUNT             : out std_logic_vector(2 downto 1);
   -- Status and control signals
   RESET             : in  std_logic
  );

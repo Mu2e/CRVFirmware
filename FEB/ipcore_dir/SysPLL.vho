@@ -54,14 +54,13 @@
 -- "Output    Output      Phase     Duty      Pk-to-Pk        Phase"
 -- "Clock    Freq (MHz) (degrees) Cycle (%) Jitter (ps)  Error (ps)"
 ------------------------------------------------------------------------------
--- CLK_OUT1___160.000______0.000______50.0______325.000____150.000
--- CLK_OUT2___200.000______0.000______50.0______300.000____150.000
--- CLK_OUT3___100.000______0.000______50.0______200.000____150.000
+-- CLK_OUT1___160.000______0.000______50.0______200.000____150.000
+-- CLK_OUT2___100.000______0.000______50.0______400.000____150.000
 --
 ------------------------------------------------------------------------------
 -- "Input Clock   Freq (MHz)    Input Jitter (UI)"
 ------------------------------------------------------------------------------
--- __primary_____________100____________0.005
+-- __primary_____________160____________0.005
 
 
 -- The following code must appear in the VHDL architecture header:
@@ -74,7 +73,6 @@ port
   -- Clock out ports
   CLK_OUT1          : out    std_logic;
   CLK_OUT2          : out    std_logic;
-  CLK_OUT3          : out    std_logic;
   -- Status and control signals
   RESET             : in     std_logic
  );
@@ -92,7 +90,6 @@ your_instance_name : SysPLL
     -- Clock out ports
     CLK_OUT1 => CLK_OUT1,
     CLK_OUT2 => CLK_OUT2,
-    CLK_OUT3 => CLK_OUT3,
     -- Status and control signals
     RESET  => RESET);
 -- INST_TAG_END ------ End INSTANTIATION Template ------------

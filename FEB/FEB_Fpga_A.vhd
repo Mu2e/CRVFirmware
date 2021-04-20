@@ -29,8 +29,8 @@
 
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
 use IEEE.numeric_std.all;
-
 Library UNISIM;
 use UNISIM.vcomponents.all;
 
@@ -91,37 +91,38 @@ architecture behavioural of FEB_Fpga_A is
 ---------------------- Signal declarations -----------------------
 
 -- Define Arrays in terms of their size
-Type Array2x1 is Array(0 to 1) of std_logic_vector (0 downto 0);
+
+-- Use this to deal with (0 downto 0)
+Type Array_2x1 is Array(0 to 1) of std_logic_vector (0 downto 0);
+
+Type Array_2x2 is Array(0 to 1) of std_logic_vector(1 downto 0);
+Type Array_2x3 is Array(0 to 1) of std_logic_vector (2 downto 0);
+Type Array_2x4 is Array(0 to 1) of std_logic_vector(3 downto 0);
+Type Array_2x5 is Array(0 to 1) of std_logic_vector(4 downto 0);
 Type Array_2x6 is Array(0 to 1) of std_logic_vector(5 downto 0);
 Type Array_2x8 is Array(0 to 1) of std_logic_vector(7 downto 0);
 Type Array_2x9 is Array(0 to 1) of std_logic_vector(8 downto 0);
+Type Array_2x10 is Array(0 to 1) of std_logic_vector(9 downto 0); 
+Type Array_2x11 is Array(0 to 1) of std_logic_vector(10 downto 0); 
+Type Array_2x12 is Array(0 to 1) of std_logic_vector(11 downto 0);
 Type Array_2x16 is Array(0 to 1) of std_logic_vector(15 downto 0); 
 Type Array_2x32 is Array(0 to 1) of std_logic_vector(31 downto 0); 
+
+Type Array_8x2 is Array(0 to 7) of std_logic_vector(1 downto 0); 
+Type Array_8x4 is Array(0 to 7) of std_logic_vector(3 downto 0);
+Type Array_8x8 is Array(0 to 7) of std_logic_vector(7 downto 0);
+Type Array_8x10 is Array(0 to 7) of std_logic_vector(9 downto 0);
 Type Array_8x12 is Array(0 to 7) of std_logic_vector(11 downto 0);
 Type Array_8x16 is Array(0 to 7) of std_logic_vector(15 downto 0);
+
+Type Array_2x8x2 is Array(0 to 1) of Array_8x2;
+Type Array_2x8x4 is Array(0 to 1) of Array_8x4;
+Type Array_2x8x8 is Array(0 to 1) of Array_8x8;
+Type Array_2x8x10 is Array(0 to 1) of Array_8x10;
 Type Array_2x8x12 is Array(0 to 1) of Array_8x12;
 Type Array_2x8x16 is Array(0 to 1) of Array_8x16;
 
-Type Arrayu_2x2 is Array(0 to 1) of unsigned(1 downto 0);
-Type Arrayu_2x3 is Array(0 to 1) of unsigned (2 downto 0);
-Type Arrayu_2x4 is Array(0 to 1) of unsigned(3 downto 0);
-Type Arrayu_2x5 is Array(0 to 1) of unsigned(4 downto 0);
-Type Arrayu_2x6 is Array(0 to 1) of unsigned(5 downto 0);
-Type Arrayu_2x8 is Array(0 to 1) of unsigned(7 downto 0);
-Type Arrayu_2x10 is Array(0 to 1) of unsigned(9 downto 0); 
-Type Arrayu_2x11 is Array(0 to 1) of unsigned(10 downto 0); 
-Type Arrayu_2x12 is Array(0 to 1) of unsigned(11 downto 0);
-Type Arrayu_2x32 is Array(0 to 1) of unsigned(31 downto 0); 
-Type Arrayu_8x2 is Array(0 to 7) of unsigned(1 downto 0); 
-Type Arrayu_8x4 is Array(0 to 7) of unsigned(3 downto 0);
-Type Array_8x10 is Array(0 to 7) of unsigned(9 downto 0);
-Type Arrayu_2x8x2 is Array(0 to 1) of Arrayu_8x2;
-Type Arrayu_2x8x4 is Array(0 to 1) of Arrayu_8x4;
-Type Arrayu_2x8x10 is Array(0 to 1) of Array_8x10;
-Type Arrayu_8x8 is Array(0 to 7) of unsigned(7 downto 0);
-Type Arrayu_2x8x8 is Array(0 to 1) of Arrayu_8x8;
-
-Type Arrays_2x8 is Array(0 to 1) of signed(7 downto 0);
+-- Signed arrays
 Type Arrays_3x12 is Array(0 to 2) of signed(11 downto 0);
 Type Arrays_8x12 is Array(0 to 7) of signed(11 downto 0);
 Type Arrays_8x16 is Array(0 to 7) of signed(15 downto 0);
@@ -130,28 +131,39 @@ Type Arrays_8x2x12 is Array(0 to 1) of Arrays_8x12;
 Type Arrays_8x2x16 is Array(0 to 1) of Arrays_8x16;
 
 -- Chip dependent drive
-signal GPI0,GPO,GPOSel : std_logic;
+signal RefIn,GPI0,GPO,GPOSel : std_logic;
 -- Counter that determines the trig out pulse width
-signal GPOCount : unsigned(2 downto 0);
+signal GPOCount : std_logic_vector(2 downto 0);
 -- Clock and reset signals
-signal SysClk, PhDetClk, Clk200MHz, Buff_Rst,
-		 ResetHi, AsyncRst, SerdesRst, Seq_Rst, AFEClk : std_logic;
+signal SysClk,Clk100MHz,Buff_Rst,ResetHi,AsyncRst, 
+		 Seq_Rst, AFEClk : std_logic;
+
 -- Synchronous edge detectors of uC read and write strobes
-Signal IdleDL,MaskSelect,GateReq : std_logic_vector (1 downto 0);
-signal uGA,RDDL,WRDL : unsigned(1 downto 0);
+signal IdleDL,MaskSelect,GateReq : std_logic_vector (1 downto 0);
+signal RDDL,uRDDL,WRDL,uWRDL : std_logic_vector(1 downto 0);
 
 -- uC data bus
 signal iCD,CDStage,ICAP_O : std_logic_vector(15 downto 0);
-signal AddrReg,uuCA : unsigned(11 downto 0);
+signal AddrReg,uAddrReg : std_logic_vector(11 downto 0);
 signal TrigType : std_logic_vector(11 downto 0);
 signal ControllerNo,PortNo : std_logic_vector(4 downto 0);
+
 -- Timing interval counters
-signal Counter1us : unsigned (7 downto 0);
-signal Counter10us : unsigned (10 downto 0);
-signal Counter1ms : unsigned (17 downto 0); 
-signal Count100ms : unsigned(6 downto 0);
-signal Counter1s : unsigned (27 downto 0);
-signal GateCounter, TurnOnTime,TurnOffTime,LEDTime : unsigned (8 downto 0);
+signal Counter1us  : std_logic_vector (7 downto 0);
+signal Counter10us : std_logic_vector (10 downto 0);
+signal Counter1ms  : std_logic_vector (17 downto 0); 
+signal Count100ms  : std_logic_vector (6 downto 0);
+signal Counter1s   : std_logic_vector (27 downto 0);
+signal GateCounter, TurnOnTime,TurnOffTime,LEDTime : std_logic_vector (8 downto 0);
+
+-- Signals for aligning RxOutClks
+Type AlignSeq_Type is (Idle,SendPDn,SendPEn,SendRst,WaitFR,CheckFR,RstCntr);
+signal AlignSeq : AlignSeq_Type;
+signal uSecCounter : std_logic_vector (8 downto 0);
+signal AlignReq, AFESel : std_logic_vector (1 downto 0);
+signal SlipCntReg : Array_2x3;
+Type OD_WriteState is (Idle, SetAFESel0, WrtAFE0, SetAFESel1, WrtAFE1); 
+signal OD_Write : OD_WriteState;
 
 -- trigger logic signals
 signal Strt_req, Seq_Busy,FlashEn,FlashGate, TrgSrc,
@@ -161,9 +173,9 @@ signal StatReg : std_logic_vector (3 downto 0);
 
 signal LEDSrc : std_logic;
 -- Make a test counter that increments with each read
-signal TestCount : unsigned (31 downto 0);
+signal TestCount : std_logic_vector (31 downto 0);
 -- Uptime counter to check for un-anticipated resets
-signal UpTimeCount : unsigned (31 downto 0);
+signal UpTimeCount : std_logic_vector (31 downto 0);
 signal UpTimeStage : std_logic_vector (31 downto 0);
 -- Number of data words per spill
 -- 80 MHz counter ADC sample #
@@ -171,38 +183,38 @@ signal PipelineSet,WidthReg : std_logic_vector (7 downto 0);
 signal BeamOnLength,BeamOffLength : std_logic_vector (11 downto 0);
 
 -- Event word cout
-signal EventWdCnt,NxtWdCount : unsigned (15 downto 0);
+signal EventWdCnt,NxtWdCount : std_logic_vector (15 downto 0);
 
-signal GPIDL,iWrtDL : Arrayu_2x2;
+signal GPIDL,iWrtDL : Array_2x2;
 signal WrtPtrRst,ADCSmplGate,EvBuffStatFIFO_Full,
 		 EvBuffStatFIFO_Empty,EvenWrtDone : std_logic_vector (1 downto 0);
 signal RdDone,EvBuffStat_rden : std_logic;
-signal EvBuffStatFIFO_Out,EvBuffStatFIFO_In : Array2x1;
+signal EvBuffStatFIFO_Out,EvBuffStatFIFO_In : Array_2x1;
 signal MaskReg,EvOvf : Array_2x8;
-signal HistWidth : Arrayu_2x8;
-signal GateWidth,uBunchOffset : Arrayu_2x12;
-signal DoneDly : Arrayu_2x3;
-signal ADCSmplCntr : Arrayu_2x8x4;
-signal ADCSmplCntReg : Unsigned (3 downto 0);
+signal HistWidth : Array_2x8;
+signal GateWidth,uBunchOffset : Array_2x12;
+signal DoneDly : Array_2x3;
+signal ADCSmplCntr : Array_2x8x4;
+signal ADCSmplCntReg : std_logic_vector (3 downto 0);
 
 -- Self trigger signals
 signal Ped_Reg,Diff_Reg,IntTrgThresh : Arrays_8x2x12;
 signal Ped_Avg : Arrays_8x2x16;
 signal Avg_En : Array_2x8;
-signal Pad_Avg_Count : Arrayu_2x5;
+signal Pad_Avg_Count : Array_2x5;
 signal Avg_Req : std_logic_vector(1 downto 0);
-signal SlfTrgEdge : Arrayu_2x8x2;
+signal SlfTrgEdge : Array_2x8x2;
 signal uBunchBuffOut,DDRAddrOut : std_logic_vector(31 downto 0);
-signal uBunch : unsigned(31 downto 0);
+signal uBunch : std_logic_vector(31 downto 0);
 signal uBunchWrt,uBunchRd,uBunchBuffEmpty,uBunchBuffFull,
-			DDRAddrRd,DDRAddrFull,DDRAddrEmpty : std_logic;
+		 DDRAddrRd,DDRAddrFull,DDRAddrEmpty : std_logic;
 
 Type Input_Seq_FSM is (Idle,Increment,WrtChanNo,WrtTimeStamp,WrtHits,
-							  WrtHitWdCnt,LdWrtAdHi);
+							  WrtHitWdCnt,LdNxtWrtAd);
 Type In_Seq_Array is Array(0 to 7) of Input_Seq_FSM;
 Type In_Seq_Array_2x8 is Array(0 to 1) of In_Seq_Array;
 signal Input_Seqs : In_Seq_Array_2x8;
-signal HitCntr : Arrayu_2x8x8;
+signal HitCntr : Array_2x8x8;
 signal In_Seq_Stat : Array_2x8;
 
 -- Octal DAC buffer FIFO control signals
@@ -210,13 +222,13 @@ signal ODFifoRdReq,ODFifoWrReq,ODFifoEmpty,Dev_Sel : std_logic;
 -- Octal DAC shadow RAM signals
 signal ShadowWrt : std_logic_vector (0 downto 0);
 signal ShadowOut : std_logic_vector (15 downto 0);
-signal SClkDL : unsigned (2 downto 0); 
+signal SClkDL : std_logic_vector (2 downto 0); 
 signal ODFifoData,ODFifoOut : std_logic_vector (27 downto 0);
 -- Dac control signals
-signal BiasActual,BiasTarget : Arrayu_2x12;
+signal BiasActual,BiasTarget : Array_2x12;
 signal RampGate : std_logic_vector (1 downto 0);
-signal ClkDiv : unsigned (2 downto 0);
-signal BitCount : unsigned (4 downto 0);
+signal ClkDiv : std_logic_vector (2 downto 0);
+signal BitCount : std_logic_vector (4 downto 0);
 signal DACShift : std_logic_vector (23 downto 0);
 signal AFERdReg : std_logic_vector (15 downto 0);
 Type  Serializer_FSM is (Idle,Shift,ClearSync,SetLoad);
@@ -226,20 +238,21 @@ Signal Octal_Shift : Serializer_FSM;
 signal RxOutClk : std_logic_vector (1 downto 0);
 -- Input buffer memory control signals
 signal Buff_In,Buff_Out : Array_2x8x16;
-signal Buff_Rd_Ptr,Buff_Wrt_Ptr,WrtWdCntAdLo,WrtWdCntAdHi,InWdCnt : Arrayu_2x8x10;
+signal Buff_Rd_Ptr,NextEvAddr,Buff_Wrt_Ptr,WrtCrrntWdCntAd,WrtNxtWdCntAd,InWdCnt : Array_2x8x10;
 signal NoHIts : Array_2x8;
 Signal Ins,Outs : Array_2x8x12;
 -- Deserialize frame along with the 8 data lines. Use the deserialized 
 -- frame signal as an input to the bitslip state machine
 signal AFE_Wrt,AFE_rd : Array_2x8;
 signal SerDesInP,SerDesInN : Array_2x9;
-signal sFrDat : Array_2x6;
-signal FrDat : Arrayu_2x6;
-signal SlipReq : std_logic_vector(1 downto 0);
-signal Slippause : Arrayu_2x4;
+signal FrDat : Array_2x6;
+signal FrDat2 : Array_2x6;
+signal SlipReq,SlipEn,SerdesRst,FR_OK,FRStat : std_logic_vector(1 downto 0);
+signal Slippause : Array_2x4;
+signal RstReqDL : Array_2x2;
 -- Input pipeline delay signals
-signal DPWrtAd,DPRdAd : Arrayu_2x8;
-signal PipeWrt : std_logic_vector(1 downto 0);
+signal DPWrtAd,DPRdAd : Array_2x8;
+signal PipeWrt, RstReq : std_logic_vector(1 downto 0);
 
 -- MIG LPDDR controller signals 
 signal AuxClk : std_logic;
@@ -249,7 +262,7 @@ signal SDWrtAd,SDWrtAdStage,SDRdAD,SDRdPtr : std_logic_vector(29 downto 0);
 signal SDwr_en,SDrd_en,SDCalDn,WrtCmdEn,SDRdCmdEn,SD_RstO,DDR_Reset,
 		 SDwr_full,SDwr_empty,SDwr_error,SDrd_full,SDrd_empty,SDrd_overflow,
 		 SDrd_error,SDwr_underrun,RdHi_LoSel,FifoRdD,WrtHi_LoSel,Even_Odd : std_logic;
-signal ResetCount : unsigned(3 downto 0);
+signal ResetCount : std_logic_vector(3 downto 0);
 constant RdBrstSiz : std_logic_vector(5 downto 0) := "000111";
 constant WrtBrstSiz : std_logic_vector(5 downto 0) := "000111";
 signal SDwr_count,DDR_Rd_Cnt : std_logic_vector(6 downto 0);
@@ -262,7 +275,7 @@ signal rxioclkn : std_logic_vector(1 downto 0);
 signal rx_serdesstrobe : std_logic_vector(1 downto 0);
 
 -- Signals for DDR write sequencer
-signal SampleCount,BuffRdCount : unsigned(8 downto 0);
+signal SampleCount,BuffRdCount : std_logic_vector(8 downto 0);
 
 Type Event_Builder_FSM is (Idle,Check_Ovf,Add_Wd_Count,Incr_Chan0,
 									Check_Mask0,WdCountWrt,WrtuBunchHi,WrtuBunchLo,
@@ -276,9 +289,8 @@ signal DDRWrtSeqStat : std_logic_vector(2 downto 0);
 signal EvBuffWrt,EvBuffRd,EvBuffEmpty,EvBuffFull,DRAMRdBuffWrt,PageRdStat,
 		 PageRdReq,DRAMRdBuffRd,DRAMRdBuffFull,DRAMRdBuffEmpty : std_logic;
 signal EvBuffDat,EvBufffOut,DRAMRdBuffDat,DRAMRdBuffOut : std_logic_vector(15 downto 0);
-signal PageWdCount : unsigned(7 downto 0);
-signal DRAMRdBuffWdsUsed,EvBuffWdsUsed : std_logic_vector(10 downto 0);
-signal DDRWrtCount : unsigned(10 downto 0);
+signal DRAMRdBuffWdsUsed,EvBuffWdsUsed,PageWdCount : std_logic_vector(10 downto 0);
+signal DDRWrtCount : std_logic_vector(10 downto 0);
 
 signal AFE_Num  : Integer range 0 to 2; 
 signal Chan_Num : integer range 0 to 7;
@@ -297,24 +309,25 @@ signal Rx1Dat,Rx1DatReg : std_logic_vector(23 downto 0);
 signal RxOut : RxOutRec;
 signal RxIn : RxInRec;
 -- Signals used by the phase detector
-signal FBDiv,TxEn,FMTxBuff_wreq,FMTxBuff_empty,FMTxBuff_full,PhDtct,SqWav,BeamOn : std_logic;
+signal TxEn,FMTxBuff_wreq,FMTxBuff_empty,FMTxBuff_full,PhDtct,SqWav,BeamOn : std_logic;
+signal FBDiv : std_logic_vector(2 downto 0);
 signal TxOuts : TxOutRec;
 
 -- Histogrammer signals
-signal HistGateCnt0,HistGateCnt1 : unsigned(15 downto 0);
+signal HistGateCnt0,HistGateCnt1 : std_logic_vector(15 downto 0);
 signal HistInterval : std_logic_vector(15 downto 0);
 signal HistChan : std_logic_vector(2 downto 0);
 signal HistMode : std_logic;
 signal Triplet : Arrays_2x3x12;
 signal Peak : Array_2x8;
 signal HistEn,HistInit,HistEnReq : std_logic_vector(1 downto 0);
-signal HistTimer,HistEnDl : Arrayu_2x2;
+signal HistTimer,HistEnDl : Array_2x2;
 Type Wen_Array is Array(0 to 1) of std_logic_vector(0 downto 0);
 signal Hist_wena,Hist_wenb : Wen_Array;
-signal HistAdaReg,HistAddra : Arrayu_2x10;
-signal HistAddrb : Arrayu_2x11;
+signal HistAdaReg,HistAddra : Array_2x10;
+signal HistAddrb : Array_2x11;
 signal Hist_Outa : Array_2x32;
-signal Hist_Data : Arrayu_2x32;
+signal Hist_Data : Array_2x32;
 signal Hist_Datb,Hist_Outb : Array_2x16;
 signal Hist_Offset_Reg : signed(11 downto 0);
 
@@ -322,10 +335,11 @@ signal TempEn : std_logic;
 signal TempCtrl : std_logic_vector(3 downto 0);
 signal One_Wire_Out : std_logic_vector(15 downto 0);
 
-begin
+-- Simon 
 
-uGA <= unsigned(GA);
-uuCA <= unsigned(uCA);
+signal FRSimonSync : Array_2x3;
+
+begin
 
 -- IBUFDS: Differential Input Buffer
 GPI0DiffIn : IBUFDS
@@ -345,8 +359,7 @@ Sys_PLL : SysPLL
     CLK_IN1_N => ClkB_N,
     -- Clock out ports
     CLK_OUT1 => SysClk,
-    CLK_OUT2 => Clk200MHz,
-	 CLK_OUT3 => PhDetClk,
+    CLK_OUT2 => Clk100MHz,
 -- Status and control signals
     RESET  => ResetHi);
 
@@ -415,15 +428,15 @@ port map (
 -- Read the temperature/ID chip on the four connectoed CMBs
 OneWire : One_Wire 
 		 port map 
-			(reset => ResetHi, clock => SysClk,
-			 WRDL => WRDL,GA => uGA, uCA => uuCA,
-			 Counter1us => Counter1us, Temp => Temp,
-			 TempEn => TempEn, TempCtrl => TempCtrl,
-			uCD => uCD,One_Wire_Out => One_Wire_Out);
+			(reset => CpldRst, clock => Clk100MHz,
+			 CpldCS => CpldCS, uCWr => uCWr, GA => GA, 
+			 uCA => uCA, Temp => Temp, TempEn => TempEn, 
+			 TempCtrl => TempCtrl, uCD => uCD,
+			 One_Wire_Out => One_Wire_Out);
 
 FMTx : FM_Tx 
 	generic map (Pwidth => 16)
-  port map (clock => SysClk,
+  port map (clock => Clk100MHz,
 				reset => ResetHi,
 				Enable => TxEn,
 				Data => TxPDat,
@@ -433,7 +446,7 @@ TxEn <= not FMTxBuff_empty and not TxOuts.Done;
 
 -- Buffer data written from the uC to the LVDS Tx port
 FMTx_Buff : LVDSTxBuff
-  PORT MAP (clk => SysClk,
+  PORT MAP (clk => Clk100MHz,
     rst => ResetHi, 
     din => uCD,
     wr_en => FMTxBuff_wreq,
@@ -445,7 +458,7 @@ FMTx_Buff : LVDSTxBuff
 -- FM Receiver for microbunch number
 FMRx1 : FM_Rx 
 	generic map(Pwidth => 24)
-	port map(SysClk => SysClk, RxClk => Clk200MHz, 
+	port map(SysClk => SysClk, RxClk => SysClk, 
 				reset => ResetHi,
 				Rx_In => RxIn,
 				Data => Rx1Dat, 
@@ -454,7 +467,7 @@ RxIn.FM <= GPI0;
 
 -- FIFO for queueing serial data destined for AFEs and DACs
 CmdFifo : Cmd_FIFO
-  port map (clk => SysClk, rst => ResetHi,
+  port map (clk => Clk100MHz, rst => ResetHi,
     wr_en => ODFifoWrReq,rd_en => ODFifoRdReq,
     din => ODFifoData,
     dout => ODFifoOut,
@@ -462,7 +475,7 @@ CmdFifo : Cmd_FIFO
 
 -- Ram for storing DAC values for readback
 ShadowRam : DAC_Ram
-port map (clka => SysClk,
+port map (clka => Clk100MHz,
     wea => ShadowWrt,
     addra => uCA(7 downto 0),
     dina => uCD,
@@ -474,7 +487,7 @@ uBunchBuff : SCFIFO_32x256
 				clk => SysClk,
 				wr_en => uBunchWrt,
 				rd_en => uBunchRd,
-				din => std_logic_vector(uBunch),
+				din => uBunch,
     dout => uBunchBuffOut, 
     empty => uBunchBuffEmpty,
 	 full => uBunchBuffFull);
@@ -485,7 +498,7 @@ DDRAddrBuff : SCFIFO_32x256
 				clk => SysClk,
 				wr_en => uBunchWrt,
 				rd_en => DDRAddrRd,
-				din => std_logic_vector(uBunch),
+				din => uBunch,
     dout => DDRAddrOut, 
     empty => DDRAddrEmpty,
 	 full => DDRAddrFull);
@@ -519,6 +532,11 @@ SerDesInP(0) <= (AFEFR_P(0) & AFEDat0_P);
 SerDesInN(0) <= (AFEFR_N(0) & AFEDat0_N);
 SerDesInP(1) <= (AFEFR_P(1) & AFEDat1_P);
 SerDesInN(1) <= (AFEFR_N(1) & AFEDat1_N);
+-- Simon
+--SerDesInP(0) <= (AFEDat0_P);
+--SerDesInN(0) <= (AFEDat0_N);
+--SerDesInP(1) <= (AFEDat1_P);
+--SerDesInN(1) <= (AFEDat1_N);
 
 GenOnePerAFE : for i in 0 to 1 generate
 
@@ -534,13 +552,13 @@ EvBuffStatFIFO : FIFO_DC_32x1
 		  full => EvBuffStatFIFO_Full(i),
 		  empty => EvBuffStatFIFO_Empty(i));
 
--- 512 x 32 Ram - 1/4 of the usable ADC range
+-- 1024 x 32 Ram - 1/2 of the usable ADC range
 Hist : Hist_Ram
   port map (rsta => ResetHi,rstb => ResetHi,
-	 clka => RxOutClk(i),clkb => SysClk,
+	 clka => RxOutClk(i),clkb => Clk100MHz,
     wea => Hist_wena(i),web => Hist_wenb(i),
-	 addra => std_logic_vector(HistAddra(i)), addrb => std_logic_vector(HistAddrb(i)),
-    dina => std_logic_vector(Hist_Data(i)), douta => Hist_Outa(i),
+	 addra => HistAddra(i), addrb => HistAddrb(i),
+    dina => Hist_Data(i), douta => Hist_Outa(i),
 	 dinb => Hist_Datb(i), doutb => Hist_Outb(i));
 
 -- Deserialize x6, since the maximum supported is x10. Concatenate two 6 bit
@@ -568,8 +586,8 @@ port map (
 	rxserdesstrobe => rx_serdesstrobe(i),
 	gclk    		=> RxOutClk(i),
 	bitslip   	=> SlipReq(i),
-	reset   		=> SerdesRst,
-  data_out(53 downto 48)  => sFrDat(i),
+	reset   		=> SerdesRst(i),
+  data_out(53 downto 48)  => FrDat(i),
   data_out(47 downto 42)  => Ins(i)(7)(11 downto 6),
   data_out(41 downto 36)  => Ins(i)(6)(11 downto 6),
   data_out(35 downto 30)  => Ins(i)(5)(11 downto 6),
@@ -581,15 +599,30 @@ port map (
   debug_in  	=> "00",
   debug    		=> open);
 
-   FrDat(i) <= unsigned(sFrDat(i));
-	
+--LVDSInDatFR : serdes_1_to_n_data_ddr_s8_diff generic map(
+--      	S		=> S,			
+--      	D		=> 1)
+--port map (                   
+--	use_phase_detector 	=> '1',	-- '1' enables the phase detector logic
+--	datain_p     	=> SerDesInP(i)(8 downto 8),
+--	datain_n     	=> SerDesInN(i)(8 downto 8),
+--	rxioclkp    	=> rxioclkp(i),
+--	rxioclkn   		=> rxioclkn(i),
+--	rxserdesstrobe => rx_serdesstrobe(i),
+--	gclk    		=> RxOutClk(i),
+--	bitslip   	=> '0',
+--	reset   		=> SerdesRst(i),
+--  data_out(5 downto 0)   => FrDat(i),
+--  debug_in  	=> "00",
+--  debug    		=> open);
+
 -- pipeline is 96 bits wide which does eight channels of ADC data
 Pipeline : AFE_DP_Pipeline
   PORT MAP (
     clka => RxOutClk(i),
     wea => PipeWrt(i downto i),
-    addra => std_logic_vector(DPWrtAd(i)),
-    addrb => std_logic_vector(DPRdAd(i)),
+    addra => DPWrtAd(i),
+    addrb => DPRdAd(i),
     dina(95 downto 84) => Ins(i)(7), dina(83 downto 72) => Ins(i)(6),
     dina(71 downto 60) => Ins(i)(5), dina(59 downto 48) => Ins(i)(4),
     dina(47 downto 36) => Ins(i)(3), dina(35 downto 24) => Ins(i)(2),
@@ -604,8 +637,8 @@ Pipeline : AFE_DP_Pipeline
 end generate;
 
 AsyncRst <= '1' when ResetHi = '1' or (uCWr = '0' and CpldCS = '0' and uCD(5) = '1' 
-					 and ((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = CSRRegAddr)
-													  or uuCA(9 downto 0) =  CSRBroadCastAd)) else '0';
+					 and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr)
+													  or uCA(9 downto 0) =  CSRBroadCastAd)) else '0';
 
 -- DRAM input buffer FIFOs
 -- 16 DP Rams 12 bits each. Four FPGAs do 64 channels in total
@@ -619,61 +652,81 @@ AFEBuff : DP_Ram_1kx16
     wea => AFE_Wrt(i)(k downto k), 
     dina => Buff_In(i)(k),
 	 doutb => Buff_Out(i)(k),
-	 addra => std_logic_vector(Buff_Wrt_Ptr(i)(k)),
-	 addrb => std_logic_vector(Buff_Rd_Ptr(i)(k)));
+	 addra => Buff_Wrt_Ptr(i)(k),
+	 addrb => Buff_Rd_Ptr(i)(k));
 end generate;
 end generate;
+
+--Debug(9 downto 6) <= "0000";
 
 -------------------------- Phase Detector logic ---------------------------
 
--- The external reference frequency is 25MHz, so divide 100MHz by 4 to compare 
--- equal frequencies with the phase detector
-IntClkDiv : process(PhDetClk,CpldRst)
-
+-- The external reference frequency is 25MHz so divide 160MHz
+-- by 8 to compare two equal frequencies with the phase detector
+IntClkDiv : process(SysClk,CpldRst)
 begin
  if CpldRst = '0' then 
-	FBDiv <= '0'; 
+ 
+	FBDiv <= "000"; 
 	SqWav <= '0';
-  elsif rising_edge(PhDetClk) then 
-	FBDiv <= not FBDiv;
-	 if FBDiv = '0' then 
-		SqWav <= not SqWav;
-	  else SqWav <= SqWav;
-	 end if;
- end if; -- CpldRst
+
+elsif falling_edge(SysClk) then
+
+ SqWav <= FBDiv(2);
+ FBDiv <= FBDiv + 1;
+
+end if; -- CpldRst
 end process IntClkDiv;
 
 ----------------- Phase Detector combinatorial outputs --------------------
 
-PhDtct <= TrgSrc and not(SqWav xor GPI0);
-A7 <= SqWav when uGA = 2 else PhDtct when uGA = 3 else GPO;
+--UpFF : process(FBDiv(1),SqWav)
+--begin
+-- if PhDtct = '1' and SqWav = '1' then PhDtct <= '0';
+--  elsif rising_edge(FBDiv(1)) then PhDtct <= '1';
+-- end if;
+--end process;
+
+--DnFF : process(Ref25MHz,PhDtct)
+--begin
+-- if PhDtct = '1' and SqWav = '1' then SqWav <= '0';
+--  elsif rising_edge(Ref25MHz) then SqWav <= '1';
+-- end if;
+--end process;
+
+PhDtct <= TrgSrc and not(FBDiv(2) xor RefIn);
+RefIn <= GPI0;
+
+A7 <= SqWav when GA = 2 else TrgSrc and PhDtct when GA = 3 else GPO;
 
 -- This must sit outside the gen loop
-Debugproc : process (RxOutClk(0), CpldRst)
-
-begin
-
+--Debugproc : process (RxOutClk(0), CpldRst)
+--
+--begin
+--
 -- if CpldRst = '0' then 
---		Debug(4 downto 2) <= "000";
-if rising_edge (RxOutClk(1)) then
-
-if (uGA = 0 and ADCSmplGate(1) = '1')
-or (uGA = 1 and SlfTrgEdge(1)(6) = 1) then Debug(4) <= '1';
-else Debug(4) <= '0';
-end if;
-
--- if SlfTrgEdge(1)(6) = 1 then Debug(3) <= '1';
---else Debug(3) <= '0';
+-- Debug(9 downto 2) <= (others => '0');
+-- 
+--elsif rising_edge (RxOutClk(0)) then
+--
+----Debug(1) <= ADCSmplGate(0);
+--Debug(1) <= not Debug(1);
+--if Input_Seqs(0)(1) = Idle then Debug(2) <= '0'; else Debug(2) <= '1'; end if;
+--
+--if SlfTrgEdge(0)(1) = 1 then Debug(3) <= '1'; else Debug(3) <= '0'; end if;
+--if Diff_Reg(0)(1) > IntTrgThresh(0)(1) then Debug(4) <= '1'; else Debug(4) <= '0'; end if;
+--
+--if SlfTrgEdge(0)(2) = 1 then Debug(5) <= '1'; else Debug(5) <= '0'; end if;
+--if Diff_Reg(0)(2) > IntTrgThresh(0)(2) then Debug(6) <= '1'; else Debug(6) <= '0'; end if;
+--
+--if SlfTrgEdge(0)(3) = 1 then Debug(7) <= '1'; else Debug(7) <= '0'; end if;
+--if Diff_Reg(0)(3) > IntTrgThresh(0)(3) then Debug(8) <= '1'; else Debug(8) <= '0'; end if;
+--
+--if SlfTrgEdge(0)(4) = 1 then Debug(9) <= '1'; else Debug(9) <= '0'; end if;
+----if Diff_Reg(0)(4) > IntTrgThresh(0)(4) then Debug(10) <= '1'; else Debug(10) <= '0'; end if;
+--
 --end if;
-if Input_Seqs(1)(6) = Idle then Debug(2) <= '0';
-else Debug(2) <= '1';
-end if;
---if GateWidth(1) = 0 then Debug(1) <= '0';
---else Debug(1) <= '1';
---end if;
-
-end if;
-end process;
+--end process;
 
 ----------------------- Logic using Serdes receive clocks -----------------------------
 
@@ -688,7 +741,9 @@ begin
 	DPWrtAd(i) <= X"08"; EvBuffStatFIFO_In(i) <= "0"; EvenWrtDone(i) <= '0';
 	DPRdAd(i) <= (others => '0'); PipeWrt(i) <= '0'; ADCSmplGate(i) <= '0';
 	iWrtDL(i) <= "00"; GateReq(i) <= '0'; GateWidth(i) <= (others => '0'); 
-	SlipReq(i) <= '0'; Slippause(i) <= X"0";  DoneDly(i) <= "000";
+	SlipReq(i) <= '0'; Slippause(i) <= X"0"; RstReqDL(i) <= "00"; SlipEn(i) <= '1';
+	SerdesRst(i) <= '1';
+	DoneDly(i) <= "000";
 	Triplet(i) <= (others => X"000"); HistTimer(i) <= "00"; Peak(i) <= X"00";
 	HistEnDl(i) <= "00";  Hist_wena(i) <= "0"; uBunchOffset(i) <= (others => '0');
 	HistAddra(i) <= (others => '0');	HistAdaReg(i) <= (others => '0');
@@ -698,16 +753,25 @@ begin
 
 elsif rising_edge (RxOutClk(i)) then
 
+	Debug(9+i) <= ADCSmplGate(i);
 -- Synchronous edge detector for uC write strobe w.r.t. deserializer output clock
 	iWrtDL(i)(0) <= not CpldCS and not uCWR;
 	iWrtDL(i)(1) <= iWrtDL(i)(0);
 
 	if iWrtDL(i) = 1 and uCD(8) = '1' and
-		((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = CSRRegAddr)
-										  or uuCA(9 downto 0) = CSRBroadCastAd)
+		((uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr)
+										  or uCA(9 downto 0) = CSRBroadCastAd)
 	  then Avg_Req(i) <= '1';
 	elsif Pad_Avg_Count(i) /= 0 then Avg_Req(i) <= '0';
 	end if;
+
+-- Reset for the input deserializer
+if CpldCS = '0' and uCWR = '0' and uCD(2) = '1' 
+   and ((uCA(11 downto 10) = GA and uCA = CSRRegAddr)
+	or uCA(9 downto 0) = CSRBroadCastAd)
+ then SerdesRst(i) <= '1';
+ else SerdesRst(i) <= '0';
+end if;
 
 	if Pad_Avg_Count(i) = 0 and FRDat(i) = 0 and Avg_Req(i) = '1'
 	then Pad_Avg_Count(i) <= "10001";
@@ -717,7 +781,7 @@ elsif rising_edge (RxOutClk(i)) then
 	end if;
 
 -- Engage serdes bit slip if shifted out framing signal isn't all 1's or all 0's
-	if (FRDat(i) /= 0 and FRDat(i) /= 63) and Slippause(i) = 0
+	if (FRDat(i) /= 0 and FRDat(i) /= 63) and AlignReq(i) = '0' and Slippause(i) = 0
 	then Slippause(i) <= X"F";
 	elsif Slippause(i) /= 0
 	then  Slippause(i) <= Slippause(i) - 1;
@@ -732,7 +796,7 @@ elsif rising_edge (RxOutClk(i)) then
 -- Read and write addresses for the pipeline delay
 if PipeWrt(i) = '1' and DPRdAd(i) = X"FF" then 
 	DPRdAd(i) <= (others => '0');
-	DPWrtAd(i) <= unsigned(PipelineSet);
+	DPWrtAd(i) <= PipelineSet;
   elsif PipeWrt(i) = '1' and DPRdAd(i) /= X"FF" then 
 		  DPWrtAd(i) <= DPWrtAd(i) + 1;
 		  DPRdAd(i)  <= DPRdAd(i) + 1;
@@ -746,9 +810,16 @@ if PipeWrt(i) = '1' and DPRdAd(i) = X"FF" then
 	end if;
 
 -- Channel mask register.
-	if iWrtDL(i) = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = InputMaskAddr
+	if iWrtDL(i) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = InputMaskAddr
 	 then MaskReg(i) <= uCD(8*i+7 downto 8*i); 
 	else MaskReg(i) <= MaskReg(i);
+	end if;
+
+-- SlipEn
+   if iWrtDL(i) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) =  AlignEnAd
+	  then SlipEn(i) <= uCD(i);
+	else
+	  SlipEn(i) <= SlipEn(i);
 	end if;
 
 -- Use this counter to append time since microbunch start to the ADC data
@@ -760,18 +831,18 @@ if PipeWrt(i) = '1' and DPRdAd(i) = X"FF" then
 
 -- Hold Gate request high until the next complete ADC sample is available
   if GateReq(i) = '0' and GateWidth(i) = 0 and TrigReq = '1'
-	then GateReq(i) <= '1';
+	then GateReq(i) <= '1'; --Debug(i+2) <= '1';
 	elsif GateReq(i) = '1' and GateWidth(i) /= 0
-	then GateReq(i) <= '0';
+	then GateReq(i) <= '0'; --Debug(i+2) <= '0';
 	else GateReq(i) <= GateReq(i);
   end if;
 
 -- Synchronize the live gate counter with the frame signal
 	if AsyncRst = '1' then GateWidth(i) <= (others => '0');
 elsif GateWidth(i) = 0 and FRDat(i) = 0 and GateReq(i) = '1' and BeamOn = '1'
-  then GateWidth(i) <= unsigned(BeamOnLength);
+  then GateWidth(i) <= BeamOnLength;
 elsif GateWidth(i) = 0 and FRDat(i) = 0 and GateReq(i) = '1' and BeamOn = '0'
-  then GateWidth(i) <= unsigned(BeamOffLength);
+  then GateWidth(i) <= BeamOffLength;
  elsif GateWidth(i) /= 0 and FRDat(i) = 0 
   then GateWidth(i) <= GateWidth(i) - 1;
  else GateWidth(i) <= GateWidth(i);
@@ -784,7 +855,7 @@ elsif DoneDly(i) /= 0 and FRDat(i) = 0
 else DoneDly(i) <= DoneDly(i);
 end if;
 
--- Allow time for the last ADC samples to be written before dclaring the 
+-- Allow time for the last ADC samples to be written before declaring the 
 -- event complete
 if DoneDly(i) = 1 then EvenWrtDone(i) <= '1';
 else EvenWrtDone(i) <= '0';
@@ -799,7 +870,6 @@ end if;
  end if;
 
 ------------------------ Histogramming logic ----------------------------
-
 -- First stage of the triplet register used for peak finding
 	if FRDat(i) = 0 then 
 	 case HistChan is
@@ -827,12 +897,12 @@ end if;
 -- Counter used for enabling the histogrammer for a specific time associated 
 -- with a trigger
 	if GateWidth(i) = 0 and FRDat(i) = 0 and GateReq(i) = '1' 
-	  and HistWidth(i) = 0 then HistWidth(i) <= unsigned(WidthReg);
+	  and HistWidth(i) = 0 then HistWidth(i) <= WidthReg;
 	elsif HistWidth(i) /= 0 and FRDat(i) = 0 then HistWidth(i) <= HistWidth(i) - 1;
 	else HistWidth(i) <= HistWidth(i);
 	end if;
 
--- Used these FFs to cross the clock boundary between sysclk and serdes clk
+-- Use these FFs to cross the clock boundary between sysclk and serdes clk
 	HistEnDl(i)(0) <= HistEn(i);
 	HistEnDl(i)(1) <= HistEnDl(i)(0);
 
@@ -846,9 +916,9 @@ end if;
 -- appear big endian when reading out..
 	if HistEnDl(i) = 1 or HistInit(i) = '1' then Hist_Data(i) <= (others => '0');
 	else
-	 if unsigned(Hist_Outa(i)(31 downto 16)) = X"FFFF" 
-		then Hist_Data(i) <= unsigned(Hist_Outa(i)) + X"00010001";
-	   else Hist_Data(i) <= unsigned(Hist_Outa(i)) + X"00010000";
+	 if Hist_Outa(i)(31 downto 16) = X"FFFF" 
+		then Hist_Data(i) <= Hist_Outa(i) + X"00010001";
+	   else Hist_Data(i) <= Hist_Outa(i) + X"00010000";
 	 end if;
 	end if;
 
@@ -873,7 +943,7 @@ end if;
 	then
 	   if Triplet(i)(1) > X"3FF" then HistAddra(i) <= "11" & X"FF";
 	elsif Triplet(i)(1) < X"000" then HistAddra(i) <= "00" & X"00";
-	 else HistAddra(i) <= unsigned(Triplet(i)(1)(9 downto 0));
+	 else HistAddra(i) <= std_logic_vector(Triplet(i)(1)(9 downto 0));
 	end if;
 	elsif HistTimer(i) = 2 then HistAddra(i) <= HistAdaReg(i);
 	else HistAddra(i) <= HistAddra(i);
@@ -888,8 +958,70 @@ end if;
 	else Hist_wena(i) <= "0";
 	end if;
 
+-----------------------------------------------------------------------------
+
+	RstReqDL(i)(0) <= RstReq(i);
+	RstReqDL(i)(1) <= RstReqDL(i)(0);
+
+-- Engage serdes bit slip if shifted out framing signal isn't all 1's or all 0's
+	if AlignReq(i) = '0' and Slippause(i) = 0 and (FRDat(i) /= 0 and FRDat(i) /= 63)
+	then Slippause(i) <= X"F";
+	elsif Slippause(i) /= 0
+	then  Slippause(i) <= Slippause(i) - 1;
+	else Slippause(i) <= Slippause(i);
+	end if;
+
+-- Allow time between requests for bit slip to take effect
+	if Slippause(i) = X"8" then 
+		SlipReq(i) <= '1';
+		--Debug(7+i) <= '1';
+	else 
+		SlipReq(i) <= '0';
+		--Debug(7+i) <= '0';
+	end if;
+
+-- Look at the deserilaized frame data. That tells you exactly how many
+-- bit slips will be required to align the deserialized ADC data
+Case SlipCntReg(i)(2 downto 1) is
+	when "00" =>  
+	if FRDat(i) = 0 or FRDat(i) = 63 then -- already aligned
+		FRStat(i) <= '1';
+	 else
+		FRStat(i) <= '0';
+	end if;
+	when "01" => 
+	if FRDat(i) = 15 or FRDat(i) = 48 then  -- two bit slips required 
+		FRStat(i) <= '1';
+	 else
+		FRStat(i) <= '0';
+	end if;
+	when "10" =>
+	if FRDat(i) = 3 or FRDat(i) = 60 then  -- four bit slips required  
+		FRStat(i) <= '1';
+	 else
+		FRStat(i) <= '0';
+	end if;
+	when others => FRStat(i) <= '0';
+end Case;
+
+if FRDat(i) = 0 then 
+	Debug(5+i) <= '1';
+ else
+	Debug(5+i) <= '0';
+end if;	
+
 end if;
 
+end process;
+
+-- FrDat2
+FrDatLong : process (RxOutClk(i), CpldRst)
+begin
+  if CpldRst = '0' then 
+    FrDat2(i) <= "000000";
+  elsif rising_edge (RxOutClk(i)) then
+    FrDat2(i) <= FrDat(i);
+  end if;
 end process;
 
 Gen_Eight_Chans : for k in 0 to 7 generate
@@ -902,11 +1034,11 @@ begin
 
 	Ins(i)(k)(5 downto 0) <= (others => '0');
 	Ped_Reg(i)(k) <= X"000"; SlfTrgEdge(i)(k) <= "00";
-	IntTrgThresh(i)(k) <= X"01C"; Ped_Avg(i)(k) <= (others => '0');
+	IntTrgThresh(i)(k) <= X"00C"; Ped_Avg(i)(k) <= (others => '0');
 	Diff_Reg(i)(k) <=  X"000"; Avg_En(i)(k) <= '0';
 	Buff_Wrt_Ptr(i)(k) <= (others => '0'); 
-	WrtWdCntAdLo(i)(k) <= (others => '0'); 
-	WrtWdCntAdHi(i)(k) <= (others => '0'); 
+	WrtCrrntWdCntAd(i)(k) <= (others => '0'); 
+	WrtNxtWdCntAd(i)(k) <= (others => '0'); 
    InWdCnt(i)(k) <= (others => '0'); AFE_Wrt(i)(k) <= '0'; 
 	Input_Seqs(i)(k) <= Idle;  In_Seq_Stat(i)(k) <= '0';
 	ADCSmplCntr(i)(k) <= "0000";
@@ -925,7 +1057,7 @@ elsif rising_edge (RxOutClk(i)) then
 	 end if;
 
 -- Pedestal registers
-	if iWrtDL(i) = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = PedRegAddr(i)(k)
+	if iWrtDL(i) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = PedRegAddr(i)(k)
 	then Ped_Reg(i)(k) <= signed(uCD(11 downto 0));
 	elsif FRDat(i) = 0 and Pad_Avg_Count(i) = 1 then Ped_Reg(i)(k) <= Ped_Avg(i)(k)(15 downto 4);
 	else Ped_Reg(i)(k) <= Ped_Reg(i)(k);
@@ -944,7 +1076,7 @@ elsif rising_edge (RxOutClk(i)) then
 	end if;
 
 -- Self trigger threshold registers
-	if iWrtDL(i) = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = ThreshRegAddr(i)(k)
+	if iWrtDL(i) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = ThreshRegAddr(i)(k)
 	 then IntTrgThresh(i)(k) <= signed(uCD(11 downto 0));
 	else IntTrgThresh(i)(k) <= IntTrgThresh(i)(k);
 	end if;
@@ -963,7 +1095,8 @@ elsif rising_edge (RxOutClk(i)) then
 	 else SlfTrgEdge(i)(k)(1) <= SlfTrgEdge(i)(k)(1);
 	 end if;
 
--- (Idle,Increment,WrtChanNo,WrtTimeStamp,WrtHits,WrtHitWdCnt,LdWrtAdHi);
+-- Input Sequencer (i: 0->1, k: 0->7)
+-- (Idle,Increment,WrtChanNo,WrtTimeStamp,WrtHits,WrtHitWdCnt,LdNxtWrtAd);
 case Input_Seqs(i)(k) is
 	When Idle =>
 	 if GateReq(i) = '1'
@@ -985,8 +1118,8 @@ case Input_Seqs(i)(k) is
 		elsif GateWidth(i) = 0 then Input_Seqs(i)(k) <= WrtHitWdCnt;
 		else Input_Seqs(i)(k) <= WrtHits;
 	   end if;
-	When WrtHitWdCnt => Input_Seqs(i)(k) <= LdWrtAdHi;
-	When LdWrtAdHi => Input_Seqs(i)(k) <= Idle;
+	When WrtHitWdCnt => Input_Seqs(i)(k) <= LdNxtWrtAd;
+	When LdNxtWrtAd => Input_Seqs(i)(k) <= Idle;
 end case;
 
 If Input_Seqs(i)(k) <= Idle then In_Seq_Stat(i)(k) <= '0';
@@ -1008,13 +1141,13 @@ end if;
 	end if;
 
 -- Store present write pointer so a leading word count can be stored at the end of the microbunch
-	if Input_Seqs(i)(k) = Increment then WrtWdCntAdLo(i)(k) <= Buff_Wrt_Ptr(i)(k);
-	else WrtWdCntAdLo(i)(k) <= WrtWdCntAdLo(i)(k);
+	if Input_Seqs(i)(k) = Increment then WrtCrrntWdCntAd(i)(k) <= Buff_Wrt_Ptr(i)(k);
+	else WrtCrrntWdCntAd(i)(k) <= WrtCrrntWdCntAd(i)(k);
 	end if;
 
 -- After writing the leading word count the pointer needs to go to the end of the event
-	if Input_Seqs(i)(k) = WrtHitWdCnt then WrtWdCntAdHi(i)(k) <= Buff_Wrt_Ptr(i)(k) + 1;
-	else WrtWdCntAdHi(i)(k) <= WrtWdCntAdHi(i)(k);
+	if Input_Seqs(i)(k) = WrtHitWdCnt then WrtNxtWdCntAd(i)(k) <= Buff_Wrt_Ptr(i)(k) + 1;
+	else WrtNxtWdCntAd(i)(k) <= WrtNxtWdCntAd(i)(k);
 	end if;
 
 -- DPRam write pointer
@@ -1022,8 +1155,8 @@ end if;
 	or Input_Seqs(i)(k) = WrtTimeStamp
 	or (Input_Seqs(i)(k) = WrtHits and FRDat(i) = 0) 
 	then Buff_Wrt_Ptr(i)(k) <= Buff_Wrt_Ptr(i)(k) + 1;
-	elsif Input_Seqs(i)(k) = WrtHitWdCnt then Buff_Wrt_Ptr(i)(k) <= WrtWdCntAdLo(i)(k);
-	elsif Input_Seqs(i)(k) = LdWrtAdHi then Buff_Wrt_Ptr(i)(k) <= WrtWdCntAdHi(i)(k);
+	elsif Input_Seqs(i)(k) = WrtHitWdCnt then Buff_Wrt_Ptr(i)(k) <= WrtCrrntWdCntAd(i)(k);
+	elsif Input_Seqs(i)(k) = LdNxtWrtAd then Buff_Wrt_Ptr(i)(k) <= WrtNxtWdCntAd(i)(k);
 	elsif WrtPtrRst(i) = '1' then Buff_Wrt_Ptr(i)(k) <= (others => '0');
 	else Buff_Wrt_Ptr(i)(k) <= Buff_Wrt_Ptr(i)(k);
 	end if;
@@ -1041,8 +1174,8 @@ end if;
 -- Write the microbunch number, channel number, and timestamp followed by ADC data
 	if Input_Seqs(i)(k) = WrtChanNo and FRDat(i) = 0 and SlfTrgEdge(i)(k) = 1 -- Diff_Reg(i)(k) > IntTrgThresh(i)(k)
 	 then Buff_In(i)(k) <= ControllerNo & PortNo & GA & ChanArray(8*i+k);
-  elsif Input_Seqs(i)(k) = WrtTimeStamp then Buff_In(i)(k) <= std_logic_vector(ADCSmplCntReg) & std_logic_vector(uBunchOffset(i));
-  elsif Input_Seqs(i)(k) = WrtHitWdCnt then Buff_In(i)(k) <= X"0" & "00" & std_logic_vector(InWdCnt(i)(k));
+  elsif Input_Seqs(i)(k) = WrtTimeStamp then Buff_In(i)(k) <= ADCSmplCntReg & uBunchOffset(i);
+  elsif Input_Seqs(i)(k) = WrtHitWdCnt then Buff_In(i)(k) <= X"0" & "00" & InWdCnt(i)(k);
   else
 	 Buff_In(i)(k) <= X"0" & Outs(i)(k);
  end if;
@@ -1067,23 +1200,20 @@ main : process(SysClk, CpldRst)
  
 	AFE_Num <= 0; Chan_Num <= 0;
 -- AFE input clock
-	AFEClk <= '0';  SerdesRst <= '1';
+	AFEClk <= '0';  AFERst <= '0'; 
 -- Synchronous edge detectors for various strobes
-	RDDL <= "00"; WRDL <= "00"; 
+	RDDL <= "00"; WRDL <= "00"; AddrReg <= (others => '0'); 
+	PulseSel <= '0'; FlashEn <= '0'; LEDSrc <= '0'; 
+	SlfTrgEn <= '0'; TurnOffTime <= '0' & X"70"; 
+	LEDTime <= '0' & X"30"; TurnOnTime <= '0' & X"01"; 
+	BeamOnLength <= X"050"; BeamOffLength <= X"700";
+	TmgSrcSel <= '0'; 
 -- Upper DRAM word staging register
 	CDStage <= (others => '0'); 
--- Control bits written by the uC
-	DACCS <= "111"; AddrReg <= (others => '0'); RampGate <= "00";
-	BiasTarget <= (others => X"000"); BiasActual <= (others => X"000"); 
-	DACLd <= '1'; DACClk <= '1'; DACDat <= '0'; Dev_Sel <= '0'; 
-	DACShift <= (others => '0'); Octal_Shift <= Idle; ClkDiv <= (others => '0');
-	BitCount <= "00000"; ODFifoWrReq <= '0'; ODFifoRdReq <= '0'; 
-	ODFifoData <= (others => '0');
 -- Test pulse generator signals
 	Buff_Rst <= '0'; Seq_Rst <= '0'; 
 	Strt_req <= '0'; TrigType <= X"000"; 
 	EventWdCnt <= (others => '0'); NxtWdCount <= (others => '0');
-	PipelineSet <= X"04";  WidthReg <= X"10";
 -- MIG related signals
 	SDWrtAd <= (others => '0'); SDWrtAdStage <= (others => '0'); 
    SDWrtCmd <= "000"; WrtCmdEn <= '0'; SDrd_en <= '0';
@@ -1091,38 +1221,30 @@ main : process(SysClk, CpldRst)
 	SDRdCmd <= "000"; SDRdCmdEn <= '0'; RdHi_LoSel <= '0'; Even_Odd <= '0';
    SDWrtDat <= (others => '0'); SDwr_en <= '0'; WrtHi_LoSel <= '0'; 
 
-	GateCounter <= '0' & X"00"; TurnOnTime <= '0' & X"01"; 
-	TurnOffTime <= '0' & X"70"; LEDTime <= '0' & X"30"; 
-	PulseSel <= '0';  FlashGate <= '0'; FlashEn <= '0'; FifoRdD <= '0'; LEDSrc <= '0';
-	MuxEn <= X"0"; Muxad <= "00"; MuxSelReg <= "000"; MuxadReg <= "00";
-	UpTimeStage <= (others => '0'); UpTimeCount <= (others => '0');
-	Counter1us <= X"00"; Counter10us <= (others => '0'); Counter1ms <= (others => '0');
-	Counter1s <= (others => '0');	TestCount <= (others => '0'); 
-	ResetCount <= (others => '0'); DDR_Reset <= '0'; 
-	AFEPDn <= "11"; AFECS <= "11"; AFESDI <= '0'; StatReg <= X"0"; TrigType <= X"000";
-	AFESClk <= '0'; AFERst <= '0'; SClkDL <= "000"; AFERdReg <= (others => '0');
 	Event_Builder <= Idle; NoHIts <= (others => X"00"); Read_Seq_Stat <= X"0";
-	TrgSrc <= '0'; DDR_Write_Seq <= Idle;
+	DDR_Write_Seq <= Idle;
 	DDR_Read_Seq <= Idle; Seq_Busy <= '0'; DDRWrtSeqStat <= "000";
 	Buff_Rd_Ptr(0) <= (others => (others => '0')); TrigReq <= '0';
 	Buff_Rd_Ptr(1) <= (others => (others => '0')); TrigReqD <= '0';
+	NextEvAddr(0) <= (others => (others => '0'));
+	NextEvAddr(1) <= (others => (others => '0'));
 	SampleCount <= (others => '0'); BuffRdCount <= (others => '0');
-	GPO <= '0'; GPOSel <= '0'; GPOCount <= "000"; HistEnReq <= "00"; RdDone <= '0';
-	HistInterval <= X"0800"; HistMode <= '0'; HistChan <= "000"; HistEn <= "00"; 
-	HistGateCnt0 <= (others => '0');	HistGateCnt1 <= (others => '0'); 
-	IdleDL <= "00"; FMTxBuff_wreq <= '0';
-	SlfTrgEn <= '0'; GPIDL(1) <= "00"; ADCSmplCntReg <= "1000"; uBunch <= (others => '0');
-	Hist_wenb <= (others => "0"); HistAddrb <= (others => (others => '0')); 
-	Hist_Datb <= (others => (others => '0'));  Hist_Offset_Reg <= (X"FF6");
-	Rx1DatReg <= (others => '0');
-	Count100ms <= (others => '0'); BeamOnLength <= X"050"; BeamOffLength <= X"700";
-	uBunchWrt <= '0'; uBunchRd <= '0'; TmgSrcSel <= '0'; EvOvf <=(others => X"FF");
-	BeamOn <= '0'; ControllerNo <= "00000"; PortNo <= "00000"; EvBuffStat_rden <= '0';
+	uBunchWrt <= '0'; uBunchRd <= '0'; 	GateCounter <= '0' & X"00"; 
+	BeamOn <= '0'; EvOvf <=(others => X"FF"); 	Rx1DatReg <= (others => '0');
+	FlashGate <= '0'; FifoRdD <= '0'; 
+	IdleDL <= "00"; GPIDL(1) <= "00"; uBunch <= (others => '0');
 	EvBuffWrt <= '0'; EvBuffRd <= '0'; EvBuffDat <= (others => '0'); PageRdReq <= '0';
 	DRAMRdBuffDat <= (others => '0'); DDRWrtCount <= (others => '0'); PageRdStat <= '0';
 	PageWdCount <= (others => '0'); DRAMRdBuffWrt <= '0'; DRAMRdBuffRd <= '0';
+	EvBuffStat_rden <= '0'; RdDone <= '0'; GPOCount <= "000"; GPO <= '0'; 
+	
+elsif rising_edge (SysClk) then 
 
- elsif rising_edge (SysClk) then 
+--if Input_Seqs(0)(0) /= Idle then
+--	Debug(7) <= '1';
+--else
+--	Debug(7) <= '0';
+--end if;
 
 -- Synchronous edge detectors for read and write strobes
 RDDL(0) <= not uCRD and not CpldCS;
@@ -1132,25 +1254,60 @@ WRDL(0) <= not uCWR and not CpldCS;
 WRDL(1) <= WRDL(0);
 
 -- Latch the address for post increment during reads
-if RDDL = 1 or WRDL = 1 then AddrReg <= uuCA;
+if RDDL = 1 or WRDL = 1 then AddrReg <= uCA;
 else AddrReg <= AddrReg;
 end if;
 
--- Reset for the input deserializer
-if CpldCS = '0' and uCWR = '0' and uCD(2) = '1' 
-   and ((uuCA(11 downto 10) = uGA and uuCA = CSRRegAddr)
-	or uuCA(9 downto 0) = CSRBroadCastAd)
- then SerdesRst <= '1';
- else SerdesRst <= '0';
+if WRDL = 1 and uCA(9 downto 0) = FlashCtrlAddr 
+-- Flash gate enable bit
+then FlashEn <= uCD(0);
+-- Choose between LED and flashgate
+	  PulseSel <= uCD(1);
+-- Select source for LED flasher pulse
+	  LEDSrc <= uCD(2);
+else FlashEn <= FlashEn;
+	  PulseSel <= PulseSel;
+	  LEDSrc <= LEDSrc;
 end if;
 
-if Strt_req = '1' then AFEClk <= '0'; 
- else AFEClk <= not AFEClk;
+-- Register for determining the turn on time 
+if WRDL = 1 and uCA(9 downto 0) = OnTimeAddr
+then TurnOnTime <= uCD(8 downto 0);
+else TurnOnTime <= TurnOnTime;
 end if;
 
-if WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = LVDSTxFIFOAd 
- then FMTxBuff_wreq <= '1';
-else FMTxBuff_wreq <= '0';
+-- Register for determining the turn off time  
+if WRDL = 1 and uCA(9 downto 0) = OffTimeAddr
+then TurnOffTime <= uCD(8 downto 0);
+else TurnOffTime <= TurnOffTime;
+end if;
+
+if WRDL = 1 and uCA(9 downto 0) = LEDTimeAddr
+then LEDTime <= uCD(8 downto 0);
+else LEDTime <= LEDTime;
+end if;
+
+-- Register for determining the live gate lengths
+   if WRDL = 1 and uCA(9 downto 0) = BeamOnLengthAd
+then BeamOnLength <= uCD(11 downto 0);
+else BeamOnLength <= BeamOnLength;
+end if;
+
+   if WRDL = 1 and uCA(9 downto 0) = BeamOffLengthAd
+then BeamOffLength <= uCD(11 downto 0);
+else BeamOffLength <= BeamOffLength;
+end if;
+
+-- Trigger control register bits
+if uWRDL = 1 and uCA(9 downto 0) = IntTrgEnAddr 
+then TmgSrcSel <= uCD(0); 
+	  SlfTrgEn <= uCD(1);
+else SlfTrgEn <= SlfTrgEn;
+	  TmgSrcSel <= TmgSrcSel;
+end if;
+
+if Strt_req = '1' then AFEClk <= '0'; Debug(8) <= '0';
+ else AFEClk <= not AFEClk; Debug(8) <= not Debug(8);
 end if;
 
 ----------------------- Flash gate logic ----------------------
@@ -1162,6 +1319,8 @@ or TmgSrcSel = '0' or FlashEn = '0'
 	then GateCounter <= (others => '0');
 else GateCounter <= GateCounter + 1;
 end if;
+
+--Debug(1) <= RxOut.Done;
 
 if SlfTrgEn = '1' and RxOut.Done = '1' and Rx1Dat(20) = '1' 
 	then BeamOn <= '1';
@@ -1177,42 +1336,50 @@ elsif GateCounter = TurnOffTime then FlashGate <= '0';
 else FlashGate <= FlashGate;
 end if;
 
--- Register for determining the turn on time 
-if WRDL = 1 and uuCA(9 downto 0) = OnTimeAddr
-then TurnOnTime <= unsigned(uCD(8 downto 0));
-else TurnOnTime <= TurnOnTime;
+if FlashEn = '1' and
+     ((PulseSel = '0' and (GateCounter = LEDTime or GateCounter = LEDTime + 1))
+   or (PulseSel = '1' and FlashGate = '1'))
+then Pulse <= '1';
+else Pulse <= '0';
 end if;
 
--- Register for determining the turn off time  
-if WRDL = 1 and uuCA(9 downto 0) = OffTimeAddr
-then TurnOffTime <= unsigned(uCD(8 downto 0));
-else TurnOffTime <= TurnOffTime;
+------------------------------- Trigger Logic ----------------------------
+
+-- Global reset term
+if WRDL = 1 and uCD(5) = '1' 
+	and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr)
+											or uCA(9 downto 0) = CSRBroadCastAd)
+then Buff_Rst <= '1';
+else Buff_Rst <= '0';
 end if;
 
-if WRDL = 1 and uuCA(9 downto 0) = LEDTimeAddr
-then LEDTime <= unsigned(uCD(8 downto 0));
-else LEDTime <= LEDTime;
+-- AFE specific reset
+if uCWR = '0' and CpldCS = '0' and uCD(6) = '1'  
+	and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr)
+									      or uCA(9 downto 0) = CSRBroadCastAd)
+then AFERst <= '1';
+else AFERst <= '0';
 end if;
 
--- Register for determining the live gate lengths
-   if WRDL = 1 and uuCA(9 downto 0) = BeamOnLengthAd
-then BeamOnLength <= uCD(11 downto 0);
-else BeamOnLength <= BeamOnLength;
+-- Trig out width counter
+if GPOCount = 0 and TrigReq = '1' then GPOCount <= "111";
+elsif GPOCount /= 0 then GPOCount <= GPOCount - 1;
+else GPOCount <= GPOCount;
 end if;
 
-   if WRDL = 1 and uuCA(9 downto 0) = BeamOffLengthAd
-then BeamOffLength <= uCD(11 downto 0);
-else BeamOffLength <= BeamOffLength;
+-- Trig Out or SpillGate on the GPO LEMO.
+   if TrigReq = '1' then GPO <= '1';
+elsif GPOCount = 1 then GPO <= '0';
+else GPO <= GPO;
 end if;
 
--- Register for defining the geographical address of the FEB
-   if WRDL = 1 and uuCA(9 downto 0) =  FEBAddresRegAd then 
-		ControllerNo <= uCD(12 downto 8); 
-		PortNo <= uCD(4 downto 0);
-	else
-	   ControllerNo <= ControllerNo;
-		PortNo <= PortNo;
-	end if;
+-- Buff reset will clear the FM receiver parity error (if any)
+if WRDL = 1 and uCD(7) = '1' 
+	and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr) 
+											or uCA(9 downto 0) = CSRBroadCastAd)
+then RxIn.Clr_Err <= '1';
+else RxIn.Clr_Err <= '0';
+end if;
 
 -- Latch the trigger type
 -- If internally generated use these bits
@@ -1224,10 +1391,10 @@ end if;
 if RxOut.Done = '1' and Rx1Dat(21) = '1' and Rx1Dat(19 downto 0) = X"00000"
 	then uBunch(31 downto 20) <= uBunch(31 downto 20) + 1;
 		  uBunch(19 downto 0) <= (others => '0');
- elsif RxOut.Done = '1' and Rx1Dat(21) = '1' and unsigned(Rx1Dat(19 downto 0)) /= 0 
-	then uBunch <= uBunch(31 downto 20) & unsigned(Rx1Dat(19 downto 0));
+ elsif RxOut.Done = '1' and Rx1Dat(21) = '1' and Rx1Dat(19 downto 0) /= 0 
+	then uBunch <= uBunch(31 downto 20) & Rx1Dat(19 downto 0);
  elsif RxOut.Done = '1' and Rx1Dat(21) = '0'
-	then uBunch <= X"000" & unsigned(Rx1Dat(19 downto 0));
+	then uBunch <= X"000" & Rx1Dat(19 downto 0);
 else uBunch <= uBunch;
 end if;
 
@@ -1260,7 +1427,7 @@ end if;
   else RdDone <= '0';
  end if;
 
- if Event_Builder = Add_Wd_Count or (SlfTrgEn = '0' and unsigned(EvBuffStatFIFO_Empty) = 0)
+ if Event_Builder = Add_Wd_Count or (SlfTrgEn = '0' and EvBuffStatFIFO_Empty = 0)
    then EvBuffStat_rden <= '1';
  else EvBuffStat_rden <= '0';
  end if; 
@@ -1269,7 +1436,7 @@ end if;
 
 Case Event_Builder is
    When Idle => Read_Seq_Stat <= X"0";
-	 	if unsigned(EvBuffStatFIFO_Empty) = 0 and SlfTrgEn = '1' and RdDone = '0'
+	 	if EvBuffStatFIFO_Empty = 0 and SlfTrgEn = '1' and RdDone = '0'
 		then Event_Builder <= Check_Mask0;
 		else Event_Builder <= Idle;
 		end if;
@@ -1278,15 +1445,15 @@ Case Event_Builder is
 		  then Event_Builder <= Check_Ovf;
 		 else Event_Builder <= Incr_Chan0;
 		end if;
-	When Incr_Chan0 => Read_Seq_Stat <= X"2"; 
-			if AFE_Num = 1 and Chan_Num = 7 
-				then Event_Builder <= WdCountWrt;
-			else Event_Builder <= Check_Mask0;
-			end if;
 	When Check_Ovf => Read_Seq_Stat <= X"3"; 
 			if EvOvf(AFE_Num)(Chan_Num) = '0' 
 				then Event_Builder <= Add_Wd_Count;
 			else Event_Builder <= Incr_Chan0;
+			end if;
+	When Incr_Chan0 => Read_Seq_Stat <= X"2"; 
+			if AFE_Num = 1 and Chan_Num = 7 
+				then Event_Builder <= WdCountWrt;
+			else Event_Builder <= Check_Mask0;
 			end if;
 	When Add_Wd_Count => Event_Builder <= Incr_Chan0; Read_Seq_Stat <= X"4"; 
 	When WdCountWrt => Event_Builder <= WrtuBunchHi; Read_Seq_Stat <= X"5"; 
@@ -1317,16 +1484,14 @@ End Case;
 
 for i in 0 to 1 loop
 for j in 0 to 7 loop
-if	unsigned(Buff_Out(i)(j)) = 0 then NoHIts(i)(j) <= '1';
+if	Buff_Out(i)(j) = 0 then NoHIts(i)(j) <= '1';
 else NoHIts(i)(j) <= '0';
 end if;
 end loop;
 end loop;
-
- NxtWdCount <= EventWdCnt + unsigned(Buff_Out(AFE_Num)(Chan_Num));
-
- if Event_Builder = WdCountWrt 
-	then EvBuffDat <= std_logic_vector(EventWdCnt);
+--EvOvf /= (X"00",X"00") & (14 downto 0);
+ if Event_Builder = WdCountWrt
+	then EvBuffDat <= EventWdCnt;
 elsif Event_Builder = WrtuBunchHi
 	then EvBuffDat <= uBunchBuffOut(31 downto 16);
 elsif Event_Builder = WrtuBunchLo
@@ -1352,30 +1517,39 @@ if Event_Builder = Incr_Chan0 or Event_Builder = Incr_Chan1
     end if;
  end if;
 
+NextEvAddr(AFE_Num)(Chan_Num) <= Buff_Rd_Ptr(AFE_Num)(Chan_Num) 
+									    + Buff_Out(AFE_Num)(Chan_Num)(9 downto 0) + 1;
+
 -- Assert reads when the read sequencer is requesting data
 -- specify which FIFO to read with the channel number
  if SlfTrgEn = '0'
    then 	Buff_Rd_Ptr(0) <= (others => (others => '0'));
 			Buff_Rd_Ptr(1) <= (others => (others => '0'));
+-- If the channel has an overflow, skip ahead to the next channel
+-- and advance the pointer on this channel to the next event
  elsif Event_Builder = Incr_Chan0 and MaskReg(AFE_Num)(Chan_Num) = '1' and EvOvf(AFE_Num)(Chan_Num) = '1'
-		then Buff_Rd_Ptr(AFE_Num)(Chan_Num) <= Buff_Rd_Ptr(AFE_Num)(Chan_Num) 
-														 + unsigned(Buff_Out(AFE_Num)(Chan_Num)(9 downto 0)) + 1;
-  elsif BuffRdCount /= 0
-		or (Event_Builder = Check_Mask1 and MaskReg(AFE_Num)(Chan_Num) = '1' and EvOvf(AFE_Num)(Chan_Num) = '0')
+		then Buff_Rd_Ptr(AFE_Num)(Chan_Num) <= NextEvAddr(AFE_Num)(Chan_Num);
+--Buff_Rd_Ptr(AFE_Num)(Chan_Num) 
+-- + Buff_Out(AFE_Num)(Chan_Num)(9 downto 0) + 1;
+  elsif BuffRdCount /= 0 
+    or (Event_Builder = Check_Mask1 and MaskReg(AFE_Num)(Chan_Num) = '1' 
+	 and EvOvf(AFE_Num)(Chan_Num) = '0')
 	then Buff_Rd_Ptr(AFE_Num)(Chan_Num) <= Buff_Rd_Ptr(AFE_Num)(Chan_Num) + 1;
 	else Buff_Rd_Ptr(AFE_Num)(Chan_Num) <= Buff_Rd_Ptr(AFE_Num)(Chan_Num);
 	end if;
 
    if Event_Builder = Idle then EventWdCnt <= X"0003";
 elsif Event_Builder = Incr_Chan0 and MaskReg(AFE_Num)(Chan_Num) = '1' and EvOvf(AFE_Num)(Chan_Num) = '0'
-	then EventWdCnt <= EventWdCnt + unsigned(Buff_Out(AFE_Num)(Chan_Num)); -- BuffOut_Mux; 
+	then EventWdCnt <= EventWdCnt + Buff_Out(AFE_Num)(Chan_Num); -- BuffOut_Mux; 
 	else EventWdCnt <= EventWdCnt;
 	end if;
 
+NxtWdCount <= EventWdCnt + Buff_Out(AFE_Num)(Chan_Num);
+--EventWdCnt + Buff_Out(AFE_Num)(Chan_Num)
 	if Event_Builder = Idle then EvOvf <= (others => X"00");
-elsif Event_Builder = Check_Mask0 and MaskReg(AFE_Num)(Chan_Num) = '1' 
+elsif Event_Builder = Check_Ovf and MaskReg(AFE_Num)(Chan_Num) = '1' 
 then 
-   if NxtWdCount > X"00FE"
+   if NxtWdCount >= PageSize
 	then EvOvf(AFE_Num)(Chan_Num) <= '1';
 	else EvOvf <= EvOvf;
 	end if;
@@ -1384,14 +1558,14 @@ end if;
 
 -- Count down the words stored in the uBunch event for this channel
 if Event_Builder = Check_Mask1 and MaskReg(AFE_Num)(Chan_Num) = '1' and EvOvf(AFE_Num)(Chan_Num) = '0' 
-	then SampleCount <= unsigned(Buff_Out(AFE_Num)(Chan_Num)(8 downto 0)); -- BuffOut_Mux(8 downto 0);
+	then SampleCount <= Buff_Out(AFE_Num)(Chan_Num)(8 downto 0); -- BuffOut_Mux(8 downto 0);
 elsif Event_Builder = WrtData and SampleCount /= 0
 then SampleCount <= SampleCount - 1;
 else SampleCount <= SampleCount;
 end if;
-
+-- The same as above but with slightly different conditions
 if Event_Builder = Check_Mask1 and MaskReg(AFE_Num)(Chan_Num) = '1' and EvOvf(AFE_Num)(Chan_Num) = '0' 
-	then BuffRdCount <= unsigned(Buff_Out(AFE_Num)(Chan_Num)(8 downto 0)); -- BuffOut_Mux(8 downto 0);
+	then BuffRdCount <= Buff_Out(AFE_Num)(Chan_Num)(8 downto 0); -- BuffOut_Mux(8 downto 0);
 elsif (Event_Builder = WrtData or Event_Builder = Wait1 or Event_Builder = Wait2) and BuffRdCount /= 0
 then BuffRdCount <= BuffRdCount - 1;
 else BuffRdCount <= BuffRdCount;
@@ -1404,8 +1578,8 @@ end if;
 -- 						CheckRdBuff1,RdDataHi,RdDataLo);
 case DDR_Read_Seq is
 	When Idle => --Debug(10 downto 8) <= "000";
- if WRDL = 1 and ((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamRdPtrLoAd)
-		 	 or uuCA(9 downto 0) = BrdCstRdPtrLoAd or uuCA(9 downto 0) = uBunchRdPtrLoAd)
+ if WRDL = 1 and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamRdPtrLoAd)
+		 	 or uCA(9 downto 0) = BrdCstRdPtrLoAd or uCA(9 downto 0) = uBunchRdPtrLoAd)
 		then DDR_Read_Seq <= CheckEmpty;
 		else DDR_Read_Seq <= Idle;
 		end if;
@@ -1443,44 +1617,51 @@ case DDR_Read_Seq is
 	When others => DDR_Read_Seq <= Idle;
 end case;
 
+--if DDR_Read_Seq = Idle then
+--	Debug(4) <= '0';
+--else
+--	Debug(4) <= '1';
+--end if;
+
 -- DDR Read address register
 -- Microcontroller access upper
- if WRDL = 1 and ((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamRdPtrHiAd)
-				or uuCA(9 downto 0) = BrdCstRdPtrHiAd)
+ if WRDL = 1 and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamRdPtrHiAd)
+				or uCA(9 downto 0) = BrdCstRdPtrHiAd)
 then SDRdAD <= uCD(13 downto 0) & SDRdAD(15 downto 0);
 -- Microcontroller access lower
-elsif WRDL = 1 and ((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamRdPtrLoAd)
-				or uuCA(9 downto 0) = BrdCstRdPtrLoAd)
+elsif WRDL = 1 and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamRdPtrLoAd)
+				or uCA(9 downto 0) = BrdCstRdPtrLoAd)
 then SDRdAD <= SDRdAD(29 downto 16) & uCD;
-elsif WRDL = 1 and uuCA(9 downto 0) = uBunchRdPtrHiAd
- then SDRdAD <= uCD(4 downto 0) & SDRdAD(24 downto 0);
-elsif WRDL = 1 and uuCA(9 downto 0) = uBunchRdPtrLoAd
- then SDRdAD <= SDRdAD(29 downto 25) & uCD & '0' & X"00";
+-- Convert the microcontroller data to a page number
+elsif WRDL = 1 and uCA(9 downto 0) = uBunchRdPtrHiAd
+ then SDRdAD <= uCD(3 downto 0) & SDRdAD(25 downto 0);
+elsif WRDL = 1 and uCA(9 downto 0) = uBunchRdPtrLoAd
+ then SDRdAD <= SDRdAD(29 downto 26) & uCD & "00" & X"00";
 -- Increment by 8 long words for each burst read command
-elsif SDRdCmdEn = '1' and DDR_Read_Seq /= CheckEmpty then SDRdAD <= std_logic_vector(unsigned(SDRdAD) + 32);
+elsif SDRdCmdEn = '1' and DDR_Read_Seq /= CheckEmpty then SDRdAD <= SDRdAD + 32;
 else SDRdAD <= SDRdAD;
 end if;
 
 -- DDR Read address pointer
 -- Microcontroller access upper
- if WRDL = 1 and ((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamRdPtrHiAd)
-				or uuCA(9 downto 0) = BrdCstRdPtrHiAd)
+ if WRDL = 1 and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamRdPtrHiAd)
+				or uCA(9 downto 0) = BrdCstRdPtrHiAd)
 then SDRdPtr <= uCD(13 downto 0) & SDRdPtr(15 downto 0);
 -- Microcontroller access lower
-elsif WRDL = 1 and ((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamRdPtrLoAd)
-				or uuCA(9 downto 0) = BrdCstRdPtrLoAd)
+elsif WRDL = 1 and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamRdPtrLoAd)
+				or uCA(9 downto 0) = BrdCstRdPtrLoAd)
 then SDRdPtr <= SDRdPtr(29 downto 16) & uCD;
-elsif WRDL = 1 and uuCA(9 downto 0) = uBunchRdPtrHiAd
- then SDRdPtr <= uCD(4 downto 0) & SDRdPtr(24 downto 0);
-elsif WRDL = 1 and uuCA(9 downto 0) = uBunchRdPtrLoAd
- then SDRdPtr <= SDRdPtr(29 downto 25) & uCD & '0' & X"00";
+elsif WRDL = 1 and uCA(9 downto 0) = uBunchRdPtrHiAd
+ then SDRdPtr <= uCD(3 downto 0) & SDRdPtr(25 downto 0);
+elsif WRDL = 1 and uCA(9 downto 0) = uBunchRdPtrLoAd
+ then SDRdPtr <= SDRdPtr(29 downto 26) & uCD & "00" & X"00";
 -- Increment by 1 long word for each read command
-elsif SDrd_en = '1' and DDR_Read_Seq /= CheckEmpty then SDRdPtr <= std_logic_vector(unsigned(SDRdPtr) + 4);
+elsif SDrd_en = '1' and DDR_Read_Seq /= CheckEmpty then SDRdPtr <= SDRdPtr + 4;
 else SDRdPtr <= SDRdPtr;  
 end if;
 
 -- DDR controller output FIFO is 32 bits. Clock once per two uC reads
-  if (RDDL = 2 and AddrReg(11 downto 10) = uGA 
+  if (RDDL = 2 and AddrReg(11 downto 10) = GA 
 		and (AddrReg(9 downto 0) = SDRamPortAd or AddrReg(9 downto 0) = SDRamSwapPort) 
 		and RdHi_LoSel = '1')
 	or (DDR_Read_Seq = CheckEmpty and SDrd_empty = '0')
@@ -1499,17 +1680,17 @@ else SDRdCmdEn <= '0';
 end if;
 
 -- Toggle between upper and lower words during reads from the DDR
- if WRDL = 1 and ((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamRdPtrLoAd)
-		 	 or uuCA(9 downto 0) = BrdCstRdPtrLoAd or uuCA(9 downto 0) = uBunchRdPtrLoAd)
+ if WRDL = 1 and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamRdPtrLoAd)
+		 	 or uCA(9 downto 0) = BrdCstRdPtrLoAd or uCA(9 downto 0) = uBunchRdPtrLoAd)
 then RdHi_LoSel <= '0'; 
- elsif (RDDL = 2 and AddrReg(11 downto 10) = uGA 
+ elsif (RDDL = 2 and AddrReg(11 downto 10) = GA 
  and (AddrReg(9 downto 0) = SDRamPortAd or AddrReg(9 downto 0) = SDRamSwapPort))
   or (PageWdCount /= 0 and (DDR_Read_Seq = RdDataHi
   or (DDR_Read_Seq = RdDataLo and PageWdCount /= 0 and SDrd_en = '0')))
 then RdHi_LoSel <= not RdHi_LoSel;  
 end if;
 
- if WRDL = 1 and uuCA(9 downto 0) = uBunchRdPtrLoAd
+ if WRDL = 1 and uCA(9 downto 0) = uBunchRdPtrLoAd
 then PageRdReq <= '1'; 
 elsif DDR_Read_Seq = RdWdCount
 then PageRdReq <= '0';
@@ -1522,31 +1703,23 @@ then DRAMRdBuffWrt <= '1';
 else DRAMRdBuffWrt <= '0'; 
 end if;
 
- if RDDL = 2 and AddrReg(11 downto 10) = uGA and AddrReg(9 downto 0) = PageFIFOAddr
+ if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = PageFIFOAddr
   then DRAMRdBuffRd <= '1'; 
   else DRAMRdBuffRd <= '0';
  end if;
 
- if RDDL = 2 and AddrReg(11 downto 10) = uGA and AddrReg(9 downto 0) = PageFIFOAddr
+ if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = PageFIFOAddr
 	then PageRdStat <= '0'; 
  elsif (DDR_Read_Seq = RdDataHi or DDR_Read_Seq = RdDataLo) and PageWdCount = 0
  then PageRdStat <= '1'; 
  else PageRdStat <= PageRdStat; 
  end if;
  
- -- Page read word count
+ -- Page read word count. Assume size is already limited by the event builder
 	if DDR_Read_Seq = RdWdCount and RdHi_LoSel = '0' 
-		then 
-			if unsigned(SDRdDat(31 downto 24)) = 0
-			 then PageWdCount <= unsigned(SDRdDat(23 downto 16));
-			 else PageWdCount <= X"FF";
-			end if;
+			 then PageWdCount <= SDRdDat(26 downto 16);
 elsif DDR_Read_Seq = RdWdCount and RdHi_LoSel = '1' 
-		 then 
-			if unsigned(SDRdDat(15 downto 8)) = 0
-			 then PageWdCount <= unsigned(SDRdDat(7 downto 0));
-			 else PageWdCount <= X"FF";
-			end if;
+			 then PageWdCount <= SDRdDat(10 downto 0);
  elsif PageWdCount /= 0 
 	 and (DDR_Read_Seq = RdDataHi or (DDR_Read_Seq = RdDataLo and SDrd_en = '1'))
    then PageWdCount <= PageWdCount - 1;
@@ -1562,48 +1735,50 @@ end if;
 
 -- DDR Write address register
 -- Microcontroller access upper
-if WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamWrtPtrHiAd 
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamWrtPtrHiAd 
 then SDWrtAd <= uCD(13 downto 0) & SDWrtAd(15 downto 0);
 -- Microcontroller access lower
-elsif WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamWrtPtrLoAd
+elsif WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamWrtPtrLoAd
 then SDWrtAd <= SDWrtAd(29 downto 16) & uCD;
 -- Increment by 4 for each long word write
 elsif SDwr_en = '1'
-then SDWrtAd <= std_logic_vector(unsigned(SDWrtAd) + 4);
+then SDWrtAd <= SDWrtAd + 4;
+--Use the stored microbunch number shifted left by 9 places 
+-- to advance to the next requested page
 elsif DDR_Write_Seq = SetWrtPtr 
-then SDWrtAd(8 downto 0) <= (others => '0');
-	  SDWrtAd(29 downto 9) <= DDRAddrOut(20 downto 0);
+then SDWrtAd(9 downto 0) <= (others => '0');
+	  SDWrtAd(29 downto 10) <= DDRAddrOut(19 downto 0);
 else SDWrtAd <= SDWrtAd;
 end if;
 
 -- DDR Write address staging register
 -- Microcontroller access upper
-if WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamWrtPtrHiAd 
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamWrtPtrHiAd 
 then SDWrtAdStage <= uCD(13 downto 0) & SDWrtAdStage(15 downto 0);
 -- Microcontroller access lower
-elsif WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamWrtPtrLoAd
+elsif WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamWrtPtrLoAd
 then SDWrtAdStage <= SDWrtAdStage(29 downto 16) & uCD;
 -- Reset the address at spill beginning
 elsif Strt_req = '1' then SDWrtAdStage <= (others => '0');
 -- Keep the address from the last update until the write command has been sent
 elsif WrtCmdEn = '1' and DDR_Write_Seq /= SetWrtPtr then SDWrtAdStage <= SDWrtAd;
 elsif DDR_Write_Seq = SetWrtPtr 
-then SDWrtAdStage(8 downto 0) <= (others => '0');
-	  SDWrtAdStage(29 downto 9) <= DDRAddrOut(20 downto 0);
+then SDWrtAdStage(9 downto 0) <= (others => '0');
+	  SDWrtAdStage(29 downto 10) <= DDRAddrOut(19 downto 0);
 else SDWrtAdStage <= SDWrtAdStage;
 end if;
 
 -- Writes to the MIG write FIFO
-if (WRDL = 1 and  uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamPortAd and WrtHi_LoSel = '1')
+if (WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamPortAd and WrtHi_LoSel = '1')
   or (DDR_Write_Seq = WrtDDR and WrtHi_LoSel = '1')
 or (DDR_Write_Seq = WritePad and (SDwr_en = '0' or SDWrtAd(4 downto 0) /= "11100")) 
-then SDwr_en <= '1'; Debug(7) <= '1';
-else SDwr_en <= '0'; Debug(7) <= '0';
+then SDwr_en <= '1'; --Debug(7) <= '1';
+else SDwr_en <= '0'; --Debug(7) <= '0';
 end if;
 
 -- When the number of writes = burst size, send a write command
 	if (SDwr_en = '1' and SDWrtAd(4 downto 0) = "11100") 
-or (WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamWrtPtrLoAd)
+or (WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamWrtPtrLoAd)
 or DDR_Write_Seq = SndCmd
 then SDWrtCmd <= "010";
 	  WrtCmdEn <= '1';
@@ -1612,17 +1787,17 @@ else SDWrtCmd <= "000";
 	  end if;
 
 -- Toggle between upper and lower words during writes to the DDR
-    if (WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamWrtPtrLoAd)
+    if (WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamWrtPtrLoAd)
 		 or Buff_Rst = '1' or Strt_req = '1' or DDR_Write_Seq = SetWrtPtr 
 		 then WrtHi_LoSel <= '0'; 
- elsif (WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = SDRamPortAd)
+ elsif (WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamPortAd)
 	     or DDR_Write_Seq = WrtDDR
  then WrtHi_LoSel <= not WrtHi_LoSel;
  end if;
 
 -- Idle,ChkWrtBuff,SndCmd,WtCmdMtpy,SetWrtPtr,Wait1,WrtDDR,WritePad
 Case DDR_Write_Seq is
-   When Idle => DDRWrtSeqStat <= "000"; Debug(10 downto 8) <= "000";
+   When Idle => DDRWrtSeqStat <= "000"; --Debug(10 downto 8) <= "000";
 -- If the FIFO words used is > leading word count, 
 -- then at least one event is ready for copying to DRAM
 		if SlfTrgEn = '1' and EvBuffWdsUsed >= EvBufffOut(10 downto 0) 
@@ -1631,28 +1806,28 @@ Case DDR_Write_Seq is
 		else DDR_Write_Seq <= Idle;
 		end if;
 -- If there is stale data in the MIG transmit FIFO, force a burst write
-	When ChkWrtBuff => DDRWrtSeqStat <= "001"; Debug(10 downto 8) <= "001";
+	When ChkWrtBuff => DDRWrtSeqStat <= "001"; --Debug(10 downto 8) <= "001";
 		if SDwr_empty = '0' then DDR_Write_Seq <= SndCmd;
 		else DDR_Write_Seq <= SetWrtPtr;
 		end if;
 -- Send a MIG burst write command
-	When SndCmd => DDR_Write_Seq <= WtCmdMtpy; DDRWrtSeqStat <= "010"; Debug(10 downto 8) <= "010";
+	When SndCmd => DDR_Write_Seq <= WtCmdMtpy; DDRWrtSeqStat <= "010"; --Debug(10 downto 8) <= "010";
 -- Wait for the MIG write FIFO to go empty
-	When WtCmdMtpy => DDRWrtSeqStat <= "011";  Debug(10 downto 8) <= "011";
+	When WtCmdMtpy => DDRWrtSeqStat <= "011";  --Debug(10 downto 8) <= "011";
 		if SDwr_empty = '1' then DDR_Write_Seq <= SetWrtPtr;
 		else DDR_Write_Seq <= WtCmdMtpy;
 		end if;
 -- When the input FIFOs have at least one event, copy the data to the DDR
-	When SetWrtPtr =>  DDRWrtSeqStat <= "100"; Debug(10 downto 8) <= "100";
+	When SetWrtPtr =>  DDRWrtSeqStat <= "100"; --Debug(10 downto 8) <= "100";
 			DDR_Write_Seq <= Wait1;
-	When Wait1 => DDRWrtSeqStat <= "101"; Debug(10 downto 8) <= "101";
+	When Wait1 => DDRWrtSeqStat <= "101"; --Debug(10 downto 8) <= "101";
 		  DDR_Write_Seq <= WrtDDR;
-	When WrtDDR =>  DDRWrtSeqStat <= "110"; Debug(10 downto 8) <= "110";
+	When WrtDDR =>  DDRWrtSeqStat <= "110"; --Debug(10 downto 8) <= "110";
 		 if DDRWrtCount <= 1 then DDR_Write_Seq <= WritePad;
 		else DDR_Write_Seq <= WrtDDR;
 		end if;
 -- At the end of each event flush the last data words from the write FIFO into the DDR
-	When WritePad => DDRWrtSeqStat <= "111";  Debug(10 downto 8) <= "111";
+	When WritePad => DDRWrtSeqStat <= "111";  --Debug(10 downto 8) <= "111";
 		if SDWrtAd(4 downto 0) = "11100" 
 		then DDR_Write_Seq <= WaitWrtDn;
 		else DDR_Write_Seq <= WritePad;
@@ -1670,13 +1845,13 @@ if DDR_Write_Seq = Wait1 or (SlfTrgEn = '0' and DDRAddrEmpty = '0')
   else DDRAddrRd <= '0';
  end if;
 
-Debug(6) <= DDRAddrEmpty;
-Debug(5) <= DDRAddrRd;
-Debug(3) <= uBunchBuffEmpty;
-Debug(1) <= uBunchRd;
+--Debug(6) <= DDRAddrEmpty;
+--Debug(5) <= DDRAddrRd;
+--Debug(3) <= uBunchBuffEmpty;
+--Debug(1) <= uBunchRd;
 
-if DDR_Write_Seq = SetWrtPtr and unsigned(EvBufffOut(10 downto 0)) > 0 
-						then DDRWrtCount <= unsigned(EvBufffOut(10 downto 0));
+if DDR_Write_Seq = SetWrtPtr and EvBufffOut(10 downto 0) > 0 
+						then DDRWrtCount <= EvBufffOut(10 downto 0);
 elsif DDR_Write_Seq = WrtDDR and DDRWrtCount /= 0 
 						then DDRWrtCount <= DDRWrtCount - 1;
 else DDRWrtCount <= DDRWrtCount;
@@ -1706,8 +1881,8 @@ elsif DDR_Write_Seq = WrtDDR
 end if;
 
 -- Second staging register
-if WRDL = 1 and  uuCA(11 downto 10) = uGA and 
- 	uuCA(9 downto 0) = SDRamPortAd and WrtHi_LoSel = '0'
+if WRDL = 1 and  uCA(11 downto 10) = GA and 
+ 	uCA(9 downto 0) = SDRamPortAd and WrtHi_LoSel = '0'
 	then CDStage <= uCD;
 elsif (DDR_Write_Seq = WrtDDR and Even_Odd = '0')
 	then CDStage <= EvBufffOut; -- BuffOut_Mux;
@@ -1720,29 +1895,106 @@ end if;
 else SDWrtDat <= CDStage & uCD;
 end if;
 
+end if; -- CpldRst
+
+end process main;
+
+Clk100 : process(Clk100MHz, CpldRst)
+
+ begin 
+
+-- asynchronous reset/preset
+ if CpldRst = '0' then
+
+	uWRDL <= "00"; uRDDL <= "00";
+	
+-- Control bits written by the uC
+	DACCS <= "111"; RampGate <= "00";
+	BiasTarget <= (others => X"000"); BiasActual <= (others => X"000"); 
+	DACLd <= '1'; DACClk <= '1'; DACDat <= '0'; Dev_Sel <= '0'; 
+	DACShift <= (others => '0'); Octal_Shift <= Idle; ClkDiv <= (others => '0');
+	BitCount <= "00000"; ODFifoWrReq <= '0'; ODFifoRdReq <= '0'; 
+	ODFifoData <= (others => '0'); TrgSrc <= '0'; 
+	PipelineSet <= X"04";  WidthReg <= X"10";
+	
+	TrigType <= X"000";	FMTxBuff_wreq <= '0'; 
+	Hist_wenb <= (others => "0"); HistAddrb <= (others => (others => '0')); 
+	Hist_Datb <= (others => (others => '0'));  Hist_Offset_Reg <= (X"FF6");
+	Count100ms <= (others => '0'); ADCSmplCntReg <= X"8"; 
+	ControllerNo <= "00000"; PortNo <= "00000"; 
+
+	MuxEn <= X"0"; Muxad <= "00"; MuxSelReg <= "000"; MuxadReg <= "00";
+	UpTimeStage <= (others => '0'); UpTimeCount <= (others => '0');
+	Counter10us <= (others => '0'); Counter1ms <= (others => '0');
+	Counter1s <= (others => '0');	TestCount <= (others => '0'); 
+	Counter1us <= X"00"; -- 1us time base 
+	ResetCount <= (others => '0'); DDR_Reset <= '0'; 
+	AFEPDn <= "11"; AFECS <= "11"; AFESDI <= '0'; StatReg <= X"0";
+	AFESClk <= '0'; SClkDL <= "000"; AFERdReg <= (others => '0');
+	GPOSel <= '0'; HistEnReq <= "00"; uAddrReg <= (others => '0');
+	HistInterval <= X"0800"; HistMode <= '0'; HistChan <= "000"; HistEn <= "00"; 
+	HistGateCnt0 <= (others => '0');	HistGateCnt1 <= (others => '0'); 
+	
+-- Signals for aligning RxOutClks
+	AlignReq <= "00"; RstReq <= "00";
+	SlipCntReg <= ("000","000"); 
+	uSecCounter <= (others => '0'); FR_OK <= "00";
+
+
+elsif rising_edge (Clk100MHz) then 
+
+-- Synchronous edge detectors for read and write strobes
+uRDDL(0) <= not uCRD and not CpldCS;
+uRDDL(1) <= uRDDL(0);
+
+uWRDL(0) <= not uCWR and not CpldCS;
+uWRDL(1) <= uWRDL(0);
+
+-- Latch the address for post increment during reads
+if uRDDL = 1 or uWRDL = 1 then uAddrReg <= uCA;
+else uAddrReg <= uAddrReg;
+end if;
+
+------------------ Various prameter storage registers ---------------------
+
 -- Specifiy the number of ADC samples per hit
-if WRDL = 1 and uuCA(9 downto 0) = ADCSmplCntrAd 
-	then ADCSmplCntReg <= unsigned(uCD(3 downto 0));
+if uWRDL = 1 and uCA(9 downto 0) = ADCSmplCntrAd 
+	then ADCSmplCntReg <= uCD(3 downto 0);
  else ADCSmplCntReg <= ADCSmplCntReg;
 end if;
+
+-- Strobe to write data to L:VDS FM return link
+if uWRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = LVDSTxFIFOAd 
+ then FMTxBuff_wreq <= '1';
+else FMTxBuff_wreq <= '0';
+end if;
+
+-- Register for defining the geographical address of the FEB
+   if uWRDL = 1 and uCA(9 downto 0) =  FEBAddresRegAd then 
+		ControllerNo <= uCD(12 downto 8); 
+		PortNo <= uCD(4 downto 0);
+	else
+	   ControllerNo <= ControllerNo;
+		PortNo <= PortNo;
+	end if;
 
 -------------------------- Histogram Control Registers ------------------
 
 -- Specify the histogrammer accumulation interval
-if WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = HistIntvalAd 
+if uWRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HistIntvalAd 
 then HistInterval <= uCD(15 downto 0); 
 else HistInterval <= HistInterval;
 end if;
 
 --Specify histogrammer offset
-if WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = HistOfstAd
+if uWRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HistOfstAd
 then Hist_Offset_Reg <= signed(uCD(11 downto 0));
 else Hist_Offset_Reg <= Hist_Offset_Reg;
 end if;
 
 -- Specify which of the eight AFE channels to histogramm, whether or not to use an external gate
-if WRDL = 1 and ((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = HistCtrlAd)
-					  or uuCA( 9 downto 0) = HistCtrlBroadCastAd)
+if uWRDL = 1 and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = HistCtrlAd)
+					  or uCA( 9 downto 0) = HistCtrlBroadCastAd)
  then HistChan <= uCD(2 downto 0);
 		HistMode <= uCD(4);
 else HistChan <= HistChan;
@@ -1752,8 +2004,8 @@ end if;
 -- Histogrammer enable logic
 
 -- latch the request from the uC until the next 1ms count
- if HistEnReq(0) = '0' and WRDL = 1 and uuCA(11 downto 10) = uGA 
-	and uuCA(9 downto 0) = HistCtrlAd and uCD(5) = '1'  
+ if HistEnReq(0) = '0' and uWRDL = 1 and uCA(11 downto 10) = GA 
+	and uCA(9 downto 0) = HistCtrlAd and uCD(5) = '1'  
 then HistEnReq(0) <= '1';
 elsif HistEnReq(0) = '1' and HistGateCnt0 = 1 and Counter1ms = Count1ms
 then HistEnReq(0) <= '0';
@@ -1762,7 +2014,7 @@ end if;
 
 -- Histogrammer accumulation timers
  if HistEn(0) = '0' and HistGateCnt0 = 0 and HistEnReq(0) = '1' and Counter1ms = Count1ms
-then HistGateCnt0 <= unsigned(HistInterval);
+then HistGateCnt0 <= HistInterval;
 elsif HistGateCnt0 /= 0 and Counter1ms = Count1ms 
 then HistGateCnt0 <= HistGateCnt0 - 1;
 else HistGateCnt0 <= HistGateCnt0;
@@ -1777,8 +2029,8 @@ else  HistEn(0) <=  HistEn(0);
 end if;
 
 -- Define the histogrammer accumulation time
- if HistEnReq(1) = '0' and WRDL = 1 and uuCA(11 downto 10) = uGA 
-	and uuCA(9 downto 0) = HistCtrlAd and uCD(6) = '1'
+ if HistEnReq(1) = '0' and uWRDL = 1 and uCA(11 downto 10) = GA 
+	and uCA(9 downto 0) = HistCtrlAd and uCD(6) = '1'
 then HistEnReq(1) <= '1';
 elsif HistEnReq(1) = '1' and HistGateCnt1 = 1 and Counter1ms = Count1ms
 then HistEnReq(1) <= '0';
@@ -1786,7 +2038,7 @@ else HistEnReq(1) <=  HistEnReq(1);
 end if;
 
  if HistEn(1) = '0' and HistGateCnt1 = 0 and HistEnReq(1) = '1' and Counter1ms = Count1ms
-then HistGateCnt1 <= unsigned(HistInterval);
+then HistGateCnt1 <= HistInterval;
 elsif HistGateCnt1 /= 0 and Counter1ms = Count1ms 
 then HistGateCnt1 <= HistGateCnt1 - 1;
 else HistGateCnt1 <= HistGateCnt1;
@@ -1800,30 +2052,30 @@ else  HistEn(1) <=  HistEn(1);
 end if;
 
 -- Histogram memory pointers
- if WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = HistPtrAd0 
-	then HistAddrb(0) <= unsigned(uCD(10 downto 0));
-elsif (RDDL = 2 or WRDL = 2) and AddrReg(11 downto 10) = uGA and AddrReg(9 downto 0) = HistRd0Ad  
+ if uWRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HistPtrAd0 
+	then HistAddrb(0) <= uCD(10 downto 0);
+elsif (uRDDL = 2 or uWRDL = 2) and uAddrReg(11 downto 10) = GA and uAddrReg(9 downto 0) = HistRd0Ad  
 	then HistAddrb(0) <= HistAddrb(0) + 1;
 else HistAddrb(0) <= HistAddrb(0);
 end if;
 
 -- Diagnostic writes to the Hist Ram 0
-if WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = HistRd0Ad 
+if uWRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HistRd0Ad 
 then Hist_wenb(0) <= "1";
 else Hist_wenb(0) <= "0";
 end if;
 -- Allow a write to Data Port B to use the memory for other purposes
 Hist_Datb(0) <= uCD;
 
- if WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = HistPtrAd1 
-	then HistAddrb(1) <= unsigned(uCD(10 downto 0));
-elsif (RDDL = 2 or WRDL = 2) and AddrReg(11 downto 10) = uGA and AddrReg(9 downto 0) = HistRd1Ad
+ if uWRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HistPtrAd1 
+	then HistAddrb(1) <= uCD(10 downto 0);
+elsif (uRDDL = 2 or uWRDL = 2) and uAddrReg(11 downto 10) = GA and uAddrReg(9 downto 0) = HistRd1Ad
 	then HistAddrb(1) <= HistAddrb(1) + 1;
 else HistAddrb(1) <= HistAddrb(1);
 end if;
 
 -- Diagnostic writes to the Hist Ram 1
-if WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = HistRd1Ad 
+if uWRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HistRd1Ad 
 then Hist_wenb(1) <= "1";
 else Hist_wenb(1) <= "0";
 end if;
@@ -1837,9 +2089,9 @@ else Count100ms <= Count100ms;
 end if;
 
 -- Timer to set width of DDR MIG reset
-if WRDL = 1 and uCD(3) = '1' and ResetCount = 0 
- and ((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = CSRRegAddr)
-    or uuCA(9 downto 0) = CSRBroadCastAd)
+if uWRDL = 1 and uCD(3) = '1' and ResetCount = 0 
+ and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr)
+    or uCA(9 downto 0) = CSRBroadCastAd)
 then ResetCount <= X"F";
 elsif ResetCount /= 0 then ResetCount <= ResetCount - 1;
 end if;
@@ -1850,20 +2102,20 @@ else DDR_Reset <= '0';
 end if;
 
 -- AFE power down control bits
-if WRDL = 1 and ((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = CSRRegAddr)
-						or uuCA(9 downto 0) = CSRBroadCastAd)
+if uWRDL = 1 and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr)
+						or uCA(9 downto 0) = CSRBroadCastAd)
 then AFEPDn <= uCD(1 downto 0);
 else AFEPDn <= AFEPDn;
 end if;
 
 -- Select between LEMO and LVDS inputs for the triggers 
-if WRDL = 1 and uuCA(9 downto 0) = TrigCtrlAddr 
+if uWRDL = 1 and uCA(9 downto 0) = TrigCtrlAddr 
 then TrgSrc <= uCD(1);
 else TrgSrc <= TrgSrc;
 end if;
 
 -- Analog multiplexer control lines
-if WRDL = 1 and  uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = MuxCtrlAd then 
+if uWRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = MuxCtrlAd then 
 	Case uCD(4 downto 2) is
 		When "100" => MuxEn <= "0001";
 		When "101" => MuxEn <= "0010";
@@ -1888,11 +2140,6 @@ if WRDL = 1 and  uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = MuxCtrlAd then
 	MuxSelReg <= MuxSelReg;
 end if;
 
--- 1us time base
-if Counter1us /= Count1us then Counter1us <= Counter1us + 1;
-else Counter1us <= X"00";
-end if;
-
 -- 10us time base
 if Counter10us /= Count10us then Counter10us <= Counter10us + 1;
 else Counter10us <= (others => '0');
@@ -1901,6 +2148,13 @@ end if;
 -- 1ms time base
 if Counter1ms = Count1ms then Counter1ms <= (others => '0');
 else Counter1ms <= Counter1ms + 1;
+end if;
+
+-- 1us time base
+if Counter1us = Count1us then 
+	Counter1us <= X"00";
+else 
+   Counter1us <= Counter1us + 1;
 end if;
 
 -- 1 second time base
@@ -1913,28 +2167,144 @@ else UpTimeCount <= UpTimeCount;
 end if;
 
 -- Register for staging uptime count.
-if CpldCS = '1' then UpTimeStage <= std_logic_vector(UpTimeCount);
+if CpldCS = '1' then UpTimeStage <= UpTimeCount;
 else UpTimeStage <= UpTimeStage;
 end if;
 
+-- Time base for alignment sequence
+	if AlignSeq /= Idle and AlignSeq /= RstCntr
+		and Counter1us = Count1us and uSecCounter /= 335
+	 then uSecCounter <= uSecCounter + 1;
+	elsif AlignSeq = Idle or AlignSeq = RstCntr
+	   or (Counter1us = Count1us and uSecCounter = 335)
+	 then uSecCounter <= (others => '0');
+	else uSecCounter <= uSecCounter;
+	end if;
+
 -- Testcounter counter is writeable. For each read of the lower half, the entire
 -- 32 bit counter increments
-   if WRDL = 1 and  uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = TestCounterHiAd 
-	 then TestCount <= (unsigned(uCD) & TestCount(15 downto 0));
-		elsif WRDL = 1 and  uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = TestCounterLoAd 
-    then TestCount <= (TestCount(31 downto 16) & unsigned(uCD));
-      elsif RDDL = 2 and AddrReg(11 downto 10) = uGA and AddrReg(9 downto 0) = TestCounterLoAd 
+   if uWRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = TestCounterHiAd 
+	 then TestCount <= uCD & TestCount(15 downto 0);
+		elsif uWRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = TestCounterLoAd 
+    then TestCount <= TestCount(31 downto 16) & uCD;
+      elsif uRDDL = 2 and uAddrReg(11 downto 10) = GA and uAddrReg(9 downto 0) = TestCounterLoAd 
     then TestCount <= TestCount + 1;
       else TestCount <= TestCount;
 end if;
 
+-- Use this to cross clock domains
+FR_OK <= FRStat;
+Debug(4) <= FRStat(0);
+Debug(7) <= FRStat(1);
+
+-- (Idle,SendPDn,SendPEn,SendRst,WaitFR,CheckFR,ChkSlipCnt,SendSlipReq);
+case AlignSeq is
+	when Idle => Debug(3 downto 1) <= "000";
+	 if AlignReq /= 0 and Counter1us = Count1us
+		then AlignSeq <= SendPDn;
+	 else AlignSeq <= Idle;
+	 end if;
+	when SendPDn => Debug(3 downto 1) <= "001";
+	  if Counter1us = Count1us and uSecCounter = 335
+		 then AlignSeq <= SendPEn;
+	  elsif AlignReq = 0 then
+	    AlignSeq <= Idle;
+	   else AlignSeq <= SendPDn;
+	  end if;
+	when SendPEn => Debug(3 downto 1) <= "010";
+	  if Counter1us = Count1us and uSecCounter = 335
+		 then AlignSeq <= SendRst;
+	  elsif AlignReq = 0 then
+	    AlignSeq <= Idle;
+	   else AlignSeq <= SendPEn;
+	  end if;
+	when SendRst => Debug(3 downto 1) <= "011";
+		if Counter1us = Count1us and uSecCounter = 335
+		  then AlignSeq <= WaitFR;
+	  elsif AlignReq = 0 then
+	    AlignSeq <= Idle;
+		else AlignSeq <= SendRst;
+		end if;
+	when WaitFR => Debug(3 downto 1) <= "100";
+	  --if Counter1us = Count1us and uSecCounter(3 downto 0) = X"F" then
+     if Counter1us = Count1us and uSecCounter = 300 then	  
+	    AlignSeq <= CheckFR;       
+	   elsif AlignReq = 0 then
+	    AlignSeq <= Idle;
+	  else AlignSeq <= WaitFR;
+	 end if;
+	when CheckFR => Debug(3 downto 1) <= "101";
+	   if Counter1us = Count1us and uSecCounter = 300
+	   --if Counter1us = Count1us and uSecCounter(3 downto 0) = X"F"
+		  then
+			  if (AlignReq(0) = '1' and FR_OK(0) = '1') 
+		     or (AlignReq(1) = '1' and FR_OK(1) = '1')
+			  or AlignReq = 0 then 
+			   AlignSeq <= Idle; 
+			  else 
+			   AlignSeq <= RstCntr;
+			 end if;
+		 end if;
+	 when RstCntr => Debug(3 downto 1) <= "110";
+			 if Counter1us = Count1us then
+			  AlignSeq <= SendPDn;
+	      else 
+			  AlignSeq <= RstCntr;
+		  end if;
+	when others => Debug(3 downto 1) <= "111"; AlignSeq <= Idle; 
+ end Case;
+
+-- Only 0,2 and 4 are allowed slip count values
+  if uWRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = SlipCntRegAd
+	then 
+		SlipCntReg(0) <= uCD(2)  & (not uCD(2)  and uCD(1)) & '0';
+		SlipCntReg(1) <= uCD(10) & (not uCD(10) and uCD(9)) & '0';
+     else
+		SlipCntReg(0) <= SlipCntReg(0);
+		SlipCntReg(1) <= SlipCntReg(1);
+	end if;
+
+-- Pass on a reset to AFE deserializer if requested
+	if AlignSeq = SendRst 
+		and Counter1us = Count1us and uSecCounter = 0
+	  then RstReq <= AlignReq;
+	 else RstReq <= "00";
+	end if;
+	
+	-- Writing a 1 enables alignment
+	if uWRDL = 1 and uCD(0) = '1' 
+		and AFEPDn(0) = '0'
+		and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = SlipCtrlAd)
+												or uCA(9 downto 0) = BrdCstAlgnReqAd)
+	 then AlignReq(0) <= '1'; 
+-- Writing a 0 disables the alignment -> force quit alignment
+-- Two conditions for stopping alignment: it successfully aligned, or it was told to stop
+	elsif (AlignReq(0) = '1' and AlignSeq = CheckFR and FR_OK(0) = '1')
+	  or (uWRDL = 1 and uCD(0) = '0' and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = SlipCtrlAd)
+													or uCA(9 downto 0) = BrdCstAlgnReqAd))
+	 then AlignReq(0) <= '0'; 
+	else AlignReq(0) <= AlignReq(0);
+	end if;
+
+	if uWRDL = 1 and uCD(1) = '1' 
+		and AFEPDn(1) = '0'
+		and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = SlipCtrlAd)
+													or uCA(9 downto 0) = BrdCstAlgnReqAd)
+	 then AlignReq(1) <= '1'; 
+	elsif (AlignReq(1) = '1' and AlignSeq = CheckFR and FR_OK(1) = '1')
+  	   or (uWRDL = 1 and uCD(1) = '0' and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = SlipCtrlAd)
+													or uCA(9 downto 0) = BrdCstAlgnReqAd))
+	 then AlignReq(1) <= '0'; 
+	else AlignReq(1) <= AlignReq(1);
+	end if;
+	
 -- Pipeline delay setting 
-if WRDL = 1 and uuCA(9 downto 0) = PipeLineAddr then PipelineSet <= uCD(7 downto 0);
+if uWRDL = 1 and uCA(9 downto 0) = PipeLineAddr then PipelineSet <= uCD(7 downto 0);
 else PipelineSet <= PipelineSet;
 end if;
 
 -- Gate width - determines the number of ADC sample per trigger and uCA(11 downto 10) = GA 
-if WRDL = 1 and uuCA(9 downto 0) = GateAddr then WidthReg <= uCD(7 downto 0);
+if uWRDL = 1 and uCA(9 downto 0) = GateAddr then WidthReg <= uCD(7 downto 0);
 else WidthReg <= WidthReg;
 end if;
 
@@ -1948,13 +2318,13 @@ ClkDiv <= ClkDiv + 1;
 
 -- Bias voltage ramping logic
 -- Write the bias target registers
-if WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = ("00" & X"44")
- then BiasTarget(0) <= unsigned(uCD(11 downto 0));
+if uWRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = ("00" & X"44")
+ then BiasTarget(0) <= uCD(11 downto 0);
 else BiasTarget(0) <= BiasTarget(0);
 end if;
 
-if WRDL = 1 and uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = ("00" & X"45")
- then BiasTarget(1) <= unsigned(uCD(11 downto 0));
+if uWRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = ("00" & X"45")
+ then BiasTarget(1) <= uCD(11 downto 0);
 else BiasTarget(1) <= BiasTarget(1);
 end if;
 
@@ -1979,39 +2349,82 @@ if BiasTarget(i) /= BiasActual(i) and Counter1ms = 4
  
 end loop;
 
+-- This state machine controls the order of AFE writes to the command FIFO
+-- Timer requirement enables the OD write strobe for one clock cycle
+--(Idle, SetAFESel0, WrtAFE0, SetAFESel1, WrtAFE1);
+case OD_Write is
+	when Idle =>
+		if (AlignSeq = SendPdn or AlignSeq = SendPEn)
+			and Counter1us = 1 and uSecCounter = 0 then
+			if AlignReq(0) = '1' then
+				OD_Write <= SetAFESel0; --Debug(4) <= '1';
+			elsif AlignReq = 2 then
+				OD_Write <= SetAFESel1; --Debug(4) <= '1';
+			end if;
+		else
+			OD_Write <= Idle; --Debug(4) <= '0';
+		end if;
+	when SetAFESel0 => OD_Write <= WrtAFE0; --Debug(4) <= '1';
+	when WrtAFE0 =>
+		if AlignReq(1) = '1' then
+			OD_Write <= SetAFESel1; --Debug(4) <= '1';
+		else OD_Write <= Idle; --Debug(4) <= '0';
+		end if;
+	when SetAFESel1 => OD_Write <= WrtAFE1; --Debug(4) <= '1';
+	when WrtAFE1 => OD_Write <= Idle; --Debug(4) <= '0';
+end case;
+
 -- Write the updated actual value to the bias DAC
 if RampGate(0) = '1' and Counter1ms = Count1ms
-	then ODFifoData <= X"0440" & std_logic_vector(BiasActual(0));
+	then ODFifoData <= X"0440" & BiasActual(0);
 elsif RampGate(1) = '1' and Counter1ms = 1
-	then ODFifoData <= X"0450" & std_logic_vector(BiasActual(1));
+	then ODFifoData <= X"0450" & BiasActual(1);
 else ODFifoData <= ("00" & uCA(9 downto 0) & uCD);
+end if;
+
+if RampGate(0) = '1' and Counter1ms = Count1ms 
+	then ODFifoData <= X"0440" & BiasActual(0); --Debug(7) <= '0';
+elsif RampGate(1) = '1' and Counter1ms = 1
+	then ODFifoData <= X"0450" & BiasActual(1); --Debug(7) <= '0';
+-- Clock adjustment, enabling and disabling LVDS output for each ultrasound
+elsif AlignSeq = SendPDn and (OD_Write = SetAFESel0 or OD_Write = WrtAFE0) then
+	ODFifoData <= X"101" & X"0002"; --Debug(7) <= '1';
+elsif AlignSeq = SendPDn and (OD_Write = SetAFESel1 or OD_Write = WrtAFE1) then
+	ODFifoData <= X"201" & X"0002"; --Debug(7) <= '1';
+elsif AlignSeq = SendPEn and (OD_Write = SetAFESel0 or OD_Write = WrtAFE0) then
+	ODFifoData <= X"101" & X"0000"; --Debug(7) <= '0';
+elsif AlignSeq = SendPEn and (OD_Write = SetAFESel1 or OD_Write = WrtAFE1) then
+	ODFifoData <= X"201" & X"0000"; --Debug(7) <= '0';
+else ODFifoData <= ("00" & uCA(9 downto 0) & uCD); --Debug(7) <= '0';
 end if;
 
 if (RampGate(0) = '1' and Counter1ms = Count1ms)
 or (RampGate(1) = '1' and Counter1ms = 1)
-or	(WRDL = 1 and uuCA(11 downto 10) = uGA
-           and ((uuCA(9 downto 0) >= DatArray0Min and uuCA(9 downto 0) <= CtrlArray2Max
-				 and uuCA(9 downto 0) /= ("00" & X"44") and uuCA(9 downto 0) /= ("00" & X"45"))
-				 or (uuCA(9 downto 0) >= AFE0ArrayMin and uuCA(9 downto 0) <= AFE0ArrayMax)
-				 or (uuCA(9 downto 0) >= AFE1ArrayMin and uuCA(9 downto 0) <= AFE1ArrayMax)))
+or ((AlignSeq = SendPDn or AlignSeq = SendPEn) and 
+     (OD_Write = SetAFESel0 or OD_Write = WrtAFE0 or OD_Write = SetAFESel1 or OD_Write = WrtAFE1))
+or	(uWRDL = 1 and uCA(11 downto 10) = GA
+           and ((uCA(9 downto 0) >= DatArray0Min and uCA(9 downto 0) <= CtrlArray2Max
+				 and uCA(9 downto 0) /= ("00" & X"44") and uCA(9 downto 0) /= ("00" & X"45"))
+				 or (uCA(9 downto 0) >= AFE0ArrayMin and uCA(9 downto 0) <= AFE0ArrayMax)
+				 or (uCA(9 downto 0) >= AFE1ArrayMin and uCA(9 downto 0) <= AFE1ArrayMax)))
 then ODFifoWrReq <= '1';
 else ODFifoWrReq <= '0';
 end if;
 
 -- If data is going to the DACs, shadow it in ram
-if WRDL = 1 and uuCA(11 downto 10) = uGA 
-  and uuCA(9 downto 0) >= DatArray0Min and uuCA(9 downto 0) <= CtrlArray2Max
+if uWRDL = 1 and uCA(11 downto 10) = GA 
+  and uCA(9 downto 0) >= DatArray0Min and uCA(9 downto 0) <= CtrlArray2Max
 then ShadowWrt <= "1";
 else ShadowWrt <= "0";
 end if;
 
 -- Distinguish between DACs and AFEs
 if ODFifoEmpty = '0' and ClkDiv = 0 and DacLd = '1' and Octal_Shift = Idle 
-           and unsigned(ODFifoOut(27 downto 16)) >= DatArray0Min and unsigned(ODFifoOut(27 downto 16)) <= CtrlArray2Max
+           and ODFifoOut(27 downto 16) >= DatArray0Min and ODFifoOut(27 downto 16) <= CtrlArray2Max
 then Dev_Sel <= '1';
 elsif ODFifoEmpty = '0' and ClkDiv = 0 and DacLd = '1' and Octal_Shift = Idle 
-           and ((unsigned(ODFifoOut(27 downto 16)) >= AFE0ArrayMin and unsigned(ODFifoOut(27 downto 16)) <=AFE0ArrayMax)
-				 or (unsigned(ODFifoOut(27 downto 16)) >= AFE1ArrayMin and unsigned(ODFifoOut(27 downto 16)) <=AFE1ArrayMax))
+           and ((ODFifoOut(27 downto 16) >= AFE0ArrayMin and ODFifoOut(27 downto 16) <=AFE0ArrayMax)
+				 or (ODFifoOut(27 downto 16) >= AFE1ArrayMin and ODFifoOut(27 downto 16) <=AFE1ArrayMax))
 then Dev_Sel <= '0';
 end if;
 
@@ -2024,7 +2437,7 @@ Case Octal_Shift is
 		When Shift => if BitCount = 1 and ClkDiv = 0 then Octal_Shift <= ClearSync;
 						 else Octal_Shift <= Shift;
 						 end if;
-	   When ClearSync => if unsigned(DacCS) = 7 and Dev_Sel = '1' and ClkDiv = 0 and Dev_Sel = '1' then Octal_Shift <= SetLoad;
+	   When ClearSync => if DacCS = 7 and Dev_Sel = '1' and ClkDiv = 0 and Dev_Sel = '1' then Octal_Shift <= SetLoad;
 						       elsif Dev_Sel = '0' and ClkDiv = 0 then Octal_Shift <= Idle;
 						       else Octal_Shift <= ClearSync;
 						      end if;
@@ -2035,10 +2448,10 @@ Case Octal_Shift is
  end Case;
 
 -- DAC output shift registter
-if ODFifoRdReq = '1' and Dev_Sel = '1' and unsigned(ODFifoOut(27 downto 16)) < DatArray2Min
+if ODFifoRdReq = '1' and Dev_Sel = '1' and ODFifoOut(27 downto 16) < DatArray2Min
 	then DACShift <= X"00" & '0' & ODFifoOut(18 downto 16) & ODFifoOut(11 downto 0);
-elsif ODFifoRdReq = '1' and Dev_Sel = '1' and unsigned(ODFifoOut(27 downto 16)) >= DatArray2Min 
-														and unsigned(ODFifoOut(27 downto 16)) < CtrlArray0Min
+elsif ODFifoRdReq = '1' and Dev_Sel = '1' and ODFifoOut(27 downto 16) >= DatArray2Min 
+														and ODFifoOut(27 downto 16) < CtrlArray0Min
 	then 
 -- Remap the LED intensity channels
 	Case ODFifoOut(18 downto 16) is 
@@ -2048,7 +2461,7 @@ elsif ODFifoRdReq = '1' and Dev_Sel = '1' and unsigned(ODFifoOut(27 downto 16)) 
 	 when "011" =>	DACShift <= X"002" & ODFifoOut(11 downto 0);
 	 when others => DACShift <= X"00" & '0' & ODFifoOut(18 downto 16) & ODFifoOut(11 downto 0);
 	end Case;
-elsif ODFifoRdReq = '1' and Dev_Sel = '1' and unsigned(ODFifoOut(27 downto 16)) >= CtrlArray0Min
+elsif ODFifoRdReq = '1' and Dev_Sel = '1' and ODFifoOut(27 downto 16) >= CtrlArray0Min
 	then DACShift <= X"00" & '1' & ODFifoOut(14 downto 0);
 elsif ODFifoRdReq = '1' and Dev_Sel = '0'
 	then DACShift <= ODFifoOut(23 downto 0);
@@ -2135,80 +2548,9 @@ if Dev_Sel = '0' and SClkDL = 6
 then AFERdReg <= AFERdReg(14 downto 0) & AFESDO;
 end if;
 
-------------------------------- Trigger Logic ----------------------------
-
--- Global reset term
-if WRDL = 1 and uCD(5) = '1' 
-	and ((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = CSRRegAddr)
-											or uuCA(9 downto 0) = CSRBroadCastAd)
-then Buff_Rst <= '1';
-else Buff_Rst <= '0';
-end if;
-
--- Flash gate enable bit
-if WRDL = 1 and uuCA(9 downto 0) = FlashCtrlAddr 
-then FlashEn <= uCD(0);
-else FlashEn <= FlashEn;
-end if;
-
--- Select source for LED flasher pulse
-if WRDL = 1 and uuCA(9 downto 0) = FlashCtrlAddr 
-then PulseSel <= uCD(1);
-else PulseSel <= PulseSel;
-end if;
-
--- Select source for LED flasher pulse
-if WRDL = 1 and uuCA(9 downto 0) = FlashCtrlAddr 
-then LEDSrc <= uCD(2);
-else LEDSrc <= LEDSrc;
-end if;
-
--- AFE specific reset
-if uCWR = '0' and CpldCS = '0' and uCD(6) = '1'  
-	and ((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = CSRRegAddr)
-									      or uuCA(9 downto 0) = CSRBroadCastAd)
-then AFERst <= '1';
-else AFERst <= '0';
-end if;
-
--- Trig out width counter
-if GPOCount = 0 and TrigReq = '1' then GPOCount <= "111";
-elsif GPOCount /= 0 then GPOCount <= GPOCount - 1;
-else GPOCount <= GPOCount;
-end if;
-
--- Trig Out or SpillGate on the GPO LEMO.
-   if TrigReq = '1' then GPO <= '1';
-elsif GPOCount = 1 then GPO <= '0';
-else GPO <= GPO;
-end if;
-
--- Buff reset will clear the FM receiver parity error (if any)
-if WRDL = 1 and uCD(7) = '1' 
-	and ((uuCA(11 downto 10) = uGA and uuCA(9 downto 0) = CSRRegAddr) 
-											or uuCA(9 downto 0) = CSRBroadCastAd)
-then RxIn.Clr_Err <= '1';
-else RxIn.Clr_Err <= '0';
-end if;
-
-if FlashEn = '1' and
-     ((PulseSel = '0' and (GateCounter = LEDTime or GateCounter = LEDTime + 1))
-   or (PulseSel = '1' and FlashGate = '1'))
-then Pulse <= '1';
-else Pulse <= '0';
-end if;
-
--- Trigger control register bits
-if WRDL = 1 and uuCA(9 downto 0) = IntTrgEnAddr 
-then TmgSrcSel <= uCD(0); 
-	  SlfTrgEn <= uCD(1);
-else SlfTrgEn <= SlfTrgEn;
-	  TmgSrcSel <= TmgSrcSel;
-end if;
-
 end if; -- CpldRst
 
-end process main;
+end process Clk100;
 
 Temp(0) <= '0' when TempEn = '1' and TempCtrl = "0001" else 'Z';
 Temp(1) <= '0' when TempEn = '1' and TempCtrl = "0010" else 'Z';
@@ -2219,9 +2561,12 @@ Temp(3) <= '0' when TempEn = '1' and TempCtrl = "1000" else 'Z';
 
 DDRRd_Mux <= SDRdDat(31 downto 16) when RdHi_LoSel = '0' else SDRdDat(15 downto 0);
 
-with uuCA(9 downto 0) select
+with uCA(9 downto 0) select
 
 iCD <= X"000" & "00" & AFEPDn when CSRRegAddr,
+		 X"000" & "00" & AlignReq when SlipCtrlAd,
+		 X"0" & '0' & SlipCntReg(1)
+			& X"0" & '0' & SlipCntReg(0) when SlipCntRegAd,
 		 X"00" & WidthReg when GateAddr,
 		 DRAMRdBuffOut when PageFIFOAddr,
 		 X"0" & '0' & DRAMRdBuffWdsUsed when PageFIFOWdsAd,
@@ -2233,14 +2578,14 @@ iCD <= X"000" & "00" & AFEPDn when CSRRegAddr,
 		 X"000" & '0' & LEDSrc & PulseSel & FlashEn when FlashCtrlAddr,
 		 UpTimeStage(31 downto 16) when UpTimeRegAddrHi,
 		 UpTimeStage(15 downto 0) when UpTimeRegAddrLo,
-		 std_logic_vector(TestCount(31 downto 16)) when TestCounterHiAd,
-		 std_logic_vector(TestCount(15 downto 0)) when TestCounterLoAd,
+		 TestCount(31 downto 16) when TestCounterHiAd,
+		 TestCount(15 downto 0) when TestCounterLoAd,
 		 X"000" & "00" & FMTxBuff_full & FMTxBuff_empty when LVDSTxFIFOStatAd,
 		 X"0" & BeamOnLength when BeamOnLengthAd,
 		 X"0" & BeamOffLength when BeamOffLengthAd,
-		 "0000000" & std_logic_vector(TurnOnTime) when OnTimeAddr,
-		 "0000000" & std_logic_vector(TurnOffTime) when OffTimeAddr,
- 		 "0000000" & std_logic_vector(LEDTime) when LEDTimeAddr,
+		 "0000000" & TurnOnTime when OnTimeAddr,
+		 "0000000" & TurnOffTime when OffTimeAddr,
+ 		 "0000000" & LEDTime when LEDTimeAddr,
 		 "00" & SDWrtAd(29 downto 16) when SDRamWrtPtrHiAd,
 		 SDWrtAd(15 downto 0) when SDRamWrtPtrLoAd,
 		 "00" & SDRdAD(29 downto 16) when SDRamRdPtrHiAd,
@@ -2255,8 +2600,8 @@ iCD <= X"000" & "00" & AFEPDn when CSRRegAddr,
 		 HistInterval when HistIntvalAd,
 		 X"00" & '0' & HistEnReq(1) & HistEnReq(0) & HistMode & '0' & HistChan when HistCtrlAd,
  		 X"0" & std_logic_vector(Hist_Offset_Reg) when HistOfstAd,
-		 X"0" & '0' & std_logic_vector(HistAddrb(0)) when HistPtrAd0,
-		 X"0" & '0' & std_logic_vector(HistAddrb(1)) when HistPtrAd1,
+		 X"0" & '0' & HistAddrb(0) when HistPtrAd0,
+		 X"0" & '0' & HistAddrb(1) when HistPtrAd1,
 		 Hist_Outb(0) when HistRd0Ad,
 		 Hist_Outb(1) when HistRd1Ad,
 		 X"0" & std_logic_vector(Ped_Reg(0)(0)) when PedRegAddr(0)(0),
@@ -2292,29 +2637,31 @@ iCD <= X"000" & "00" & AFEPDn when CSRRegAddr,
 		 X"0" & std_logic_vector(IntTrgThresh(1)(6)) when ThreshRegAddr(1)(6),
 		 X"0" & std_logic_vector(IntTrgThresh(1)(7)) when ThreshRegAddr(1)(7),
 		 X"000" & "00" & TrgSrc & '0' when TrigCtrlAddr,
-		 X"000" & std_logic_vector(ADCSmplCntReg) when ADCSmplCntrAd,
+		 X"000" & ADCSmplCntReg when ADCSmplCntrAd,
 		 X"000" &"00" & SlfTrgEn & TmgSrcSel when IntTrgEnAddr,
 		 "000" & ControllerNo & "000" & PortNo when FEBAddresRegAd,
+		 "00" & FRDat(0) & "00" & FRDat2(0) when FRDat0RegAd,
+		 "00" & FRDat(1) & "00" & FRDat2(1) when FRDat1RegAd,
 		 X"0000" when others;
 
 -- Select between DAC readback and the rest of the registers
-uCD <= iCD when uCRd = '0' and CpldCS = '0' and uuCA(11 downto 10) = uGA 
-   and (uuCA(9 downto 0) < DatArray0Min or uuCA(9 downto 0) > CtrlArray2Max)
-	and (uuCA(9 downto 0) < OneWireCmdAd or uuCA(9 downto 0) > TempDat4Ad)
-	and uuCA(9 downto 0) /= PageStatAddr
-else ShadowOut when uCRd = '0' and CpldCS = '0' and uuCA(11 downto 10) = uGA 
-   and uuCA(9 downto 0) >= DatArray0Min and uuCA(9 downto 0) <= CtrlArray2Max
-else One_Wire_Out when uCRd = '0' and CpldCS = '0' and uuCA(11 downto 10) = uGA 
-   and uuCA(9 downto 0) >= OneWireCmdAd and uuCA(9 downto 0) <= TempDat4Ad
+uCD <= iCD when uCRd = '0' and CpldCS = '0' and uCA(11 downto 10) = GA 
+   and (uCA(9 downto 0) < DatArray0Min or uCA(9 downto 0) > CtrlArray2Max)
+	and (uCA(9 downto 0) < OneWireCmdAd or uCA(9 downto 0) > TempDat4Ad)
+	and uCA(9 downto 0) /= PageStatAddr
+else ShadowOut when uCRd = '0' and CpldCS = '0' and uCA(11 downto 10) = GA 
+   and uCA(9 downto 0) >= DatArray0Min and uCA(9 downto 0) <= CtrlArray2Max
+else One_Wire_Out when uCRd = '0' and CpldCS = '0' and uCA(11 downto 10) = GA 
+   and uCA(9 downto 0) >= OneWireCmdAd and uCA(9 downto 0) <= TempDat4Ad
 -- Contrive to to show status bits from 4 FPGAs with a read from a single address.
 else 'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'& DRAMRdBuffEmpty &'Z'&'Z'&'Z'  
-		& PageRdStat when uCRd = '0' and CpldCS = '0' and GA = "00" and uuCA(9 downto 0) = PageStatAddr
+		& PageRdStat when uCRd = '0' and CpldCS = '0' and GA = "00" and uCA(9 downto 0) = PageStatAddr
 else 'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'& DRAMRdBuffEmpty &'Z'&'Z'&'Z'
-	   & PageRdStat &'Z' when uCRd = '0' and CpldCS = '0' and GA = "01" and uuCA(9 downto 0) = PageStatAddr 
+	   & PageRdStat &'Z' when uCRd = '0' and CpldCS = '0' and GA = "01" and uCA(9 downto 0) = PageStatAddr 
 else 'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'& DRAMRdBuffEmpty &'Z'&'Z'&'Z'
-		& PageRdStat &'Z'&'Z' when uCRd = '0' and CpldCS = '0' and GA = "10" and uuCA(9 downto 0) = PageStatAddr 
+		& PageRdStat &'Z'&'Z' when uCRd = '0' and CpldCS = '0' and GA = "10" and uCA(9 downto 0) = PageStatAddr 
 else 'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'&'Z'& DRAMRdBuffEmpty &'Z'&'Z'&'Z'
-		& PageRdStat &'Z'&'Z'&'Z' when uCRd = '0' and CpldCS = '0' and GA = "11" and uuCA(9 downto 0) = PageStatAddr 
+		& PageRdStat &'Z'&'Z'&'Z' when uCRd = '0' and CpldCS = '0' and GA = "11" and uCA(9 downto 0) = PageStatAddr 
 else (others => 'Z');
 
 end behavioural;

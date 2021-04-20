@@ -1,0 +1,2 @@
+vhdl work ../../GTPClkDCM.vhd
+vhdl work ../example_design/GTPClkDCM_exdes.vhd

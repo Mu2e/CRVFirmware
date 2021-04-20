@@ -52,7 +52,7 @@
 #----------------------------------------------------------------
 # Differential clock only needs one constraint
 NET "CLK_IN1_P" TNM_NET = "CLK_IN1_P";
-TIMESPEC "TS_CLK_IN1_P" = PERIOD "CLK_IN1_P" 10.0 ns HIGH 50% INPUT_JITTER 50.0ps;
+TIMESPEC "TS_CLK_IN1_P" = PERIOD "CLK_IN1_P" 6.25 ns HIGH 50% INPUT_JITTER 31.25ps;
 
 
 # FALSE PATH constraints 

@@ -12,7 +12,7 @@ package Proj_Defs is
 
 ----------------------- Address list -----------------------------
 
-Subtype AddrPtr is unsigned(9 downto 0);
+Subtype AddrPtr is std_logic_vector(9 downto 0);
 
 -- Control and status register
 constant CSRRegAddr : AddrPtr  := "00" & X"00";
@@ -92,10 +92,11 @@ constant CtrlArray1Max : AddrPtr := "00" & X"57";
 constant CtrlArray2Min : AddrPtr := "00" & X"58";
 constant CtrlArray2Max : AddrPtr := "00" & X"5F";
 
-constant uBunchFIFOStatAd : AddrPtr := "00" & X"60";
+--Clock alignment slip control registers
+constant SlipCtrlAd 	 : AddrPtr := "00" & X"61";
+constant SlipCntRegAd : AddrPtr := "00" & X"62";
+constant AlignEnAd    : AddrPtr := "00" & X"63";
 
-constant EvWrtCounterAdHi : AddrPtr := "00" & X"64";
-constant EvWrtCounterAdLo : AddrPtr := "00" & X"65";
 -- Spill word count
 -- One second timer reset at FPGA config
 constant UpTimeRegAddrHi : AddrPtr := "00" & X"6C";
@@ -103,6 +104,10 @@ constant UpTimeRegAddrLo : AddrPtr := "00" & X"6D";
 -- Diagnostic access to timestamp register
 constant TimeStampAdHi : AddrPtr := "00" & X"72";
 constant TimeStampAdLo : AddrPtr := "00" & X"73";
+
+-- Simon Debug
+constant FRDat0RegAd : AddrPtr := "00" & X"74";
+constant FRDat1RegAd : AddrPtr := "00" & X"75";
 -- Spill indicator
 
 Type AddrArrayType is Array(0 to 7) of AddrPtr;
@@ -163,6 +168,8 @@ constant CSRBroadCastAd : AddrPtr := "11" & X"16";
 constant PageStatAddr : AddrPtr := "11" & X"17";
 constant LEDTimeAddr : AddrPtr := "11" & X"18";
 
+constant BrdCstAlgnReqAd : AddrPtr := "11" & X"19";
+
 ----------------------------------------------------------------------
 Subtype AddrPins is std_logic_vector(11 downto 0);
 
@@ -173,15 +180,15 @@ constant ChanArray : PtrArrayType := (X"0",X"1",X"2",X"3",X"4",X"5",X"6",X"7",
 
 -- Timing constants assuming 160 MHz clock
 -- 1us timer
-constant Count1us : unsigned (7 downto 0) := X"9F"; -- 159 D
+constant Count1us : std_logic_vector (7 downto 0) := X"63"; -- 99 D
 -- 10us timer
-constant Count10us : unsigned (10 downto 0) := "110" & X"3F"; -- 1599 (10us)
+constant Count10us : std_logic_vector (10 downto 0) := "011" & X"E7"; -- 999 (10us)
 -- 1msec timer
-constant Count1ms : unsigned (17 downto 0) := "10" & X"70FF"; -- 159999 (1ms)
+constant Count1ms : std_logic_vector (17 downto 0) := "01" & X"869F"; -- 99999 (1ms)
 -- use this for reasonable simulation times
 --constant Count1ms : std_logic_vector (17 downto 0) := "00" & X"0040"; -- 159999 (1ms)
 -- 1Second timer
-constant Count1s : unsigned (27 downto 0) := X"98967FF"; -- 159,999,999 Decimal
+constant Count1s : std_logic_vector (27 downto 0) := X"5F5E0FF"; -- 99,999,999 Decimal
 -- Use this for debugging purposes
 -- constant Count1s : std_logic_vector (27 downto 0) := X"0000280"; -- 640 Decimal
 --  "000" & X"000037"; --  Value used for simulating test pulse generator
@@ -190,6 +197,8 @@ constant Count1s : unsigned (27 downto 0) := X"98967FF"; -- 159,999,999 Decimal
 constant RefreshCmd : std_logic_vector (2 downto 0) := "100";
 constant ReadCmd : std_logic_vector (2 downto 0) := "001";
 constant WriteCmd : std_logic_vector (2 downto 0) := "000";
+
+constant PageSize : std_logic_vector (15 downto 0) := X"01FE";
 
 ----------------------------- Type Defs -------------------------------
 -- Inter-module link FM serializer and deserializer type declarations
@@ -236,7 +245,6 @@ port
   -- Clock out ports
   CLK_OUT1          : out    std_logic;
   CLK_OUT2          : out    std_logic;
-  CLK_OUT3          : out    std_logic;
   -- Status and control signals
   RESET             : in     std_logic
  );
@@ -346,8 +354,6 @@ component AFE_DP_Pipeline
     doutb : out std_logic_vector(95 downto 0));
 end component;
 
--- FIFO for queueing AFE data while waiting for LPDDR writes 
-
 -- Histogrammer memory 512x32
 component Hist_Ram
   port (
@@ -436,6 +442,7 @@ port 	(
 	debug_in		:  in std_logic_vector(1 downto 0) ;  		-- Debug Inputs, set to '0' if not required
 	debug			: out std_logic_vector((2*D)+6 downto 0)) ; 	-- Debug output bus, 2D+6 = 2 lines per input (from mux and ce) + 7, 
 																				-- leave nc if debug not required
+	--FRSimonSync : out std_logic_vector(2 downto 0)) ;
 end component ;
 
 -------------------- user defined components ------------------
@@ -462,11 +469,10 @@ component FM_Rx is
 end component;
 
 component One_Wire is
-		 port(clock,reset : in std_logic;
-			GA,WRDL  : in unsigned(1 downto 0);
-			uCA : in unsigned(11 downto 0);
+		 port(clock,reset,CpldCS,uCWr  : in std_logic;
+			GA  : in std_logic_vector(1 downto 0);
+			uCA : in std_logic_vector(11 downto 0);
 			uCD : in std_logic_vector(15 downto 0);
-			Counter1us : in unsigned(7 downto 0);
 			Temp : in  std_logic_vector(3 downto 0);
 			TempEn : buffer std_logic;
 			TempCtrl : buffer std_logic_vector(3 downto 0);

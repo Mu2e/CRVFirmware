@@ -1,0 +1,9 @@
+run
+-ifmt MIXED
+-top SerialTx_exdes
+-p xc6slx25t-fgg484-3
+-ifn xst.prj
+-ofn SerialTx_exdes
+-keep_hierarchy soft 
+-equivalent_register_removal no 
+-max_fanout 65535

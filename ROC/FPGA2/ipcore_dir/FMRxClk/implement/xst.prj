@@ -1,0 +1,2 @@
+vhdl work ../../FMRxClk.vhd
+vhdl work ../example_design/FMRxClk_exdes.vhd
