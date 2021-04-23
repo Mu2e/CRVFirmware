@@ -107,7 +107,8 @@ signal GPOCount : std_logic_vector(2 downto 0);
 -- Signals for decoding duty cycle modulated microbunch marker
 signal DDRBits : std_logic_vector(1 downto 0);
 signal MarkerBits : std_logic_vector(15 downto 0);
-signal Even_Odd,Marker,MarkerReq,MarkerSyncEn : std_logic;
+signal MarkerDelay, MarkerDelayCounter : std_logic_vector(7 downto 0);
+signal Even_Odd,Marker,MarkerDelayed,MarkerReq,MarkerSyncEn : std_logic;
 
 -- Orange tree signals
 signal iDQ : std_logic_vector (15 downto 0);
@@ -141,7 +142,7 @@ signal HrtBtBrstCntReg,HrtBtBrstCounter  : std_logic_vector (23 downto 0);
 signal uBunchLEDCnt : std_logic_vector (4 downto 0);
 signal TrigType : std_logic_vector (3 downto 0);
 signal DRFreq : std_logic_vector (31 downto 0);
-signal DRCount : std_logic_vector (8 downto 0);
+signal DRCount : std_logic_vector (7 downto 0);
 signal Int_uBunch : std_logic_vector (1 downto 0);
 
 -- Count the number of triggers
@@ -253,6 +254,7 @@ Type Trig_Tx_State is (Idle,SendTrigHdr,SendPad0,SendPktType,SenduBunch0,SenduBu
 								SenduBunch2,SendPad1,SendPad2,SendPad3,WaitCRC,SendCRC,SetPktType);
 signal IntTrigSeq : Trig_Tx_State;
 signal DReqBrstCntReg,DReqBrstCounter : std_logic_vector (15 downto 0);
+signal DReqPrescale,PreScaleReg : std_logic_vector (8 downto 0);
 signal Packet_Type : std_logic_vector (3 downto 0);
 
 -- Heart beat FIFO
@@ -830,8 +832,8 @@ end if;
 	end if;
 
 		if Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and HrtBtWrtCnt > 0
-	then HrtBtBuff_wr_en <= '1'; Debug(7) <= '1';
-	else HrtBtBuff_wr_en <= '0'; Debug(7) <= '0';
+	then HrtBtBuff_wr_en <= '1'; GPO(1) <= '1'; Debug(7) <= '1';
+	else HrtBtBuff_wr_en <= '0'; GPO(1) <= '0'; Debug(7) <= '0';
 	end if;
 
 -- Store the empty flag values when they make a transition, 
@@ -1584,7 +1586,7 @@ EthProc : process(EthClk, CpldRst)
 	ZEthCS <= '1'; ZEthWE <= '1'; 
 	ZEthBE <= "11"; EthRDDL <= (others => '0');
 	MarkerBits <= X"0000"; Even_Odd <= '0'; 
-	GPO <= "00"; Marker <= '0';
+	GPO(0) <= '0'; Marker <= '0';
 
  elsif rising_edge (EthClk) then 
 
@@ -1597,12 +1599,12 @@ EthProc : process(EthClk, CpldRst)
 	else Marker <= Marker; GPO(0) <= GPO(0);
 	end if;
 
-	if GPO(1) = '0' and MarkerBits = X"F0C0"
-	  then GPO(1) <= '1';
-	elsif GPO(1) = '1' and MarkerBits = X"F0FC"
-	  then GPO(1) <= '0';
-	 else GPO(1) <= GPO(1);
-	end if;
+--	if GPO(1) = '0' and MarkerBits = X"F0C0"
+--	  then GPO(1) <= '1';
+--	elsif GPO(1) = '1' and MarkerBits = X"F0FC"
+--	  then GPO(1) <= '0';
+--	 else GPO(1) <= GPO(1);
+--	end if;
 
 	if MarkerBits = X"C0F0" then Even_Odd <= '1';
 	elsif MarkerBits = X"FCF0" then Even_Odd <= '0';  
@@ -1693,11 +1695,23 @@ FMTxReq : process(Clk80MHz, CpldRst)
  if CpldRst = '0' then
 
 	HrtBtFMTxEn <= '0'; FMTxBsy <= '0';
+	MarkerDelayCounter <= (others => '0');
 
  elsif rising_edge(Clk80MHz) then
+ 
+-- Counter to manage delay of marker receipt
+  if Marker = '1'
+		then MarkerDelayCounter <= MarkerDelay;
+	elsif MarkerDelayCounter > 0
+		then MarkerDelayCounter <= MarkerDelayCounter - 1;
+	elsif MarkerDelayCounter = 0 and MarkerDelayed = '0'
+		then MarkerDelayed <= '1';
+	else
+		MarkerDelayed <= '0';
+  end if;
 
 -- Send a heart beat without pause if there is no marker input expected
-  if HrtBtFMReq = '1' or (MarkerSyncEn = '1' and Marker = '1')
+  if HrtBtFMReq = '1' or (MarkerSyncEn = '1' and MarkerDelayed = '1')
 	  then HrtBtFMTxEn <= '1';
 	else HrtBtFMTxEn <= '0';
   end if;
@@ -1751,13 +1765,14 @@ main : process(SysClk, CpldRst)
 	TmgCntEn <= '0'; ClkDiv <= "000"; CMDBitCount <= (others => '0'); 
 	LEDShiftReg <= (others => '0');	LED_Shift <= Idle;
 	DReqBuff_uCRd <= '0'; LinkBusy <= '0'; HrtBtTxInh <= '0';
-
+	MarkerDelay <= (others => '0'); 
+	
 -- Pll Chip Shifter signals
 	PLLBuffwr_en <= '0'; PLLBuffrd_en <= '0'; PllPDn <= '1';
 	PllStage <= X"00"; PllShiftReg <= (others => '0'); 
 	PllBitCount <= (others => '0'); Pll_Shift <= Idle;
 	PllSClk <= '0'; PllSDat <= '0'; PllLd <= '0';
-
+	
 -- TDAQ Receive link signals
 	RxSeqNo(0) <= "000";  WrtCount(0) <= "000";
 	TDisA <= '0'; TDisB <= '0';
@@ -1767,6 +1782,7 @@ main : process(SysClk, CpldRst)
 
 	DReqBrstCntReg <= X"0001"; DReqBrstCounter <= (others => '0');
 	Dreq_Tx_Req <= '0'; Dreq_Tx_ReqD <= '0';
+	DReqPrescale <= (others => '0'); PreScaleReg <= '0' & X"63";
 
 	FEBID_wea <= "0"; 
 	FEBID_addra <= (others => '0'); FEBID_addrb <= (others => '0');
@@ -1819,11 +1835,11 @@ if IntTmgEn = '0'
 -- If the finite length is enabled, stop after the count has expired
  elsif IntTmgEn = '1' 
    and ((WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr and uCD(0) = '0')
-    or  (HrtBtBrstCounter = 1 and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = BeamOffLength)))
+    or  (HrtBtBrstCounter = 1 and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)))
   then IntTmgEn <= '0';
  else IntTmgEn <= IntTmgEn;
  end if;
-
+ 
 -- Finite heartbeat transmit sequence length enable bit
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
 	and TmgCntEn = '0' and uCD(0) = '1' and uCD(1) = '1'
@@ -1841,7 +1857,7 @@ if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
 	and TmgCntEn = '0' and uCD(0) = '1' and uCD(1) = '1'
   then HrtBtBrstCounter <= HrtBtBrstCntReg;
- elsif HrtBtBrstCounter /= 0 and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = BeamOffLength)
+ elsif HrtBtBrstCounter /= 0 and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
   then HrtBtBrstCounter <= HrtBtBrstCounter - 1;
  else HrtBtBrstCounter <= HrtBtBrstCounter;
  end if;
@@ -1880,9 +1896,29 @@ if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr
   else DReqBrstCounter <= DReqBrstCounter;
   end if;
 
+-- Register used to prescale data requests during beam on
+ if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = PreScaleRegAd then 
+     PreScaleReg <= uCD(8 downto 0);
+  else 
+	  PreScaleReg <= PreScaleReg;
+  end if;
+
+-- Counter used to prescale data requests during beam on
+	if Beam_On = '0'  
+	 or (TstTrigEn = '1' and IntTmgEn = '1' and Int_uBunch = 1 
+	and Beam_On = '1' and DRCount = 7 and BmOnTrigReq = '1' and DReqPrescale = PreScaleReg) then 
+	  DReqPrescale <= (others => '0'); 
+	elsif TstTrigEn = '1' and IntTmgEn = '1' and Int_uBunch = 1 
+	and Beam_On = '1' and DRCount = 7 and BmOnTrigReq = '1' and DReqPrescale /= PreScaleReg then 
+	  DReqPrescale <= DReqPrescale + 1;
+	else
+	  DReqPrescale <= DReqPrescale;
+	end if;
+
 -- Send a heart request to transmit a data request packet.
 if TstTrigEn = '1' and IntTmgEn = '1' and Int_uBunch = 1 
-	and ((Beam_On = '1' and DRCount = 7 and BmOnTrigReq = '1') or DRCount = BeamOffLength)
+	and ((Beam_On = '1' and DRCount = 7 and BmOnTrigReq = '1' and DReqPrescale = PreScaleReg) 
+	or DRCount = 143)
 	then Dreq_Tx_Req <= '1';
 elsif DReq_Tx_Ack = '1'
 	then Dreq_Tx_Req <= '0';
@@ -1892,6 +1928,12 @@ Dreq_Tx_ReqD <= Dreq_Tx_Req;
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = IDregAddr 
 then IDReg <= uCD(3 downto 0);
 else IDReg <= IDReg;
+end if;
+
+-- Set delay for received marker
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = MarkerDelayAd
+	then MarkerDelay <= uCD(7 downto 0);
+	else MarkerDelay <= MarkerDelay;
 end if;
 
 --	Read of the trigger request FIFO
@@ -1942,16 +1984,16 @@ Int_uBunch(1) <= Int_uBunch(0);
 -- For now define the on spill to be 8 4.7MHz ticks and the off spill 144 ticks
 -- "DR" for delivery ring 
 if IntTmgEn = '1' and 
-   Int_uBunch = 1 and not((Beam_On = '1' and DRCount = 7) or DRCount = BeamOffLength)
+   Int_uBunch = 1 and not((Beam_On = '1' and DRCount = 7) or DRCount = 143)
 then DRCount <= DRCount + 1;
-elsif Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = BeamOffLength)
+elsif Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
 then DRCount <= (others => '0');
 else DRCount <= DRCount;
 end if;
 
 -- If timing is internal, increment the microbunch number
 if IntTmgEn = '1' and 
-	Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = BeamOffLength)
+	Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
 then IntuBunchCount <= IntuBunchCount + 1;
 elsif WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = TrigCtrlAddr	and uCD(2) = '1'
 then IntuBunchCount <= (others => '0');
@@ -1960,7 +2002,7 @@ end if;
 
 
 -- Send a heartbeat transmit request to GTPTx(1) 
-if IntTmgEn = '1' and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = BeamOffLength)
+if IntTmgEn = '1' and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
  then HrtBtTxReq <= '1'; 
 	elsif HrtBtTxAck = '1' then HrtBtTxReq <= '0';
  else HrtBtTxReq <= HrtBtTxReq;
@@ -2325,6 +2367,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 UpTimeStage(15 downto 0) when UpTimeRegAddrLo,
 		 TestCount(31 downto 16) when TestCounterHiAd,
 		 TestCount(15 downto 0) when TestCounterLoAd,
+		 X"0" & "000" & PreScaleReg when PreScaleRegAd,
 		 LinkFIFOOut(0) when LinkRdAddr(0),
 		 LinkFIFOOut(1) when LinkRdAddr(1),
 		 LinkFIFOOut(2) when LinkRdAddr(2),
@@ -2356,6 +2399,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 DReqBuff_Emtpy & "0000" & TrgPktRdCnt when DreqBuffStatAd,
 		 HrtBtBuff_Emtpy & "0000" & HrtBtBuffRdCnt when HrtBtBuffStatAd,
 		 HrtBtBuff_Out when HrtBtFIFORdAd,
+		 X"00" & MarkerDelay when MarkerDelayAd,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers

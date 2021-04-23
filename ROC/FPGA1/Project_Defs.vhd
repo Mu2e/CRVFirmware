@@ -74,9 +74,8 @@ constant InterSpillRegAd : AddrPtr := "00" & X"31";
 constant HrtBtBrstCntAdHi : AddrPtr := "00" & X"32"; 
 constant HrtBtBrstCntAdLo : AddrPtr := "00" & X"33"; 
 
--- Counter used to produce sequential data as a diagnostic
-constant TestCounterHiAd : AddrPtr := "00" & X"34";
-constant TestCounterLoAd : AddrPtr := "00" & X"35";
+constant TestCounterHiAd : AddrPtr := "00" & X"34"; 
+constant TestCounterLoAd : AddrPtr := "00" & X"35"; 
 
 constant MicroBunchAdHi : AddrPtr  := "00" & X"36";
 constant MicroBunchAdMid : AddrPtr := "00" & X"37";
@@ -93,6 +92,8 @@ constant DreqBuffStatAd : AddrPtr := "00" & X"3C";
 -- Heart Beat request buffer
 constant HrtBtBuffStatAd : AddrPtr := "00" & X"3D";
 constant HrtBtFIFORdAd : AddrPtr := "00" & X"3E";
+-- Data request prescale during beam on
+constant PreScaleRegAd : AddrPtr := "00" & X"40";
 
 constant SpillTrigCntAdHi : AddrPtr := "00" & X"66";
 constant SpillTrigCntAdLo : AddrPtr := "00" & X"67";
@@ -112,6 +113,7 @@ constant TimeStampAdLo : AddrPtr := "00" & X"73";
 constant SpillStatAddr : AddrPtr := "00" & X"76";
 
 constant MarkerBitsAd : AddrPtr  := "00" & X"77";
+constant MarkerDelayAd : AddrPtr := "00" & X"78";
 
 ---------------------- Broadcast addresses ------------------------------
 
@@ -146,7 +148,6 @@ constant SpillBegin : std_logic_vector (13 downto 0) := "00" & X"61C"; -- 1566
 constant SpillEnd : std_logic_vector (13 downto 0) := "01" & X"4F4"; -- 5364
 constant SpillLength : std_logic_vector (8 downto 0) := '1' & X"AE"; -- 430 (43.1 ms)
 constant InterSpillLength : std_logic_vector (7 downto 0) := X"31"; -- 49 (5 ms)
-constant BeamOffLength : std_logic_vector (8 downto 0) := '1' & X"D7"; -- 472 4.7MHz Counts
 
 -- Use these shortened values for simulation 
 --constant Count100us : std_logic_vector (13 downto 0) := "00" & X"01D"; -- 10620 (100us) "00" & X"030"; --
