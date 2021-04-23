@@ -55,14 +55,15 @@
 -- "Output    Output      Phase     Duty      Pk-to-Pk        Phase"
 -- "Clock    Freq (MHz) (degrees) Cycle (%) Jitter (ps)  Error (ps)"
 ------------------------------------------------------------------------------
--- CLK_OUT1___100.000______0.000______50.0______200.000____150.000
--- CLK_OUT2___160.000______0.000______50.0______325.000____150.000
--- CLK_OUT3___160.000____180.000______50.0______325.000____150.000
+-- CLK_OUT1___100.000______0.000______50.0______400.000____150.000
+-- CLK_OUT2___160.000______0.000______50.0______200.000____150.000
+-- CLK_OUT3___160.000____180.000______50.0______300.000____150.000
+-- CLK_OUT4____80.000______0.000______50.0______300.000____150.000
 --
 ------------------------------------------------------------------------------
 -- "Input Clock   Freq (MHz)    Input Jitter (UI)"
 ------------------------------------------------------------------------------
--- __primary_____________100____________0.010
+-- __primary_____________160____________0.010
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -82,6 +83,7 @@ port
   CLK_OUT1          : out    std_logic;
   CLK_OUT2          : out    std_logic;
   CLK_OUT3          : out    std_logic;
+  CLK_OUT4          : out    std_logic;
   -- Status and control signals
   RESET             : in     std_logic;
   LOCKED            : out    std_logic
@@ -90,15 +92,16 @@ end SysPll;
 
 architecture xilinx of SysPll is
   attribute CORE_GENERATION_INFO : string;
-  attribute CORE_GENERATION_INFO of xilinx : architecture is "SysPll,clk_wiz_v3_6,{component_name=SysPll,use_phase_alignment=true,use_min_o_jitter=false,use_max_i_jitter=false,use_dyn_phase_shift=false,use_inclk_switchover=false,use_dyn_reconfig=false,feedback_source=FDBK_AUTO,primtype_sel=DCM_SP,num_out_clk=3,clkin1_period=10.0,clkin2_period=10.0,use_power_down=false,use_reset=true,use_locked=true,use_inclk_stopped=false,use_status=false,use_freeze=false,use_clk_valid=false,feedback_type=SINGLE,clock_mgr_type=AUTO,manual_override=false}";
+  attribute CORE_GENERATION_INFO of xilinx : architecture is "SysPll,clk_wiz_v3_6,{component_name=SysPll,use_phase_alignment=true,use_min_o_jitter=false,use_max_i_jitter=false,use_dyn_phase_shift=false,use_inclk_switchover=false,use_dyn_reconfig=false,feedback_source=FDBK_AUTO,primtype_sel=DCM_SP,num_out_clk=4,clkin1_period=6.25,clkin2_period=6.25,use_power_down=false,use_reset=true,use_locked=true,use_inclk_stopped=false,use_status=false,use_freeze=false,use_clk_valid=false,feedback_type=SINGLE,clock_mgr_type=AUTO,manual_override=false}";
 	  -- Input clock buffering / unused connectors
   signal clkin1            : std_logic;
   -- Output clock buffering
-  signal clk_out1_internal : std_logic;
+  signal clk_out2_internal : std_logic;
   signal clkfb             : std_logic;
   signal clk0              : std_logic;
+  signal clk180            : std_logic;
   signal clkfx             : std_logic;
-  signal clkfx180          : std_logic;
+  signal clkdv             : std_logic;
   signal clkfbout          : std_logic;
   signal locked_internal   : std_logic;
   signal status_internal   : std_logic_vector(7 downto 0);
@@ -123,10 +126,10 @@ begin
   dcm_sp_inst: DCM_SP
   generic map
    (CLKDV_DIVIDE          => 2.000,
-    CLKFX_DIVIDE          => 5,
-    CLKFX_MULTIPLY        => 8,
+    CLKFX_DIVIDE          => 8,
+    CLKFX_MULTIPLY        => 5,
     CLKIN_DIVIDE_BY_2     => FALSE,
-    CLKIN_PERIOD          => 10.0,
+    CLKIN_PERIOD          => 6.25,
     CLKOUT_PHASE_SHIFT    => "NONE",
     CLK_FEEDBACK          => "1X",
     DESKEW_ADJUST         => "SYSTEM_SYNCHRONOUS",
@@ -139,13 +142,13 @@ begin
     -- Output clocks
     CLK0                  => clk0,
     CLK90                 => open,
-    CLK180                => open,
+    CLK180                => clk180,
     CLK270                => open,
     CLK2X                 => open,
     CLK2X180              => open,
     CLKFX                 => clkfx,
-    CLKFX180              => clkfx180,
-    CLKDV                 => open,
+    CLKFX180              => open,
+    CLKDV                 => clkdv,
    -- Ports for dynamic phase shift
     PSCLK                 => '0',
     PSEN                  => '0',
@@ -164,25 +167,31 @@ begin
 
   -- Output buffering
   -------------------------------------
-  clkfb <= clk_out1_internal;
+  clkfb <= clk_out2_internal;
 
 
   clkout1_buf : BUFG
   port map
-   (O   => clk_out1_internal,
-    I   => clk0);
+   (O   => CLK_OUT1,
+    I   => clkfx);
 
 
-  CLK_OUT1 <= clk_out1_internal;
 
   clkout2_buf : BUFG
   port map
-   (O   => CLK_OUT2,
-    I   => clkfx);
+   (O   => clk_out2_internal,
+    I   => clk0);
+
+  CLK_OUT2 <= clk_out2_internal;
 
   clkout3_buf : BUFG
   port map
    (O   => CLK_OUT3,
-    I   => clkfx180);
+    I   => clk180);
+
+  clkout4_buf : BUFG
+  port map
+   (O   => CLK_OUT4,
+    I   => clkdv);
 
 end xilinx;

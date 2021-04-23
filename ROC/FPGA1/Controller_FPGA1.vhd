@@ -98,7 +98,7 @@ Signal RDDL,WRDL : std_logic_vector (1 downto 0);
 signal EthWRDL,EthRDDL : std_logic_vector (4 downto 0);
 
 -- Clock and reset signals
-signal Buff_Rst,SysClk,FMGenClk,ResetHi,Pll_Locked,nEthClk,
+signal Buff_Rst,SysClk,Clk80MHz,FMGenClk,ResetHi,Pll_Locked,nEthClk,
 		 EthClk,SerdesRst,LinkBuffRst,GTPRst, Seq_Rst : std_logic;
 
 -- Counter that determines the trig out pulse width
@@ -106,9 +106,8 @@ signal GPOCount : std_logic_vector(2 downto 0);
 
 -- Signals for decoding duty cycle modulated microbunch marker
 signal DDRBits : std_logic_vector(1 downto 0);
-signal MarkerBits : std_logic_vector(7 downto 0);
-signal GaurdCount : std_logic_vector(3 downto 0);
-signal Even_Odd,Marker : std_logic;
+signal MarkerBits : std_logic_vector(15 downto 0);
+signal Even_Odd,Marker,MarkerReq,MarkerSyncEn : std_logic;
 
 -- Orange tree signals
 signal iDQ : std_logic_vector (15 downto 0);
@@ -119,7 +118,7 @@ signal DQEn : std_logic;
 signal iCD : std_logic_vector(15 downto 0);
 signal AddrReg : std_logic_vector(11 downto 0);
 -- FM transmit enable
-signal EnTx1,TrgSrc,TrigReq,TrigPls : std_logic;
+signal EnTx1,TrgSrc : std_logic;
 
 -- Timing interval counters
 signal Counter1us : std_logic_vector (7 downto 0);
@@ -130,23 +129,22 @@ signal GateCounter, TurnOnTime, TurnOffTime : std_logic_vector (8 downto 0);
 
 signal TrigEn,TstTrigEn,TstTrigCE,Spill_Req,Beam_On,Seq_Busy : std_logic; 
 
-signal TstPlsEn,TstPlsEnReq,SS_FR,IntTrig,ExtTrig,IntTmgEn,TmgCntEn : std_logic;
+signal TstPlsEn,TstPlsEnReq,SS_FR,IntTrig,IntTmgEn,TmgCntEn : std_logic;
 signal SpillWidth,InterSpill,InterSpillCount : std_logic_vector (7 downto 0);
 
 -- Signals for generating fake accelerator timing signals
 signal SpillWidthCount : std_logic_vector (8 downto 0);
 signal SuperCycleCount : std_logic_vector (13 downto 0);
-signal MicrobunchCount : std_logic_vector (47 downto 0);
+signal IntuBunchCount,ExtuBunchCount : std_logic_vector (47 downto 0);
 -- Counter for counting down heartbeat bursts
 signal HrtBtBrstCntReg,HrtBtBrstCounter  : std_logic_vector (23 downto 0);
 signal uBunchLEDCnt : std_logic_vector (4 downto 0);
 signal TrigType : std_logic_vector (3 downto 0);
 signal DRFreq : std_logic_vector (31 downto 0);
-signal DRCount : std_logic_vector (7 downto 0);
+signal DRCount : std_logic_vector (8 downto 0);
 signal Int_uBunch : std_logic_vector (1 downto 0);
 
 -- Count the number of triggers
-signal TrigCounter : std_logic_vector (31 downto 0);
 signal DReq_Count : std_logic_vector (15 downto 0);
 -- Make a test counter that increments with each read
 signal TestCount : std_logic_vector (31 downto 0);
@@ -219,10 +217,6 @@ signal rx_serdesstrobe	: std_logic_vector(2 downto 0);
 
 signal RxOutClk : std_logic_vector (2 downto 0);
 
--- Signal used by LVDS FM links
-signal Rx1Dat : std_logic_vector(15 downto 0);
-signal RxOut : RxOutRec;
-
 -- Signals used by GTP transceivers
 Signal tile0_gtp0_refclk_i,tile0_gtp1_refclk_i,GTPRxRst : std_logic;
 Signal PllLkDtct,GTPRstDn,RxUsrClk,BuffOut_DCMIn,
@@ -244,34 +238,39 @@ signal EnPRBSTst,En_PRBS : Array_2x3;
 signal GTPRxBuff_DatCnt : Array_2x13;
 -- Signals used by the microbunch,trigger FM transmitters
 signal HrtBtTxOuts,DreqTxOuts : TxOutRec;
-signal HrtBtTxEn,DReqTxEn,LinkBusy : std_logic;
+signal HrtBtDone,HrtBtTxReq,HrtBtTxAck,HrtBtFMTxEn,TxEnReq,DReqTxEn,LinkBusy : std_logic;
 signal HrtBtData : std_logic_vector (23 downto 0);
 signal TrigFMDat : std_logic_vector (15 downto 0);
 
 -- Trigger request packet buffer, FIFO status bits
 signal DReqBuff_Out : std_logic_vector (15 downto 0);
 signal DReqBuff_wr_en,DReqBuff_rd_en,DReqBuff_uCRd,
-		 DReqBuff_Full,TrigTx_Sel,DReqBuff_Emtpy,Trig_Tx_Req,
-		 Trig_Tx_Ack,BmOnTrigReq,Trig_Tx_ReqD,Stat_DReq : std_logic;
+		 DReqBuff_Full,TrigTx_Sel,DReqBuff_Emtpy,
+		 Dreq_Tx_Req,Dreq_Tx_ReqD,DReq_Tx_Ack,BmOnTrigReq,Stat_DReq : std_logic;
 signal LinkFIFOStatReg,Lower_FM_Bits : std_logic_vector (2 downto 0);  
 
 Type Trig_Tx_State is (Idle,SendTrigHdr,SendPad0,SendPktType,SenduBunch0,SenduBunch1,
-								SenduBunch2,SendPad1,SendPad2,SendPad3,WaitCRC,SendCRC);
+								SenduBunch2,SendPad1,SendPad2,SendPad3,WaitCRC,SendCRC,SetPktType);
 signal IntTrigSeq : Trig_Tx_State;
 signal DReqBrstCntReg,DReqBrstCounter : std_logic_vector (15 downto 0);
-signal TrigReqWdCnt,DCSReqWdCnt : std_logic_vector (3 downto 0);
-signal TrgPktRdCnt : std_logic_vector (10 downto 0);
+signal Packet_Type : std_logic_vector (3 downto 0);
 
+-- Heart beat FIFO
+signal HrtBtWrtCnt,HrtBtRdCnt,TrigReqWdCnt,HrtBtWdCnt,DCSReqWdCnt : std_logic_vector (3 downto 0);
+signal HrtBtBuffRdCnt,TrgPktRdCnt : std_logic_vector (10 downto 0);
+signal HrtBtBuff_wr_en,HrtBtBuff_rd_en,HrtBtBuff_Full,HrtBtBuff_Emtpy,HrtBtFMReq : std_logic;
+signal HrtBtBuff_Out : std_logic_vector (15 downto 0);
+signal HrtBtMode : std_logic_vector (7 downto 0);
 -- Time stamp FIFO
-signal TStmpBuff_Out : std_logic_vector (15 downto 0); 
+signal TStmpBuff_Out : std_logic_vector (15 downto 0);
 signal TStmpBuff_wr_en,TStmpBuff_rd_en,TStmpBuff_Full,TStmpBuff_Emtpy : std_logic;
-signal TStmpWds : std_logic_vector (8 downto 0); 
+signal TStmpWds : std_logic_vector (8 downto 0);
 
 -- DCS request FIFO
 signal DCSTxBuff_wr_en,DCSTxBuff_rd_en,DCSTxBuff_Full,DCSTxBuff_Emtpy : std_logic;
-signal DCSPktRdCnt : std_logic_vector (12 downto 0); 
-signal DCSTxBuff_Out : std_logic_vector (15 downto 0); 
-signal DCSTxBuffWds : std_logic_vector (8 downto 0); 
+signal DCSPktRdCnt : std_logic_vector (12 downto 0);
+signal DCSTxBuff_Out : std_logic_vector (15 downto 0);
+signal DCSTxBuffWds : std_logic_vector (8 downto 0);
 
 -- FEB active register
 signal ActiveReg : std_logic_vector (23 downto 0);
@@ -299,7 +298,7 @@ signal ChkCntr,FormStatReg,EmptyLatch : std_logic_vector (2 downto 0);
 signal Pkt_Timer : std_logic_vector (3 downto 0);
 signal TxPkCnt : std_logic_vector (10 downto 0);
 signal EvTxWdCnt : std_logic_vector (13 downto 0);
-signal FormHold,FormRst,ExtTmg,EvTxWdCntTC : std_logic;
+signal FMTxBsy,FormHold,HrtBtTxInh,FormRst,ExtTmg,EvTxWdCntTC : std_logic;
 
 signal TxSeqNo,RxSeqNo,WrtCount,GtpRxBuffStat,GtpRxBuffCnt : Array_2x3;
 signal RxSeqNoErr : std_logic_vector (1 downto 0);
@@ -317,6 +316,7 @@ Sys_Pll : SysPll
     CLK_OUT1 => SysClk,   -- 100 MHz
     CLK_OUT2 => EthClk,   -- 160 MHz used for Orange Tree I/O
 	 CLK_OUT3 => nEthClk,  -- 160 MHz 180 deg. phase fro DDR In
+	 CLK_OUT4 => Clk80MHz, -- 80 MHz for 20mbit FM transmitter
 -- Status and control signals
     RESET  => ResetHi,
     LOCKED => Pll_Locked);
@@ -330,7 +330,7 @@ BunchClkIn : IDDR2
    port map (
       Q0 => DDRBits(0), -- 1-bit output captured with C0 clock
       Q1 => DDRBits(1), -- 1-bit output captured with C1 clock
-      C0 => EthClk, -- 1-bit clock input
+      C0 => EthClk,  -- 1-bit clock input
       C1 => nEthClk, -- 1-bit clock input
       CE => '1',  -- 1-bit clock enable input
       D => BnchClk,   -- 1-bit data input 
@@ -340,27 +340,30 @@ BunchClkIn : IDDR2
 
 TrigLED <= '0';
 
+-- GTP System reset
 GTPRst <= '1' when CpldRst = '0' 
-  	                or (CpldCS = '0' and uCWR = '0' and uCA = CSRRegAddr and uCD(3) = '1') else '0';
+  	            or (CpldCS = '0' and uCWR = '0' and uCA = CSRRegAddr and uCD(3) = '1') else '0';
+
+-- Reset of receive FIFOs, event counters
 GTPRxRst <= '1' when CpldRst = '0' 
-  	                or (CpldCS = '0' and uCWR = '0' and uCA = GTPFIFOAddr and uCD(0) = '1') else '0';
+  	               or (CpldCS = '0' and uCWR = '0' and uCA = GTPFIFOAddr and uCD(0) = '1') else '0';
 
-
-HrtBtData(19 downto 0) <= MicrobunchCount(19 downto 0);
+HrtBtData(19 downto 0) <= ExtuBunchCount(19 downto 0);
 HrtBtData(20) <= Beam_On;
-HrtBtData(21) <= '0' when MicrobunchCount(31 downto 20) = 0 else '1';
+HrtBtData(21) <= '0' when ExtuBunchCount(31 downto 20) = 0 else '1';
 HrtBtData(23 downto 22) <= "00";
 -- FM transmitter for boadcasting microbunch numbers to the FEBs
 HeartBeatTx : FM_Tx 
 	generic map (Pwidth => 24)
-		 port map(clock => SysClk, 
+		 port map(clock => Clk80MHz, 
 					 reset => ResetHi,
-					 Enable => HrtBtTxEn,
+					 Enable => HrtBtFMTxEn,
 					 Data => HrtBtData, 
 					 Tx_Out => HrtBtTxOuts);
 HeartBeatFM <= HrtBtTxOuts.FM when ExtTmg = '0' else GPI;
+Debug(1) <= HrtBtTxOuts.FM;
 
--- FM transmitter for data requests 
+-- FM transmitter for data requests, used only when sending fake controller data to the GTP link
 DReqTx : FM_Tx
 	generic map (Pwidth => 16)
 		 port map(clock => SysClk, 
@@ -370,11 +373,10 @@ DReqTx : FM_Tx
 					 Tx_Out => DreqTxOuts);
 TrigFM <= DreqTxOuts.FM when TrigTx_Sel = '1'
 			 else LinkBusy when TrigTx_Sel = '0';
-Debug(1) <= DreqTxOuts.FM;
+
 DReqTxEn <= '1' when TrigTx_Sel = '1' and DReqBuff_Emtpy = '0' and DreqTxOuts.Done = '0' 
 					  else '0';
-Debug(7) <= '1' when TrigTx_Sel = '1' and DReqBuff_Emtpy = '0' and DreqTxOuts.Done = '0' 
-					  else '0';
+				  
 -- FIFO for buffering broadcast trigger requests, 
 -- crossing clock domains from UsrClk to Sysclk
 DReqBuff : FIFO_DC_1kx16
@@ -387,12 +389,23 @@ DReqBuff : FIFO_DC_1kx16
     dout => DReqBuff_Out,
     full => DReqBuff_Full,
     empty => DReqBuff_Emtpy,
-	rd_data_count => TrgPktRdCnt);
+	 rd_data_count => TrgPktRdCnt);
 
-DReqBuff_rd_en <= DreqTxOuts.Done when TrigTx_Sel = '1' else DReqBuff_uCRd;
-Debug(6) <= DreqTxOuts.Done when TrigTx_Sel = '1' else DReqBuff_uCRd;
-Debug(5) <= DReqBuff_Emtpy;
+	 DReqBuff_rd_en <= DreqTxOuts.Done when TrigTx_Sel = '1' else DReqBuff_uCRd;
 
+-- FIFO for buffering incoming heartbeats
+-- crossing clock domains from UsrClk to Sysclk
+HrtBtBuff : FIFO_DC_1kx16
+  PORT MAP (rst => GTPRxRst,
+    wr_clk => UsrClk2(0),
+	 rd_clk => SysClk,
+    din => GTPRxReg(0),
+    wr_en => HrtBtBuff_wr_en,
+    rd_en => HrtBtBuff_rd_en,
+    dout => HrtBtBuff_Out,
+    full => HrtBtBuff_Full,
+    empty => HrtBtBuff_Emtpy,
+	 rd_data_count => HrtBtBuffRdCnt);
 
 -- FIFO for buffering status requests
 DCSPktBuff : LinkFIFO
@@ -624,10 +637,10 @@ begin
 	UsrWRDL(0) <= "00"; UsrRDDL(0) <= "00";
 	Reframe(0) <= '1'; GTPTx(0) <= X"BC3C";
 	TxCharIsK(0) <= "11"; GTPTxStage(0) <= X"BC3C"; 
-	TxSeqNo(0) <= "000"; TxCRCRst(0) <= '0';
-    TxCRCEn(0) <= '0'; RdCRCEn(0) <= '0'; 
-	RxCRCRst(0) <= '0';  RxCRCRstD(0) <= '0';
-	PRBSCntRst(0) <= '0'; DReqBuff_wr_en <= '0'; TrigReqWdCnt <= X"0";
+	TxSeqNo(0) <= "000"; TxCRCRst(0) <= '0'; HrtBtMode <= X"00";
+   TxCRCEn(0) <= '0'; RdCRCEn(0) <= '0'; HrtBtBuff_wr_en <= '0';
+ 	RxCRCRst(0) <= '0';  RxCRCRstD(0) <= '0'; HrtBtWrtCnt <= X"0";
+	TrigReqWdCnt <= X"0"; PRBSCntRst(0) <= '0'; DReqBuff_wr_en <= '0'; 
 	DCSTxBuff_wr_en <= '0'; DReq_Count <= (others =>'0');
 	LinkRDDL <= "00"; Packet_Parser <= Idle; Event_Builder <= Idle;
 	RxSeqNoErr(0) <= '0'; Packet_Former <= Idle; FormRst <= '0';
@@ -658,14 +671,14 @@ elsif rising_edge (UsrClk2(0)) then
 	end if;
 
 -- If a packet header is being received then reset the Rx CRC generator
-	  if Rx_IsCtrl(0) = "10" then RxCRCRst(0) <= '1';
+	  if Rx_IsCtrl(0) = "10" and RxLOS(0)(1) = '0' then RxCRCRst(0) <= '1';
 	else RxCRCRst(0) <= '0';
 	end if;
 
 	RxCRCRstD(0) <= RxCRCRst(0);
 	GTPRxReg(0) <= GTPRx(0);
 
-	  if Rx_IsCtrl(0) = "00" then RdCRCEn(0) <= '1'; 
+	  if Rx_IsCtrl(0) = "00" and RxLOS(0)(1) = '0' then RdCRCEn(0) <= '1'; 
 	else RdCRCEn(0) <= '0'; 
 	end if;
 
@@ -673,7 +686,7 @@ elsif rising_edge (UsrClk2(0)) then
 	CommaDL(0)(1) <= CommaDL(0)(0);
 
 -- Hold reframe until a vaild pad character set is decoded
-	if InvalidChar(0) = "00" and CommaDL(0) = 1 then Reframe(0) <= '0';
+	if RxLOS(0)(1) = '0' and InvalidChar(0) = "00" and CommaDL(0) = 1 then Reframe(0) <= '0';
 	elsif InvalidChar(0) /= "00" then Reframe(0) <= '1';
 	else Reframe(0) <= Reframe(0);
 	end if;
@@ -788,8 +801,8 @@ end if;
 	else FormRst <= '0';
 	end if;
 
--- Count down the nine words of the packet being received
-	if GTPRxRst = '1' then TrigReqWdCnt <= X"0";
+-- Count down the nine words of the data request packet being received
+	if GTPRxRst = '1' or RxLOS(0)(1) = '1' then TrigReqWdCnt <= X"0";
 	elsif Rx_IsComma(0) = "00" and ReFrame(0) = '0' and Rx_IsCtrl(0) = "10" and GTPRx(0)(4 downto 0) = 2
 	then TrigReqWdCnt <= X"9";
 	elsif Rx_IsComma(0) = "00" and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and TrigReqWdCnt /= 0  
@@ -797,16 +810,28 @@ end if;
 	else TrigReqWdCnt <= TrigReqWdCnt;
 	end if;
 
-	if Rx_IsComma(0) = "00" and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and TrigReqWdCnt > 0
-	then DReqBuff_wr_en <= '1'; Debug(8) <= '1';
-	else DReqBuff_wr_en <= '0'; Debug(8) <= '0';
+	if Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and TrigReqWdCnt > 0
+	then DReqBuff_wr_en <= '1';  Debug(10) <= '1';
+	else DReqBuff_wr_en <= '0';  Debug(10) <= '0';
 	end if;
 
-	Debug(4 downto 2) <= TrigReqWdCnt(2 downto 0);
-	
 	if TrigTx_Sel = '1' and DReqBuff_Emtpy = '0'
 	then Stat_DReq <= '0';
 	else Stat_DReq <= '1';
+	end if;
+
+-- Count down the nine words of the heart beat packet being received
+	if GTPRxRst = '1' or RxLOS(0)(1) = '1' then HrtBtWrtCnt <= X"0";
+	elsif Rx_IsComma(0) = "00" and ReFrame(0) = '0' and Rx_IsCtrl(0) = "10" and GTPRx(0)(4 downto 0) = 1
+	then HrtBtWrtCnt <= X"9";
+	elsif Rx_IsComma(0) = "00" and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and HrtBtWrtCnt /= 0  
+	then HrtBtWrtCnt <= HrtBtWrtCnt - 1;
+	else HrtBtWrtCnt <= HrtBtWrtCnt;
+	end if;
+
+		if Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and HrtBtWrtCnt > 0
+	then HrtBtBuff_wr_en <= '1'; Debug(7) <= '1';
+	else HrtBtBuff_wr_en <= '0'; Debug(7) <= '0';
 	end if;
 
 -- Store the empty flag values when they make a transition, 
@@ -817,7 +842,7 @@ end if;
 	end if;
 
 -- Store the time stamp subfield from the trigger request packet for later checking
-	if Rx_IsComma(0) = "00" and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" 
+	if Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" 
 	and TrigReqWdCnt >= 5 and TrigReqWdCnt <= 7 	
 	then TStmpBuff_wr_en <= '1';
 	else TStmpBuff_wr_en <= '0';
@@ -1054,8 +1079,8 @@ end if;
 
 if (Packet_Former = WrtCtrlHdrPkt and (Pkt_Timer = 8 or Pkt_Timer = 4))
  or (Packet_Former = WrtDatPkt and Pkt_Timer > 2 and EvTxWdCnt > 0)
-then EventBuff_RdEn <= '1';  --Debug(5) <= '1';
-else EventBuff_RdEn <= '0';  --Debug(5) <= '0';
+then EventBuff_RdEn <= '1';  Debug(9) <= '1';
+else EventBuff_RdEn <= '0';  Debug(9) <= '0';
 end if;
 
 --Debug(4) <= EventBuff_Empty;
@@ -1139,7 +1164,7 @@ end if;
 
 -- Increment the data request counter when forming the header packet.
 if Packet_Former = WrtHdrPkt and Pkt_Timer = 9 then DReq_Count <= DReq_Count + 1;
-elsif GTPRxRst = '1' then DReq_Count <= (others => '0');
+elsif GTPRxRst = '1' or RxLOS(0)(1) = '1' then DReq_Count <= (others => '0');
 else DReq_Count <= DReq_Count;
 end if;
 
@@ -1172,14 +1197,16 @@ begin
    TxCRCEn(1) <= '0'; RdCRCEn(1) <= '0'; 
 	RxCRCRst(1) <= '0'; RxCRCRstD(1) <= '0'; TxCRCDat(1) <= X"0000";
 	GTPRxBuff_wr_en(1) <= '0'; PRBSCntRst(1) <= '0';
-	En_PRBS(1) <= "000"; Trig_Tx_Ack <= '0';
-	IntTrigSeq <= Idle; 
-
+	En_PRBS(1) <= "000"; DReq_Tx_Ack <= '0';
+	IntTrigSeq <= Idle; Packet_Type <= X"1";
+	HrtBtDone <= '0'; HrtBtTxAck <= '0';
+	
 elsif rising_edge (UsrClk2(1)) then
 
 	UsrRDDL(1)(0) <= not uCRD and not CpldCS;
 	UsrRDDL(1)(1) <= UsrRDDL(1)(0);
 
+-- Use the data count to make the FIFO behave like a trace buffer.
 if (UsrRDDL(1) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPRdAddr1)
 	or (GTPRxBuff_DatCnt(1) >= '0' & X"FFE" and GTPRxBuff_wr_en(1) = '1')
 then GTPRxBuff_rd_en(1) <= '1';
@@ -1198,6 +1225,7 @@ end if;
 	RxCRCRst(1) <= RxCRCRstD(1);
 	GTPRxReg(1) <= GTPRx(1);
 
+-- Enable the check sum for non-control words.
 	if Rx_IsCtrl(1) = "00" then RdCRCEn(1) <= '1'; 
 	else RdCRCEn(1) <= '0'; 
 	end if;
@@ -1213,16 +1241,22 @@ end if;
 	UsrWRDL(1)(0) <= not uCWR and not CpldCS;
    UsrWRDL(1)(1) <= UsrWRDL(1)(0);
 
--- Request/Acknowledge to cross clock domains
-	Trig_Tx_Ack  <= Trig_Tx_Req;
+-- Request/Acknowledges to cross clock domains
+	if DReq_Tx_Ack = '0' and Dreq_Tx_Req = '1' then 
+	 DReq_Tx_Ack <= '1';
+	elsif Packet_Type = X"2" then
+	 DReq_Tx_Ack <= '0';
+	end if;
+	
+	 HrtBtTxAck <= HrtBtTxReq;
 
 -- State machine for sending trigger requests from internal trigger generator
 -- Idle,SendTrigHdr,SendPktType,SendPad0,SenduBunch0,SenduBunch1,
 --	SenduBunch2,SendPad1,SendPad2,SendPad3,SendCRC
 Case IntTrigSeq is
 	when Idle =>
-	  if Trig_Tx_Ack = '1' then IntTrigSeq <= SendTrigHdr;
-	  else IntTrigSeq <= Idle;
+	  if HrtBtTxAck = '1' then IntTrigSeq <= SendTrigHdr;
+	   else IntTrigSeq <= Idle;
 	  end if;
 	when SendTrigHdr => IntTrigSeq <= SendPad0;
 	when SendPad0 => IntTrigSeq <= SendPktType;
@@ -1234,16 +1268,32 @@ Case IntTrigSeq is
 	when SendPad2 => IntTrigSeq <= SendPad3;
 	when SendPad3 => IntTrigSeq <= WaitCRC;
 	when WaitCRC => IntTrigSeq <= SendCRC;
-	when SendCRC => IntTrigSeq <= Idle;
+	when SendCRC => IntTrigSeq <= SetPktType;
+	when SetPktType => 
+		if Packet_Type = X"1" and DReq_Tx_Ack = '1' then
+			Packet_Type <= X"2";
+			IntTrigSeq <= SendTrigHdr;
+		else
+			Packet_Type <= X"1";
+			IntTrigSeq <= Idle;
+	   end if;
 	when others => IntTrigSeq <= Idle;
 end Case;
+
+	if IntTrigSeq = SetPktType and Packet_Type = X"1" then 
+		HrtBtDone <= '1';
+	elsif
+		HrtBtFMTxEn = '1'
+	then 
+		HrtBtDone <= '0';
+	end if;
 
 -- Use this address to append K28.0 to Dx.y where x is 5 bits of data and
 -- y is the packet sequence number
 	if (UsrWRDL(1) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPWrtAddr(1))
 	   or IntTrigSeq = SendTrigHdr  
 	 then if IntTrigSeq = SendTrigHdr 
-				then GTPTx(1) <= X"1C" & TxSeqNo(1) & "00010";
+				then GTPTx(1) <= X"1C" & TxSeqNo(1) & '0' & Packet_Type;
 				else GTPTx(1) <= X"1C" & TxSeqNo(1) & uCD(4 downto 0);
 			 end if;
 		   TxSeqNo(1) <= TxSeqNo(1) + 1;
@@ -1264,26 +1314,26 @@ end Case;
 			TxCRCRst(1) <= '0';
 			TxCRCEn(1) <= '1';
 	 elsif IntTrigSeq = SendPktType  
-	  then GTPTx(1) <= X"0020";
-			TxCRCDat(1) <= X"0020"; 
+	  then GTPTx(1) <= X"00" & Packet_Type & X"0";
+			TxCRCDat(1) <= X"00" & Packet_Type & X"0";
 			TxCharIsK(1) <= "00";
 			TxCRCRst(1) <= '0';
 			TxCRCEn(1) <= '1';
 	 elsif IntTrigSeq = SenduBunch0  
-	  then GTPTx(1) <= MicrobunchCount(15 downto 0);
-	       TxCRCDat(1) <= MicrobunchCount(15 downto 0); 
+	  then GTPTx(1) <= IntuBunchCount(15 downto 0);
+	       TxCRCDat(1) <= IntuBunchCount(15 downto 0); 
 			TxCharIsK(1) <= "00";
 			TxCRCRst(1) <= '0';
 			TxCRCEn(1) <= '1';
 	 elsif IntTrigSeq = SenduBunch1  
-	  then GTPTx(1) <= MicrobunchCount(31 downto 16);
-	      TxCRCDat(1) <= MicrobunchCount(31 downto 16); 
+	  then GTPTx(1) <= IntuBunchCount(31 downto 16);
+	      TxCRCDat(1) <= IntuBunchCount(31 downto 16); 
 			TxCharIsK(1) <= "00";
 			TxCRCRst(1) <= '0';
 			TxCRCEn(1) <= '1';
 	 elsif IntTrigSeq = SenduBunch2  
-	  then GTPTx(1) <= MicrobunchCount(47 downto 32);
-	      TxCRCDat(1) <= MicrobunchCount(47 downto 32); 
+	  then GTPTx(1) <= IntuBunchCount(47 downto 32);
+	      TxCRCDat(1) <= IntuBunchCount(47 downto 32); 
 			TxCharIsK(1) <= "00";
 			TxCRCRst(1) <= '0';
 			TxCRCEn(1) <= '1';
@@ -1533,44 +1583,30 @@ EthProc : process(EthClk, CpldRst)
 	ZEthA <= (others => '0'); DQEn <= '0';
 	ZEthCS <= '1'; ZEthWE <= '1'; 
 	ZEthBE <= "11"; EthRDDL <= (others => '0');
-	MarkerBits <= X"00"; Even_Odd <= '0'; Marker <= '0';
-	GaurdCount <= X"0"; GPO <= "00";
+	MarkerBits <= X"0000"; Even_Odd <= '0'; 
+	GPO <= "00"; Marker <= '0';
 
  elsif rising_edge (EthClk) then 
 
-	MarkerBits <= MarkerBits(5 downto 0) & DDRBits;
+	MarkerBits <= MarkerBits(13 downto 0) & DDRBits;
 
-	if GaurdCount = 0 and 
-		not(MarkerBits = X"F0" or MarkerBits = X"C3" or MarkerBits = X"0F" or MarkerBits = X"3C")
-	then GaurdCount <= X"F";
-	elsif GaurdCount /= 0 
-	then GaurdCount <= GaurdCount - 1;
-	else GaurdCount <= GaurdCount;
+	if Marker = '0' and (MarkerBits = X"F0C0" or MarkerBits = X"F0FC") then  
+		GPO(0) <= '1'; Marker <= '1';
+	elsif Marker = '1' and (MarkerBits = X"FCF0" or MarkerBits = X"C0F0") then 
+	   GPO(0) <= '0'; Marker <= '0';
+	else Marker <= Marker; GPO(0) <= GPO(0);
 	end if;
-	
-	if GaurdCount = 0 and Debug(9) = '0' 
-		and not(MarkerBits = X"F0" or MarkerBits = X"C3" or MarkerBits = X"0F" or MarkerBits = X"3C")
-	then Debug(9) <= '1'; GPO(0) <= '1';
-	elsif Debug(9) = '1' 
-		and (MarkerBits = X"F0" or MarkerBits = X"C3" or MarkerBits = X"0F" or MarkerBits = X"3C")
-	then Debug(9) <= '0'; GPO(0) <= '0';
-	else Debug(9) <= Debug(9); GPO(0) <= GPO(0);
+
+	if GPO(1) = '0' and MarkerBits = X"F0C0"
+	  then GPO(1) <= '1';
+	elsif GPO(1) = '1' and MarkerBits = X"F0FC"
+	  then GPO(1) <= '0';
+	 else GPO(1) <= GPO(1);
 	end if;
-	
-	if Debug(9) = '0' and MarkerBits = X"0C" 
-	  then Debug(10) <= '1';  GPO(1) <= '1';
-	elsif Debug(9) = '0' and GaurdCount = 0 and MarkerBits = X"3F"
-	  then Debug(10) <= '0'; GPO(1) <= '0';
-	 else Debug(10) <= Debug(10); GPO(1) <= GPO(1);
-	end if;
-	
-	if MarkerBits <= X"C0" then Even_Odd <= '1';
-	elsif MarkerBits <= X"FC" then Even_Odd <= '0';  
+
+	if MarkerBits = X"C0F0" then Even_Odd <= '1';
+	elsif MarkerBits = X"FCF0" then Even_Odd <= '0';  
 	else Even_Odd <= Even_Odd; 
-	end if;
-	
-	if MarkerBits <= X"C0" or MarkerBits <= X"FC" then Marker <= '1';
-	else Marker <= '0';
 	end if;
 
 	ZEthClk <= not ZEthClk;
@@ -1650,6 +1686,32 @@ end if;
 
 end process;
 
+FMTxReq : process(Clk80MHz, CpldRst)
+
+ begin 
+-- asynchronous reset/preset
+ if CpldRst = '0' then
+
+	HrtBtFMTxEn <= '0'; FMTxBsy <= '0';
+
+ elsif rising_edge(Clk80MHz) then
+
+-- Send a heart beat without pause if there is no marker input expected
+  if HrtBtFMReq = '1' or (MarkerSyncEn = '1' and Marker = '1')
+	  then HrtBtFMTxEn <= '1';
+	else HrtBtFMTxEn <= '0';
+  end if;
+
+ if HrtBtBuff_rd_en = '1' 
+     then FMTxBsy <= '1'; Debug(8) <= '1';
+ elsif HrtBtTxOuts.Done = '1'
+     then FMTxBsy <= '0'; Debug(8) <= '0';
+ end if;
+ 
+end if; -- rising_edge
+
+end process;
+	
 ----------------------- 100 Mhz clocked logic -----------------------------
 
 main : process(SysClk, CpldRst)
@@ -1665,30 +1727,30 @@ main : process(SysClk, CpldRst)
 -- Trigger and spill generator logic
 	FreqReg <= X"00000237"; PhaseAcc <= (others => '0');
 	Buff_Rst <= '0'; Seq_Rst <= '0'; 
-	Beam_On <= '0'; TrigReq <= '0'; TrigPls <= '0';	TrigEn <= '1'; 
+	Beam_On <= '0'; TrigEn <= '1'; 
 	TstPlsEn <= '0';  TstPlsEnReq <= '0'; SS_FR <= '0';  TstTrigEn <= '0';
-	ExtTrig <= '0'; IntTrig <= '0'; TrigType <= X"0"; 
+	IntTrig <= '0'; TrigType <= X"0"; 
 	SpillWidth <= X"02"; Spill_Req <= '0'; TstTrigCE <= '0';
 	EventWdCnt <= (others => '0'); InterSpill <= X"04"; BmOnTrigReq <= '0';
 	PhaseAccD <= '0';
 	UpTimeStage <= (others => '0'); UpTimeCount <= (others => '0');
-	Counter1us <= X"00"; Counter1ms <= (others => '0');
+	Counter1us <= X"00"; Counter1ms <= (others => '0'); MarkerReq <= '0';
 	SuperCycleCount <= (others => '0'); SpillWidthCount <= (others => '0');
-	InterSpillCount <= (others => '0'); 
-	HrtBtTxEn <= '0'; MicrobunchCount <= (others => '0'); 
-	DRFreq <= (others => '0'); -- Delivery ring DDS
+	InterSpillCount <= (others => '0'); MarkerSyncEn <= '0';
+	TxEnReq <= '0'; DRFreq <= (others => '0'); -- Delivery ring DDS
 	Int_uBunch <= "00"; -- Rising edge of DDS terminal count
 	DRCount <= (others => '0'); -- Delivery ring bunch counter
 	Counter1s <= (others => '0');	TestCount <= (others => '0'); 
-	Counter100us <= (others => '0');	
-	TrigCounter <= (others => '0'); SpillCount <= (others => '0'); 
+	Counter100us <= (others => '0');	SpillCount <= (others => '0'); 
 	LEDRst <= '1'; LEDSDat <= "000"; LEDSClk <= "000"; LEDLd <= "000000";
 	uBunchLED <= '0'; uBunchLEDCnt <= (others => '0'); IntTmgEn <= '0';
    HrtBtBrstCntReg <= (X"001000"); HrtBtBrstCounter <= (others => '0');
-	CMDwr_en <= '0'; CMDrd_en <= '0';  TmgCntEn <= '0';
-	ClkDiv <= "000"; CMDBitCount <= (others => '0'); 
+	ExtuBunchCount <= (others => '0'); IntuBunchCount <= (others => '0'); 
+	HrtBtBuff_rd_en <= '0'; HrtBtRdCnt <= X"0"; HrtBtTxReq <= '0';
+	HrtBtFMReq <= '0'; CMDwr_en <= '0'; CMDrd_en <= '0'; 
+	TmgCntEn <= '0'; ClkDiv <= "000"; CMDBitCount <= (others => '0'); 
 	LEDShiftReg <= (others => '0');	LED_Shift <= Idle;
-	DReqBuff_uCRd <= '0'; LinkBusy <= '0';
+	DReqBuff_uCRd <= '0'; LinkBusy <= '0'; HrtBtTxInh <= '0';
 
 -- Pll Chip Shifter signals
 	PLLBuffwr_en <= '0'; PLLBuffrd_en <= '0'; PllPDn <= '1';
@@ -1704,8 +1766,11 @@ main : process(SysClk, CpldRst)
 	IDReg <= X"1";
 
 	DReqBrstCntReg <= X"0001"; DReqBrstCounter <= (others => '0');
-	Trig_Tx_Req <= '0'; Trig_Tx_ReqD <= '0';
+	Dreq_Tx_Req <= '0'; Dreq_Tx_ReqD <= '0';
 
+	FEBID_wea <= "0"; 
+	FEBID_addra <= (others => '0'); FEBID_addrb <= (others => '0');
+	
  elsif rising_edge (SysClk) then 
 
 -- Synchronous edge detectors for read and write strobes
@@ -1733,16 +1798,18 @@ elsif WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = FreqRegAdLo
  else FreqReg <= FreqReg;
  end if;
 
--- Choose between internal and TDAQ supplied timing
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr
 then FormHold <= uCD(2);
 	  ExtTmg <= uCD(4);
+	  MarkerSyncEn <= uCD(5);
+-- Choose between internal and TDAQ supplied timing
 	  TrigTx_Sel <= uCD(6);
-	  TstTrigCE <= uCD(9);
+	  HrtBtTxInh <= uCD(10);
 else FormHold <= FormHold;
 	  ExtTmg <= ExtTmg;
 	  TrigTx_Sel <= TrigTx_Sel;
-	  TstTrigCE <= TstTrigCE;
+	  MarkerSyncEn <= MarkerSyncEn;
+	  HrtBtTxInh <= HrtBtTxInh;
 end if;
 
 -- Enable the transmitting of heartbeats
@@ -1752,7 +1819,7 @@ if IntTmgEn = '0'
 -- If the finite length is enabled, stop after the count has expired
  elsif IntTmgEn = '1' 
    and ((WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr and uCD(0) = '0')
-    or  (HrtBtBrstCounter = 1 and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)))
+    or  (HrtBtBrstCounter = 1 and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = BeamOffLength)))
   then IntTmgEn <= '0';
  else IntTmgEn <= IntTmgEn;
  end if;
@@ -1774,7 +1841,7 @@ if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
 	and TmgCntEn = '0' and uCD(0) = '1' and uCD(1) = '1'
   then HrtBtBrstCounter <= HrtBtBrstCntReg;
- elsif HrtBtBrstCounter /= 0 and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
+ elsif HrtBtBrstCounter /= 0 and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = BeamOffLength)
   then HrtBtBrstCounter <= HrtBtBrstCounter - 1;
  else HrtBtBrstCounter <= HrtBtBrstCounter;
  end if;
@@ -1786,7 +1853,7 @@ if TstTrigEn = '0' and WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) =
 -- If the finite length is enabled, stop after the count has expired
  elsif TstTrigEn = '1' and ((WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
 	and uCD(8) = '0')
-  or (TstTrigCE = '1' and DReqBrstCounter = 1 and Trig_Tx_Req = '1' and Trig_Tx_ReqD = '0'))
+  or (TstTrigCE = '1' and DReqBrstCounter = 1 and Dreq_Tx_Req = '1' and Dreq_Tx_ReqD = '0'))
   then TstTrigEn <= '0';
  else TstTrigEn <= TstTrigEn;
  end if;
@@ -1798,7 +1865,7 @@ if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr
 -- If the finite length is enabled, stop after the count has expired
  elsif TstTrigCE = '1' and ((WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
 	and uCD(9) = '0')
-    or (TstTrigCE = '1' and DReqBrstCounter = 1 and Trig_Tx_Req = '1' and Trig_Tx_ReqD = '0'))
+    or (TstTrigCE = '1' and DReqBrstCounter = 1 and Dreq_Tx_Req = '1' and Dreq_Tx_ReqD = '0'))
   then TstTrigCE <= '0';
  else TstTrigCE <= TstTrigCE;
  end if;
@@ -1807,18 +1874,20 @@ if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr
  if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
 	and TstTrigEn = '0' and  uCD(8) = '1'
   then DReqBrstCounter <= DReqBrstCntReg;
- elsif DReqBrstCounter /= 0 and TstTrigEn = '1' and TstTrigCE = '1' and Trig_Tx_Req = '1' and Trig_Tx_ReqD = '0'
+ elsif DReqBrstCounter /= 0 and TstTrigEn = '1' and TstTrigCE = '1' 
+								and Dreq_Tx_Req = '1' and Dreq_Tx_ReqD = '0'
   then DReqBrstCounter <= DReqBrstCounter - 1;
   else DReqBrstCounter <= DReqBrstCounter;
   end if;
 
+-- Send a heart request to transmit a data request packet.
 if TstTrigEn = '1' and IntTmgEn = '1' and Int_uBunch = 1 
-	and ((Beam_On = '1' and DRCount = 7 and BmOnTrigReq = '1') or DRCount = 143)
-	then Trig_Tx_Req <= '1';
-elsif Trig_Tx_Ack = '1'
-	then Trig_Tx_Req <= '0';
+	and ((Beam_On = '1' and DRCount = 7 and BmOnTrigReq = '1') or DRCount = BeamOffLength)
+	then Dreq_Tx_Req <= '1';
+elsif DReq_Tx_Ack = '1'
+	then Dreq_Tx_Req <= '0';
 end if;
-Trig_Tx_ReqD <= Trig_Tx_Req;
+Dreq_Tx_ReqD <= Dreq_Tx_Req;
 
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = IDregAddr 
 then IDReg <= uCD(3 downto 0);
@@ -1873,27 +1942,67 @@ Int_uBunch(1) <= Int_uBunch(0);
 -- For now define the on spill to be 8 4.7MHz ticks and the off spill 144 ticks
 -- "DR" for delivery ring 
 if IntTmgEn = '1' and 
-   Int_uBunch = 1 and not((Beam_On = '1' and DRCount = 7) or DRCount = 143)
+   Int_uBunch = 1 and not((Beam_On = '1' and DRCount = 7) or DRCount = BeamOffLength)
 then DRCount <= DRCount + 1;
-elsif Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
+elsif Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = BeamOffLength)
 then DRCount <= (others => '0');
 else DRCount <= DRCount;
 end if;
 
--- Increment the microbunch number
+-- If timing is internal, increment the microbunch number
 if IntTmgEn = '1' and 
-	Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
-then MicrobunchCount <= MicrobunchCount + 1;
-elsif IntTmgEn = '0'
-	then MicrobunchCount <= (others => '0');
-else MicrobunchCount <= MicrobunchCount;
+	Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = BeamOffLength)
+then IntuBunchCount <= IntuBunchCount + 1;
+elsif WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = TrigCtrlAddr	and uCD(2) = '1'
+then IntuBunchCount <= (others => '0');
+else IntuBunchCount <= IntuBunchCount;
 end if;
 
--- Send a start transmit pulse to the FM transmitter at the beginning of 
--- each microbunch
-if Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
- then HrtBtTxEn <= '1'; 
-else HrtBtTxEn <= '0';
+
+-- Send a heartbeat transmit request to GTPTx(1) 
+if IntTmgEn = '1' and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = BeamOffLength)
+ then HrtBtTxReq <= '1'; 
+	elsif HrtBtTxAck = '1' then HrtBtTxReq <= '0';
+ else HrtBtTxReq <= HrtBtTxReq;
+end if;
+
+-- If there are at least eight words in the heartbeat receive FIFO
+-- start reading the packet data from the buffer
+	if HrtBtBuffRdCnt >= 9 and HrtBtRdCnt = 0 and FMTxBsy = '0' then 
+		HrtBtRdCnt <= X"9";
+	elsif HrtBtRdCnt /= 0 then 
+		HrtBtRdCnt <= HrtBtRdCnt - 1;
+	else HrtBtRdCnt <= HrtBtRdCnt;
+	end if;
+	
+Debug(5 downto 2) <= HrtBtBuffRdCnt(3 downto 0);
+
+	if (HrtBtRdCnt /= 0 and HrtBtTxInh = '0') 
+	or (HrtBtTxInh = '1' and RDDL = 2 and AddrReg(11 downto 10) = GA 
+		 and AddrReg(9 downto 0) = HrtBtFIFORdAd) then	
+	  HrtBtBuff_rd_en <= '1'; Debug(6) <= '1';
+	else 
+	  HrtBtBuff_rd_en <= '0'; Debug(6) <= '0';
+	end if;
+
+-- Update the microbunch count from the received heartbeat.
+	 Case HrtBtRdCnt is
+		when X"6" => ExtuBunchCount(15 downto 0) <= HrtBtBuff_Out;
+		when X"5" => ExtuBunchCount(31 downto 16) <= HrtBtBuff_Out;
+		when X"4" => ExtuBunchCount(47 downto 32) <= HrtBtBuff_Out;
+	   when others => ExtuBunchCount <= ExtuBunchCount;
+	 end case;
+
+
+-- Use signal as a handshake to cross over to the 80MHz clock domain
+	if MarkerSyncEn = '0' and HrtBtRdCnt = 2 then 
+		HrtBtFMReq <= '1';
+	elsif HrtBtFMTxEn = '1' then
+	   HrtBtFMReq <= '0';
+	end if;
+
+if HrtBtRdCnt = 5 then HrtBtMode <= HrtBtBuff_Out(7 downto 0);
+else HrtBtMode <= HrtBtMode;
 end if;
 
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = DReqBrstCntAd 
@@ -1986,9 +2095,8 @@ then TestCount <= TestCount + 1;
 else TestCount <= TestCount;
 end if;
 
-
 if WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPCSRAddr  
- then   TDisA <= uCD(0); 
+ then TDisA <= uCD(0); 
 		TDisB <= uCD(8);
  else 
 		TDisA <= TDisA;
@@ -2169,64 +2277,22 @@ end if;
 PhaseAcc <= PhaseAcc + FreqReg;
 PhaseAccD <= PhaseAcc(31);
 
-
-if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
-and uCD(5) = '1' then Buff_Rst <= '1';
-else Buff_Rst <= '0';
-end if;
-
--- Reset the trigger counter on begin spill and uCA(11 downto 10) = GA 
-if Buff_Rst = '1' 
-then TrigCounter <= (others => '0');
-elsif TrigPls = '1' then TrigCounter <= TrigCounter + 1;
-else TrigCounter <= TrigCounter;
-end if;
-
--- The "OR" of the various trigger sources
-if TrigEn = '1' and
--- LEMO trigger, software trigg
- (((Beam_On = '1' and TrgSrc = '0' and GPIDL(0) = 1) or (WrDL = 1 and uCA(9 downto 0) = TrigCtrlAddr and uCD(0) = '1')
--- internal trigger rate generator
-	or (TstPlsEn = '1' and PhaseAcc(31) = '1' and PhaseAccD = '0'))
--- external triggers from the controller
-or (TrgSrc = '1' and Beam_On = '1' and ((RxOut.Done = '1' and (Rx1Dat(15 downto 12) = EventTrig  
-	or Rx1Dat(15 downto 12) = EventTrigD)))))
-then TrigPls <= '1'; 
-else TrigPls <= '0'; 
-end if;
-
-if TstTrigEn = '1' and HrtBtTxEn = '0' and PhaseAcc(31) = '1' and PhaseAccD = '0' then BmOnTrigReq <= '1';
-elsif HrtBtTxEn = '1' then BmOnTrigReq <= '0';
+if TstTrigEn = '1'
+	and PhaseAcc(31) = '1' and PhaseAccD = '0' then 
+   BmOnTrigReq <= '1';
+elsif HrtBtDone = '1' then 
+	BmOnTrigReq <= '0';
 else BmOnTrigReq <= BmOnTrigReq;
 end if;
 
--- Make a trigger pulse two clocks wide for crossing clock boundaries to the AFE sections
-if (TrigEn = '1' and
- (((Beam_On = '1' and TrgSrc = '0' and GPIDL(0) = 1) or (WrDL = 1 and uCA(9 downto 0) = TrigCtrlAddr and uCD(0) = '1')
-	or (TstPlsEn = '1' and PhaseAcc(31) = '1' and PhaseAccD = '0'))
-or (TrgSrc = '1' and Beam_On = '1' and 
-	((RxOut.Done = '1' and (Rx1Dat(15 downto 12) = EventTrig or Rx1Dat(15 downto 12) = EventTrigD))))))
-or TrigPls = '1'
-then TrigReq <= '1'; 
-else TrigReq <= '0';
-end if;
-
 -- Trig out width counter
-if GPOCount = 0 and TrigReq = '1' then GPOCount <= "111";
+if GPOCount = 0 and MarkerReq = '1' then GPOCount <= "111";
 elsif GPOCount /= 0 then GPOCount <= GPOCount - 1;
 else GPOCount <= GPOCount;
 end if;
 
--- Flag bit indicating a LEMO trigger 
-	if GPIDL(0) = 1 then	ExtTrig <= '1';
-elsif (WrDL = 1 and uCA(9 downto 0) = TrigCtrlAddr and uCD(0) = '1') or TstTrigEn = '1'
-then ExtTrig <= '0';
-else ExtTrig <= ExtTrig;
-end if;
-
 -- Flag bit indicating a software trigger 
-if WrDL = 1 and uCA(9 downto 0) = TrigCtrlAddr and uCD(0) = '1'
- then IntTrig <= '1';
+if WrDL = 1 and uCA(9 downto 0) = TrigCtrlAddr and uCD(0) = '1' then IntTrig <= '1';
  elsif GPIDL(0) = 1 or TstTrigEn = '1'
  then  IntTrig <= '0';
  else  IntTrig <= IntTrig;
@@ -2240,8 +2306,8 @@ end process;
 
 with uCA(9 downto 0) select
 
-iCD <= X"0" & "00" & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel 
-		 & '0' & ExtTmg & '0' & FormHold & TmgCntEn & IntTmgEn when CSRRegAddr,
+iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel 
+		 & MarkerSyncEn & ExtTmg & '0' & FormHold & TmgCntEn & IntTmgEn when CSRRegAddr,
 		   Rx_IsCtrl(1) & InvalidChar(1) & Rx_IsComma(1) & Reframe(1) & TDisB 
 		 & Rx_IsCtrl(0) & InvalidChar(0) & Rx_IsComma(0) & Reframe(0) & TDisA when GTPCSRAddr,
 		 X"00" & "00" & GTPRxBuff_Full & GTPRxBuff_Emtpy & "00" when GTPFIFOAddr,
@@ -2254,8 +2320,6 @@ iCD <= X"0" & "00" & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 X"000" & IDReg when IDregAddr,
 		 X"0" & "00" & Debug when DebugPinAd,
 		 X"000" & '0' & FormStatReg when GTPSeqStatAd,
-		 TrigCounter(31 downto 16) when SpillTrigCntAdHi,
-		 TrigCounter(15 downto 0) when SpillTrigCntAdLo,
 		 X"000" & '0' & Beam_On & '0' & Seq_Busy when SpillStatAddr,
 		 UpTimeStage(31 downto 16) when UpTimeRegAddrHi,
 		 UpTimeStage(15 downto 0) when UpTimeRegAddrLo,
@@ -2283,12 +2347,15 @@ iCD <= X"0" & "00" & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 	    DReqBrstCntReg when DReqBrstCntAd,
 	    X"00" & HrtBtBrstCntReg(23 downto 16) when HrtBtBrstCntAdHi,
 	    HrtBtBrstCntReg(15 downto 0) when HrtBtBrstCntAdLo,
-		 MicrobunchCount(47 downto 32) when MicroBunchAdHi,
-		 MicrobunchCount(31 downto 16) when MicroBunchAdMid,
-		 MicrobunchCount(15 downto 0) when MicroBunchAdLo,
+		 IntuBunchCount(47 downto 32) when MicroBunchAdHi,
+		 IntuBunchCount(31 downto 16) when MicroBunchAdMid,
+		 IntuBunchCount(15 downto 0) when MicroBunchAdLo,
 		 FreqReg(31 downto 16) when FreqRegAdHi,
 		 FreqReg(15 downto 0) when FreqRegAdLo,
-		 X"00" & MarkerBits when MarkerBitsAd,
+		 MarkerBits when MarkerBitsAd,
+		 DReqBuff_Emtpy & "0000" & TrgPktRdCnt when DreqBuffStatAd,
+		 HrtBtBuff_Emtpy & "0000" & HrtBtBuffRdCnt when HrtBtBuffStatAd,
+		 HrtBtBuff_Out when HrtBtFIFORdAd,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers

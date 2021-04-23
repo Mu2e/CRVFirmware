@@ -38,20 +38,21 @@ constant DReqBrstCntAd : AddrPtr := "00" & X"0F";
 Type LEDAddr_Array is Array(0 to 5) of AddrPtr;
 constant LEDDatAddr : LEDAddr_Array  := ("00" & X"10","00" & X"11","00" & X"12",
 													  "00" & X"13","00" & X"14","00" & X"15");
-constant LEDRstAddr : AddrPtr  := "00" & X"16";
+constant LEDRstAddr : AddrPtr := "00" & X"16";
 
 constant PLLHiAddr : AddrPtr  := "00" & X"17";
 constant PLLLoAddr : AddrPtr  := "00" & X"18";
-constant PLLPDnAddr : AddrPtr  := "00" & X"19";
+constant PLLPDnAddr : AddrPtr := "00" & X"19";
 
 Type GTPAddr_Array is Array(0 to 5) of AddrPtr;
 constant GTPWrtAddr : GTPAddr_Array := ("00" & X"1A","00" & X"1B","00" & X"1C",
 													 "00" & X"1D","00" & X"1E","00" & X"1F");
-constant GTPRdAddr0 : AddrPtr  := "00" & X"20";
-constant GTPRdAddr1 : AddrPtr  := "00" & X"21";
+constant GTPRdAddr0 : AddrPtr := "00" & X"20";
+constant GTPRdAddr1 : AddrPtr := "00" & X"21";
 
-constant GTPSeqStatAd : AddrPtr  := "00" & X"22";
+constant GTPSeqStatAd : AddrPtr := "00" & X"22";
 
+constant HrtBtDatAd : AddrPtr := "00" & X"23";
 -- Array of addresses for reading Link Receive FIFOs
 Type RdAddrArrayType is Array(0 to 2) of AddrPtr;
 constant LinkRdAddr : RdAddrArrayType := ("00" & X"24","00" & X"25","00" & X"26");
@@ -67,6 +68,9 @@ constant WdCntBuffStatAd : AddrPtr := "00" & X"2D";
 constant GTPTxSnoopAd : AddrPtr := "00" & X"2E";
 constant GTPTxSnoopStatAd : AddrPtr := "00" & X"2F";
 
+constant SpillWidthRegAd : AddrPtr := "00" & X"30";
+constant InterSpillRegAd : AddrPtr := "00" & X"31";
+
 constant HrtBtBrstCntAdHi : AddrPtr := "00" & X"32"; 
 constant HrtBtBrstCntAdLo : AddrPtr := "00" & X"33"; 
 
@@ -80,25 +84,32 @@ constant MicroBunchAdLo : AddrPtr  := "00" & X"38";
 
 -- Trigger control register
 constant TrigCtrlAddr : AddrPtr := "00" & X"39";
-constant FreqRegAdHi : AddrPtr  := "00" & X"3A";
-constant FreqRegAdLo : AddrPtr  := "00" & X"3B";
+
+constant FreqRegAdHi : AddrPtr := "00" & X"3A";
+constant FreqRegAdLo : AddrPtr := "00" & X"3B";
+
+-- Data request buffer
+constant DreqBuffStatAd : AddrPtr := "00" & X"3C";
+-- Heart Beat request buffer
+constant HrtBtBuffStatAd : AddrPtr := "00" & X"3D";
+constant HrtBtFIFORdAd : AddrPtr := "00" & X"3E";
 
 constant SpillTrigCntAdHi : AddrPtr := "00" & X"66";
 constant SpillTrigCntAdLo : AddrPtr := "00" & X"67";
 
-constant SpillCountAddr : AddrPtr   := "00" & X"68";
-constant EVWdCntAddr : AddrPtr  := "00" & X"69";
+constant SpillCountAddr : AddrPtr := "00" & X"68";
+constant EVWdCntAddr : AddrPtr := "00" & X"69";
 
-constant SpillWdCntHiAd : AddrPtr   := "00" & X"6A";
-constant SpillWdCntLoAd : AddrPtr   := "00" & X"6B";
+constant SpillWdCntHiAd : AddrPtr := "00" & X"6A";
+constant SpillWdCntLoAd : AddrPtr := "00" & X"6B";
 
-constant UpTimeRegAddrHi : AddrPtr  := "00" & X"6C";
-constant UpTimeRegAddrLo : AddrPtr  := "00" & X"6D";
+constant UpTimeRegAddrHi : AddrPtr := "00" & X"6C";
+constant UpTimeRegAddrLo : AddrPtr := "00" & X"6D";
 
-constant TimeStampAdHi : AddrPtr  := "00" & X"72";
-constant TimeStampAdLo : AddrPtr  := "00" & X"73";
+constant TimeStampAdHi : AddrPtr := "00" & X"72";
+constant TimeStampAdLo : AddrPtr := "00" & X"73";
 
-constant SpillStatAddr : AddrPtr  := "00" & X"76";
+constant SpillStatAddr : AddrPtr := "00" & X"76";
 
 constant MarkerBitsAd : AddrPtr  := "00" & X"77";
 
@@ -124,6 +135,9 @@ constant Count1ms : std_logic_vector (17 downto 0) := "01" & X"869F"; -- 99999 (
 -- 1Second timer
 constant Count1s : std_logic_vector (27 downto 0) := X"5F5E0FF"; -- 99999999 -- Decimal
 --  "000" & X"000037"; --  Value used for simulating test pulse generator
+
+constant Count1s80MHz : std_logic_vector (27 downto 0) := X"4C4B3FF"; -- 79999999 -- Decimal
+--constant Count1s80MHz : std_logic_vector (27 downto 0) := X"00003FF"; -- short value for simulation
 constant RefreshCount : std_logic_vector (10 downto 0) := "101" & X"19"; -- 8.192 us
 
 constant SuperCycleLength : std_logic_vector (13 downto 0) := "11" & X"6AF"; -- 13999
@@ -132,6 +146,7 @@ constant SpillBegin : std_logic_vector (13 downto 0) := "00" & X"61C"; -- 1566
 constant SpillEnd : std_logic_vector (13 downto 0) := "01" & X"4F4"; -- 5364
 constant SpillLength : std_logic_vector (8 downto 0) := '1' & X"AE"; -- 430 (43.1 ms)
 constant InterSpillLength : std_logic_vector (7 downto 0) := X"31"; -- 49 (5 ms)
+constant BeamOffLength : std_logic_vector (8 downto 0) := '1' & X"D7"; -- 472 4.7MHz Counts
 
 -- Use these shortened values for simulation 
 --constant Count100us : std_logic_vector (13 downto 0) := "00" & X"01D"; -- 10620 (100us) "00" & X"030"; --
@@ -207,6 +222,7 @@ port
   CLK_OUT1          : out    std_logic;
   CLK_OUT2          : out    std_logic;
   CLK_OUT3          : out    std_logic;
+  CLK_OUT4          : out    std_logic;
   -- Status and control signals
   RESET             : in     std_logic;
   LOCKED            : out    std_logic

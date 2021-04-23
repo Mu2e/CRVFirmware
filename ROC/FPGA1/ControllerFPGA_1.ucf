@@ -233,18 +233,21 @@ NET "GTPTx_N(0)" LOC = A6;
 NET "GTPTx_P(1)" LOC = B8;
 NET "GTPTx_N(1)" LOC = A8;
 
+
 ##---------- Set placement for tile0_rocketio_wrapper_i/GTPA1_DUAL ------
 
 INST GTP_Xcvr_i/tile0_GTP_Xcvr_i/gtpa1_dual_i LOC=GTPA1_DUAL_X0Y0;
 
 ## Specifiying clock rates
+
+# Specifying GTP clock rate 156.25MHz
 TIMESPEC TS_GTPClk_P0 = PERIOD "GTPClk_P0" 6.4 ns HIGH 50%;
 NET "GTPClk_P[0]" TNM_NET = "GTPClk_P0";
 #
 TIMESPEC TS_GTPClk_P1 = PERIOD "GTPClk_P1" 6.4 ns HIGH 50%;
 NET "GTPClk_P[1]" TNM_NET = "GTPClk_P1";
 
-# User Clock Constraints
+# Usr Clock Constraints
 NET "UsrClk[0]" TNM_NET = "tile0_txusrclk0_i";
 TIMESPEC "TS_tile0_txusrclk0_i" = PERIOD "tile0_txusrclk0_i" 3.2 ns;
 
@@ -257,10 +260,11 @@ TIMESPEC "TS_tile0_txusrclk1_i" = PERIOD "tile0_txusrclk1_i" 3.2 ns;
 NET "UsrClk2[1]" TNM_NET = "tile0_txusrclk21_i";
 TIMESPEC "TS_tile0_txusrclk21_i" = PERIOD "tile0_txusrclk21_i" 6.4 ns;
 
-TIMESPEC TS_ClkB_P = PERIOD "ClkB_P" 9.4 ns HIGH 50%;
+# Specifying VXO frequency
+TIMESPEC TS_ClkB_P = PERIOD "ClkB_P" 10 ns HIGH 50%;
 NET "ClkB_P" TNM_NET = "ClkB_P";
 
-TIMESPEC TS_VXO_P = PERIOD "VXO_P" 9.4 ns HIGH 50%;
+TIMESPEC TS_VXO_P = PERIOD "VXO_P" 10 ns HIGH 50%;
 NET "VXO_P" TNM_NET = "VXO_P";
 
 # Specifying Inter FPGA Link source synchronous timing

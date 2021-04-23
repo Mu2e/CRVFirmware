@@ -2675,9 +2675,22 @@ uCIO : process
 		  CpldCS <= '0';
 		  wait for 5 ns;
 		  uCD <= X"0040";
---		  uCD <= X"0303";
 		  uCWr <= '0';
 		  wait for 15 ns;
+		  uCWr <= '1';
+		  CpldCS <= '1';
+		  wait for 5 ns;
+		  uCA <= (Others => 'Z');
+		  uCD <= (others => 'Z');
+		  wait for 10 ns;
+
+		  uCA <= "00" & TrigCtrlAddr;
+		  wait for 5 ns;
+		  CpldCS <= '0';
+		  wait for 5 ns;
+		  uCD <= X"0300";
+		  uCWr <= '0';
+		  wait for 50 ns;
 		  uCWr <= '1';
 		  CpldCS <= '1';
 		  wait for 5 ns;

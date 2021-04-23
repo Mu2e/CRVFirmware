@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <report-views version="2.0" >
  <header>
-  <DateModified>2019-06-19T15:35:28</DateModified>
+  <DateModified>2020-02-18T18:07:35</DateModified>
   <ModuleName>ControllerFPGA_1</ModuleName>
-  <SummaryTimeStamp>2019-01-10T11:44:16</SummaryTimeStamp>
+  <SummaryTimeStamp>2020-02-18T16:50:08</SummaryTimeStamp>
   <SavedFilePath>C:/Experiments/mu2e/Readout_Controller/Controller_FPGA1/iseconfig/ControllerFPGA_1.xreport</SavedFilePath>
   <ImplementationReportsDirectory>C:/Experiments/mu2e/Readout_Controller/Controller_FPGA1\</ImplementationReportsDirectory>
   <DateInitialized>2015-09-27T13:01:13</DateInitialized>
