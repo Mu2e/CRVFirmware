@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <symbol version="7" name="SCFifo_512x16">
     <symboltype>BLOCK</symboltype>
-    <timestamp>2018-6-21T21:30:41</timestamp>
+    <timestamp>2019-12-5T15:46:48</timestamp>
     <pin polarity="Input" x="0" y="80" name="clk" />
     <pin polarity="Input" x="0" y="112" name="rst" />
     <pin polarity="Input" x="0" y="240" name="din[15:0]" />

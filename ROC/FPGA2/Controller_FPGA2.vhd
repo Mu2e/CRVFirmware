@@ -12,7 +12,7 @@
 
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
+use ieee.numeric_std.all;
 use ieee.std_logic_unsigned.all;
 
 Library UNISIM;
@@ -22,7 +22,7 @@ use work.Proj_Defs.all;
 
 entity Controller_FPGA2 is port(
 
--- 100 MHz VXO clock, Phy clocks
+-- 160 MHz VXO clock, Phy clocks
 	VXO_P,VXO_N,ClkB_P,ClkB_N,Clk50MHz,
 -- microcontroller strobes
 	CpldRst, CpldCS, uCRd, uCWr : in std_logic;
@@ -210,7 +210,7 @@ Type Array_OutRec_x2 is Array(0 to 1) of RxOutRec;
 signal RxOut : Array_OutRec_x2;
 Type Array_InRec_x2 is Array(0 to 1) of RxInRec;
 signal RxIn : Array_InRec_x2;
-signal RxFMClk,TrigWdCntRst,DRegSrc,LinkFIFOStat : std_logic;
+signal i50MHz,RxFMClk,TrigWdCntRst,DRegSrc,LinkFIFOStat : std_logic;
 signal TrigWdCount,DReqFMDL : std_logic_vector (3 downto 0);
 signal TrigReqCount : std_logic_vector (7 downto 0);
 signal DatReqBuff_rdreq,DatReqBuff_Full,DatReqBuff_Empty : std_logic; 
@@ -221,12 +221,12 @@ signal DatReqBuff_Out : std_logic_vector (15 downto 0);
 signal FEBRxBuff_Dat,FEBRxBuff_Out : Array_8x16;
 signal FEBRxBuff_wreq,FEBRxBuff_rdreq,FEBRxBuff_Empty,
 		 FEBRxBuff_Full,PErrStat : std_logic_vector(7 downto 0);
-Type Array_8OutRecs is Array(0 to 7) of RxOutRec;
-signal FEBRxOut : Array_8OutRecs;
-Type Array_8InRecs is Array(0 to 7) of RxInRec;
-signal FEBRxIn : Array_8InRecs;
+Type Array_OutRec_x8 is Array(0 to 7) of RxOutRec;
+signal FEBRxOut : Array_OutRec_x8;
+Type Array_InRec_x8 is Array(0 to 7) of RxInRec;
+signal FEBRxIn : Array_InRec_x8;
 
--- Signals used to determine which port have FEBs plugged into them
+-- Signals used to determine which ports have FEBs plugged into them
 signal RxDl : Array_8x2;
 signal TransitionCount : Array_8x4;
 signal Rx_active : std_logic_vector(7 downto 0);
@@ -260,6 +260,7 @@ SysPLL : Sys_PLL
     CLK_OUT1 => BitClk, -- 500 MHz serializer bit clock
     CLK_OUT2 => SysClk, -- 100 MHz system clock
     CLK_OUT3 => RxFMClk,-- 200 MHz FM Rx clock
+	 CLK_OUT4 => i50MHz,
     -- Status and control signals
     RESET  => ResetHi,
 	 LOCKED => PllLock);
@@ -373,7 +374,7 @@ LinkRegLo <= TxFIFO_Out(4 downto 0) when LinkTxEmpty = '0' else "00110";
 -- Buffer for MDIO data
 SMI_Buff : SMI_FIFO
   PORT MAP (wr_clk => SysClk, rst => ResetHi,
-	 rd_clk => Clk50MHz,
+	 rd_clk => i50MHz,
 	 din(23) => MDIORd,
 	 din(22 downto 16) => uCA(6 downto 0),
     din(15 downto 0) => uCD,
@@ -384,7 +385,7 @@ SMI_Buff : SMI_FIFO
 -- 1k deep buffer for PhyTx
 PhyTx_Buff : PhyTxBuff
   PORT MAP ( rst => ResetHi,   wr_clk => SysClk,
-    rd_clk => Clk50MHz, din => uCD,
+    rd_clk => i50MHz, din => uCD,
     wr_en => PhyTxBuff_wreq, rd_en => PhyTxBuff_rdreq,
     dout => PhyTxBuff_Out, full => PhyTxBuff_Full,
     empty => PhyTxBuff_Empty,
@@ -393,7 +394,7 @@ PhyTx_Buff : PhyTxBuff
 -- Buffer for SPI data
 SPITx_Buff : PhyTxBuff
   PORT MAP ( rst => ResetHi, wr_clk => SysClk,
-    rd_clk => Clk50MHz, din => uCD,
+    rd_clk => i50MHz, din => uCD,
     wr_en => SPI_WrtReq, rd_en => SPI_rdreq,
     dout => SPI_Out, full => SPI_Full,
     empty => SPI_Empty,
@@ -418,10 +419,6 @@ DatReqBuff: SCFifo_512x16
     dout => DatReqBuff_Out, 
 	 full => DatReqBuff_Full, empty => DatReqBuff_Empty,
 	 data_count => DatReqBuff_Count);
-
-Debug(3) <= DatReqBuff_Empty;
-Debug(4) <= RxOut(0).Done;
-Debug(6 downto 5) <= "00";
 
 GTPRxRst <= '1' when CpldRst = '0' 
   	or (CpldCS = '0' and uCWR = '0' and uCA(11 downto 10) = "00" and uCA(9 downto 0) = GTPFIFOAddr and uCD(0) = '1') else '0';
@@ -451,6 +448,11 @@ AddrBuff : SCFIFO_1Kx28
 ---- Loop through eight Phy receive channels, eight FM receive channels ----
 ----------------------------------------------------------------------------
 
+Debug(3) <= FEBRxBuff_Empty(0);
+Debug(4) <= FEBRxOut(0).Done;
+Debug(5) <= FEBRxBuff_rdreq(0);
+Debug(6) <= FMRx(0);
+
 Gen_RxBuffs : for i in 0 to 7 generate
 
 -- CRC generators for receive data CRC checking. 
@@ -476,6 +478,7 @@ FEBFMRx : FM_Rx
 				Rx_In => FEBRxIn(i),
 				Data => FEBRxBuff_Dat(i), 
 				Rx_Out => FEBRxOut(i));
+
 FEBRxIn(i).FM <= FMRx(i);
 PErrStat(i) <= FEBRxOut(i).Parity_Err;
 
@@ -589,7 +592,7 @@ end generate;
 
 -- Serializer for MDC links on the Phy chips, SPI ports on the LVDS Tx Chips --
 -- Clock runs at 50 MHz, MDI bit period is 40ns, SPI bit perios is 80ns
-SMI_Proc : process(CpldRst, Clk50MHz)
+SMI_Proc : process(CpldRst, i50MHz)
 
 begin 
 
@@ -611,7 +614,7 @@ SPIDiv <= "000"; SPIBitCnt <= (others => '0');
 SPI_State <= Idle; SPICS <= '1'; SPISClk <= '0'; 
 SPI_rdreq <= '0';
 
-elsif rising_edge (Clk50MHz) then 
+elsif rising_edge (i50MHz) then 
 
 Clk25MHz <= not Clk25MHz; 
 
@@ -1098,12 +1101,14 @@ else FEBRxBuff_rdreq(i) <= '0';
 end if;
 
 -- FEB FM receiver clear parity error
-if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = FMRxErrAddr
-then FEBRxIn(i).Clr_Err <= uCD(i) or uCD(8);
+if ((WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = FMRxErrAddr)
+	and (uCD(i) = '1' or uCD(8) = '1')) or CpldRst = '0'
+then FEBRxIn(i).Clr_Err <= '1';
 else FEBRxIn(i).Clr_Err <= '0';
 end if;
 
 end loop;
+
 
 if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = FMRxErrAddr
 then RxIn(0).Clr_Err <= uCD(9);

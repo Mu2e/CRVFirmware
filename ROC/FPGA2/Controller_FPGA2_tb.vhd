@@ -45,7 +45,7 @@ ARCHITECTURE behavior OF Controller_FPGA2_tb IS
 
  COMPONENT Controller_FPGA2
   PORT(
--- 106 MHz VXO clock, Phy clocks
+-- 100 MHz VXO clock, Phy clocks
 	VXO_P,VXO_N,ClkB_P,ClkB_N,Clk50MHz,
 -- microcontroller strobes
 	CpldRst, CpldCS, uCRd, uCWr : in std_logic;
@@ -68,26 +68,27 @@ ARCHITECTURE behavior OF Controller_FPGA2_tb IS
 	RxDA,RxDB,RxDC,RxDD,RxDE,RxDF,RxDG,RxDH : in std_logic_vector(3 downto 0);
 	RxClk,RxDV,RxErr,CRS : in std_logic_vector(7 downto 0);
 	TxDA,TxDB,TxDC,TxDD,TxDE,TxDF,TxDG,TxDH : out std_logic_vector(3 downto 0);
-	TxEn : out std_logic_vector(7 downto 0);
+	TxEn : buffer std_logic_vector(7 downto 0);
 	MDC : buffer std_logic_vector(1 downto 0);
 	MDIO : inout std_logic_vector(1 downto 0);
-	PhyPDn,PhyRst : out std_logic;
+	PhyPDn,PhyRst : buffer std_logic;
 -- Two of eight TxClk chips from the PHYs are connected to the FPGA
 	TxClk : in std_logic_vector(1 downto 0);
 	Clk25MHz : buffer std_logic;
 -- LVDS receivers
 	FMRx : in std_logic_vector(7 downto 0);
 -- Chip enable for octal LVDS receiver
-	FMRxEn : out std_logic;
---- Microbunch counter, trigger request from top level FPGA
+	FMRxEn : buffer std_logic;
+--- Heart beat data, asynchronous packets from top level FPGA
 	HrtBtFM,DReqFM : in std_logic;
--- LVDS driver SPI port 
+-- LVDS driver SPI port
 	SPICS,SPISClk,SPIMOSI : buffer std_logic;
 	SPIMISO : in std_logic;
 -- Debug port
- 	Debug : out std_logic_vector(10 downto 1));
+	Debug : buffer std_logic_vector(10 downto 1)
+);
   END COMPONENT;
-    
+
 --Inputs
    signal VXO_P,VXO_N,ClkB_P,ClkB_N : std_logic := '0';
    signal Clk50MHz : std_logic := '0';
@@ -118,7 +119,7 @@ ARCHITECTURE behavior OF Controller_FPGA2_tb IS
    signal TxDA,TxDB,TxDC,TxDD,TxDE,TxDF,TxDG,TxDH : std_logic_vector(3 downto 0);
    signal TxEn,iRxClk,iRxDV,iCRS : std_logic_vector(7 downto 0);
    signal MDC : std_logic_vector(1 downto 0);
-   signal PhyPDn,PhyRst,Clk25MHz,FMRxEn : std_logic;
+   signal PhyPDn,PhyRst,Clk25MHz,Clk100MHz,FMRxEn : std_logic;
    signal Debug : std_logic_vector(10 downto 1);
 
 	signal MDIO_Shift_Out0,MDIO_Shift_Out1,PhyTxDat : std_logic_vector(15 downto 0);
@@ -139,7 +140,7 @@ ARCHITECTURE behavior OF Controller_FPGA2_tb IS
 	signal ResetHi,TrgTxEn,FMTxEn,TxDelay,RxDatEnable,RxDatEnableD,CRSEn : std_logic;
 	signal TrigRxBuff_Out : std_logic_vector(15 downto 0);
 
-	signal TrigOuts : TxOutRec;
+	signal TrigOuts,LVDSOuts : TxOutRec;
 	
 --	constant RxSize : Integer := 94;
 --	Type RxOutArray is Array(0 to RxSize - 1) of std_logic_vector(15 downto 0);
@@ -244,8 +245,8 @@ ARCHITECTURE behavior OF Controller_FPGA2_tb IS
 	Type Delay_Array is Array(0 to 7) of time;
 	constant Delays : Delay_Array := (100 ns, 250 ns, 500 ns, 320 ns, 
 												  80 ns, 700 ns, 175 ns, 640 ns);
-   constant ClkB_P_period : time := 10 ns;
-   constant ClkB_N_period : time := 10 ns;
+   constant ClkB_P_period : time := 6.25 ns;
+   constant ClkB_N_period : time := 6.25 ns;
    constant Clk50MHz_period : time := 20 ns;
    constant Clk25MHz_period : time := 40 ns;
    constant RxClk_period : time := 39.99 ns;
@@ -284,16 +285,33 @@ BEGIN
 -- FM transmitter for requesting event data from the first level FPGAs
 TrigTx : FM_Tx
 	generic map (Pwidth => 16)
-		 port map(clock => VXO_P, 
+		 port map(clock => Clk100MHz, 
 					 reset => ResetHi,
 					 Enable => TrgTxEn,
 					 Data => TrigRxBuff_Out,
 					 Tx_Out => TrigOuts);
 DReqFM <= TrigOuts.FM;
+HrtBtFM <= TrigOuts.FM;
+LVDSTx : FM_Tx
+	generic map (Pwidth => 16)
+		 port map(clock => Clk100MHz, 
+					 reset => ResetHi,
+					 Enable => TrgTxEn,
+					 Data => TrigRxBuff_Out,
+					 Tx_Out => LVDSOuts);
+FMRx(0) <= LVDSOuts.FM;
+FMRx(1) <= LVDSOuts.FM;
+FMRx(2) <= LVDSOuts.FM;
+FMRx(3) <= LVDSOuts.FM;
+FMRx(4) <= LVDSOuts.FM;
+FMRx(5) <= LVDSOuts.FM;
+FMRx(6) <= LVDSOuts.FM;
+FMRx(7) <= LVDSOuts.FM;
+
 
 ResetHi <= not CpldRst;
 
-TrgTxEn <= '0'; --'1' when FMTxEn = '1' and TrigOuts.Done = '0' else '0';
+TrgTxEn <= '1' when FMTxEn = '1' and TrigOuts.Done = '0' else '0';
 
 -- Clock process definitions
    ClkB_process :process
@@ -317,6 +335,16 @@ TrgTxEn <= '0'; --'1' when FMTxEn = '1' and TrigOuts.Done = '0' else '0';
 		Clk50MHz <= '1';
 		wait for Clk50MHz_period/2;
    end process;
+
+   Clk100MHz_process :process
+   begin
+		Clk100MHz <= '0';
+		wait for 5 ns;
+		Clk100MHz <= '1';
+		wait for 5 ns;
+   end process;
+
+
  
    RxClk_process : process
    begin
@@ -346,16 +374,16 @@ TrgTxEn <= '0'; --'1' when FMTxEn = '1' and TrigOuts.Done = '0' else '0';
 
 	TxClk <= (others => not Clk25MHz);
 
-	FMRx(0) <= Clk25MHz; 
-	FMRx(1) <= Clk25MHz; --'0';
-	FMRx(2) <= '0';
-	FMRx(3) <= '0';--Clk25MHz; 
-	FMRx(4) <= '0';--Clk25MHz; 
-	FMRx(5) <= '0';--Clk25MHz; 
-	FMRx(6) <= '0';--Clk25MHz; 
-	FMRx(7) <= '0';--Clk25MHz; 
+--	FMRx(0) <= Clk25MHz; 
+--	FMRx(1) <= Clk25MHz; --'0';
+--	FMRx(2) <= '0';
+--	FMRx(3) <= '0';--Clk25MHz; 
+--	FMRx(4) <= '0';--Clk25MHz; 
+--	FMRx(5) <= '0';--Clk25MHz; 
+--	FMRx(6) <= '0';--Clk25MHz; 
+--	FMRx(7) <= '0';--Clk25MHz; 
 
-FMTxProc : process(CpldRst,VXO_P)
+FMTxProc : process(CpldRst,Clk100MHz)
 
 	Variable Index : Integer;
 
@@ -365,7 +393,7 @@ FMTxProc : process(CpldRst,VXO_P)
 
 	Index := 0; FMTxEn <= '0';
 
- elsif rising_edge(VXO_P) then
+ elsif rising_edge(Clk100MHz) then
 	
 		if Index = 0 and TxDelay = '1' then FMTxEn <= '1'; 
 	 elsif TrigOuts.Done = '0' and Index = 8 then FMTxEn <= '0';

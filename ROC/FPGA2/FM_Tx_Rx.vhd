@@ -7,7 +7,6 @@
 
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 use work.Proj_Defs.all;
 
@@ -154,7 +153,6 @@ end behavioural; -- of Serial_Tx
 
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 use work.Proj_Defs.all;
 
@@ -297,7 +295,6 @@ end behavioural; -- of Serial_Rx
 
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 USE work.Proj_Defs.all;
 
@@ -424,7 +421,6 @@ end behavioural; -- of TClk_Tx
 
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 use work.Proj_Defs.all;
 
@@ -550,7 +546,6 @@ end behavioural; -- of TClk_Rx
 
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 use work.Proj_Defs.all;
 

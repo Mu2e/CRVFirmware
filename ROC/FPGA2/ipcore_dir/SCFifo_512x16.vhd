@@ -22,7 +22,7 @@
 --    devices, or systems.  Use in such applications are expressly            --
 --    prohibited.                                                             --
 --                                                                            --
---    (c) Copyright 1995-2018 Xilinx, Inc.                                    --
+--    (c) Copyright 1995-2019 Xilinx, Inc.                                    --
 --    All rights reserved.                                                    --
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -119,7 +119,7 @@ END COMPONENT;
       c_error_injection_type_wdch => 0,
       c_error_injection_type_wrch => 0,
       c_family => "spartan6",
-      c_full_flags_rst_val => 1,
+      c_full_flags_rst_val => 0,
       c_has_almost_empty => 0,
       c_has_almost_full => 0,
       c_has_axi_aruser => 0,

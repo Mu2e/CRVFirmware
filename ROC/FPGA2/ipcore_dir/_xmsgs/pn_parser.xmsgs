@@ -8,7 +8,7 @@
 <!-- Copyright (c) 1995-2013 Xilinx, Inc.  All rights reserved.    -->
 
 <messages>
-<msg type="info" file="ProjectMgmt" num="1061" ><arg fmt="%s" index="1">Parsing VHDL file &quot;C:/Experiments/mu2e/Readout_Controller/Controller_FPGA2/ipcore_dir/SCFIFO_1Kx28.vhd&quot; into library work</arg>
+<msg type="info" file="ProjectMgmt" num="1061" ><arg fmt="%s" index="1">Parsing VHDL file &quot;C:/Xilinx/Controller_FPGA2/ipcore_dir/SCFifo_512x16.vhd&quot; into library work</arg>
 </msg>
 
 </messages>
