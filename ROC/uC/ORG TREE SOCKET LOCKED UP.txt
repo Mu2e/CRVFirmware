@@ -1,0 +1,19 @@
+
+
+>SOCK
+Orange Tree ZestETM1 Status, 4 Sockets Enabled
+Socket0  StatRegC=33  ESTABLISHED  131.225.012.216 :43536
+Socket1  StatRegC=33  ESTABLISHED  131.225.012.216 :42924
+Socket2  StatRegC=33  ESTABLISHED  131.225.012.216 :53404
+Socket3  StatRegC=33  ESTABLISHED  131.225.012.216 :35437
+Sockets  Intr Cnt=2
+
+
+
+
+C:\WORK\U-TELNET>nslookup 131.225.12.216
+Server:  nsdns0.fnal.gov
+Address:  131.225.0.254
+
+Name:    fsf-galileo.fnal.gov
+Address:  131.225.12.216

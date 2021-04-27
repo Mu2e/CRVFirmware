@@ -1,0 +1,26 @@
+
+
+//build files here
+C:\Program Files (x86)\Texas Instruments\Hercules\HET\bin
+
+
+
+.het
+
+het470wrap "$FILE_DIR$" "$TOOLKIT_DIR$\bin\het470" -iii -hc $FILE_FNAME$ $FILE_BNAME$
+het470wrap "$FILE_DIR$" "$TOOLKIT_DIR$\bin\het470" -iii -hc $FILE_FNAME$ $FILE_BNAME$
+
+$FILE_BPATH$.c
+$FILE_BPATH$.h
+
+
+hetp "C:\Program Files (x86)\Texas Instruments\Hercules\HET\bin\hetp" -n0 -hc32 -v2"  $FILE_FNAME$ $FILE_BNAME$
+
+
+C:\TI_PROJECTS\Hercules nHET\HET\Examples\Terry>hetp -n0 -hc32 -v2 nHetCap.het
+NHET Assembler    Release 1.7
+Texas Instruments Incorporated.
+ PASS 1
+ PASS 2
+
+ No Errors, No Warnings

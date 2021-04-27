@@ -1,0 +1,673 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<project>
+  <fileVersion>2</fileVersion>
+  <fileChecksum>4005139036</fileChecksum>
+  <configuration>
+    <name>Debug</name>
+    <outputs>
+      <file>$PROJ_DIR$\include\sys_core.h</file>
+      <file>$PROJ_DIR$\include\esm.h</file>
+      <file>$PROJ_DIR$\include\sys_common.h</file>
+      <file>$PROJ_DIR$\include\adc.h</file>
+      <file>$PROJ_DIR$\nHetCap\nHetCap.c</file>
+      <file>$PROJ_DIR$\nHetCap\nHetCap.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\string.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\pinmux.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_pmm.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\adc.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\system.o</file>
+      <file>$PROJ_DIR$\Debug\Exe\MU2E_CNTRL_V1.bin</file>
+      <file>$PROJ_DIR$\Debug\Obj\ZestETM1_SPI.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\wchar.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\stdio.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\rti.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\Mu2e_Ctrl_DAQ_PHY.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\stdbool.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\xencoding_limits.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_selftest.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\i2c.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\DLib_Product_string.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\nHetCap.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\crc.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\DLib_Defaults.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\yvals.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\emif.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\crc.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\Mu2e_Ctrl_Misc.o</file>
+      <file>$PROJ_DIR$\source\fram.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_intvecs.o</file>
+      <file>$TOOLKIT_DIR$\inc\c\xmtx.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\rti.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\ZestETM1_SPI.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\het.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\pinmux.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\gio.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\system.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\notification.o</file>
+      <file>$TOOLKIT_DIR$\inc\c\yfuns.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_mpu.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\esm.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\ZestSock-TEK.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\ysizet.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_main.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\fram.o</file>
+      <file>$TOOLKIT_DIR$\inc\c\stdlib.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_pmm.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\ymath.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_pcr.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_dma.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_main.o</file>
+      <file>$TOOLKIT_DIR$\inc\c\math.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\Mu2e_Ctrl_DAQ_PHY.o</file>
+      <file>$TOOLKIT_DIR$\inc\c\ystdio.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\nHetCap.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_startup.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\Mu2e_Ctrl_DAQ_LVDS.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\dabort.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_dma.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\locale.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_startup.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\het.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\xtls.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\xtgmath.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_core.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_pcr.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\notification.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\gio.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\esm.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\DLib_Product.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\spi.o</file>
+      <file>$PROJ_DIR$\Debug\Exe\c.out</file>
+      <file>$TOOLKIT_DIR$\inc\c\DLib_Threads.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\Mu2e_Ctrl.pbi</file>
+      <file>$PROJ_DIR$\source\ZestETM1_SPI.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\Mu2e_Ctrl.o</file>
+      <file>$TOOLKIT_DIR$\inc\c\xlocale.h</file>
+      <file>$PROJ_DIR$\source\ZestSock_TEK.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\xlocale_lconv.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\Mu2e_Ctrl_Misc.pbi</file>
+      <file>$PROJ_DIR$\source\Mu2e_Ctrl_i2c.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\ycheck.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\fram.pbi</file>
+      <file>$PROJ_DIR$\include\het.h</file>
+      <file>$PROJ_DIR$\include\reg_dma.h</file>
+      <file>$PROJ_DIR$\include\hw_reg_access.h</file>
+      <file>$PROJ_DIR$\include\nHetCap.h</file>
+      <file>$PROJ_DIR$\include\gio.h</file>
+      <file>$PROJ_DIR$\include\hal_stdtypes.h</file>
+      <file>$PROJ_DIR$\include\i2c.h</file>
+      <file>$PROJ_DIR$\include\reg_adc.h</file>
+      <file>$PROJ_DIR$\include\reg_system.h</file>
+      <file>$PROJ_DIR$\include\reg_rti.h</file>
+      <file>$PROJ_DIR$\include\sci.h</file>
+      <file>$PROJ_DIR$\include\rti.h</file>
+      <file>$PROJ_DIR$\include\reg_gio.h</file>
+      <file>$PROJ_DIR$\include\reg_esm.h</file>
+      <file>$PROJ_DIR$\include\reg_spi.h</file>
+      <file>$PROJ_DIR$\include\spi.h</file>
+      <file>$PROJ_DIR$\include\reg_sci.h</file>
+      <file>$PROJ_DIR$\include\std_nhet.h</file>
+      <file>$PROJ_DIR$\include\reg_i2c.h</file>
+      <file>$PROJ_DIR$\include\reg_het.h</file>
+      <file>$PROJ_DIR$\source\fram.c</file>
+      <file>$PROJ_DIR$\source\Mu2e_Ctrl.c</file>
+      <file>$PROJ_DIR$\source\sys_main.c</file>
+      <file>$PROJ_DIR$\source\ver_ePHY.h</file>
+      <file>$PROJ_DIR$\source\Mu2e_Ctrl_DAQ_LVDS.c</file>
+      <file>$PROJ_DIR$\include\sys_dma.h</file>
+      <file>$PROJ_DIR$\source\ZestSock-TEK.c</file>
+      <file>$PROJ_DIR$\source\ZestETM1_SOCKET.h</file>
+      <file>$PROJ_DIR$\source\emif.c</file>
+      <file>$PROJ_DIR$\source\ver_io.h</file>
+      <file>$PROJ_DIR$\source\adc.c</file>
+      <file>$PROJ_DIR$\source\dabort.asm</file>
+      <file>$PROJ_DIR$\source\crc.c</file>
+      <file>$PROJ_DIR$\source\gio.c</file>
+      <file>$PROJ_DIR$\source\het.c</file>
+      <file>$PROJ_DIR$\source\i2c.c</file>
+      <file>$PROJ_DIR$\source\notification.c</file>
+      <file>$PROJ_DIR$\source\ver_help.h</file>
+      <file>$PROJ_DIR$\source\Mu2e_Ctrl_i2c.c</file>
+      <file>$PROJ_DIR$\source\Mu2e_Ctrl_DAQ_PHY.c</file>
+      <file>$PROJ_DIR$\source\ZestETM1_SPI.c</file>
+      <file>$PROJ_DIR$\source\Mu2e_Ctrl_Misc.c</file>
+      <file>$PROJ_DIR$\source\esm.c</file>
+      <file>$PROJ_DIR$\Debug\Obj\emif.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\ZestSock-TEK.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\spi.pbi</file>
+      <file>$PROJ_DIR$\source\rti.c</file>
+      <file>$PROJ_DIR$\Debug\Obj\RM48_MU2E_CNTRL_V1.pbd</file>
+      <file>$PROJ_DIR$\source\sys_intvecs.asm</file>
+      <file>$PROJ_DIR$\source\sys_phantom.c</file>
+      <file>$PROJ_DIR$\source\sys_vim.c</file>
+      <file>$TOOLKIT_DIR$\inc\c\xlocalelist.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\stdint.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_vim.o</file>
+      <file>$PROJ_DIR$\source\sci.c</file>
+      <file>$PROJ_DIR$\Debug\Obj\i2c.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_phantom.o</file>
+      <file>$PROJ_DIR$\source\sys_selftest.c</file>
+      <file>$PROJ_DIR$\source\spi.c</file>
+      <file>$PROJ_DIR$\source\sys_pmm.c</file>
+      <file>$PROJ_DIR$\source\pinmux.c</file>
+      <file>$PROJ_DIR$\source\sys_mpu.asm</file>
+      <file>$PROJ_DIR$\source\sys_core.asm</file>
+      <file>$PROJ_DIR$\source\sys_dma.c</file>
+      <file>$PROJ_DIR$\source\sys_pcr.c</file>
+      <file>$PROJ_DIR$\source\sys_startup.c</file>
+      <file>$PROJ_DIR$\source\sys_pmu.asm</file>
+      <file>$PROJ_DIR$\source\system.c</file>
+      <file>$PROJ_DIR$\source\Mu2e_Ctrl.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\adc.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_vim.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\ctype.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\Mu2e_Ctrl_i2c.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\sci.pbi</file>
+      <file>$PROJ_DIR$\source\Mu2e_Ctrl_Misc.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\DLib_Config_Full.h</file>
+      <file>$PROJ_DIR$\Debug\Obj\sci.o</file>
+      <file>$PROJ_DIR$\Debug\Obj\Mu2e_Ctrl_DAQ_LVDS.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_selftest.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\Mu2e_Ctrl_i2c.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_phantom.pbi</file>
+      <file>$PROJ_DIR$\Debug\Obj\sys_pmu.o</file>
+    </outputs>
+    <file>
+      <name>[ROOT_NODE]</name>
+      <outputs>
+        <tool>
+          <name>ILINK</name>
+          <file> 72</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\nHetCap\nHetCap.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 55</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 22</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 70 2 17 25 82 159 101 89 136 24 18 73</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\Debug\Exe\c.out</name>
+      <outputs>
+        <tool>
+          <name>OBJCOPY</name>
+          <file> 11</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\fram.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 83</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 45</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 24 82 89 25 31 6 29 13 43 17 2 14 155 99 18 73 54 63 135 46 159 70 21 77 60 79 136 98 96</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\Mu2e_Ctrl.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 74</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 76</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 0 29 121 96 52 158 18 82 54 14 103 111 81 70 21 99 46 6 87 113 107 78 152 75 17 25 159 43 48 101 2 84 109 90 93 98 91 100 39 89 136 24 73 64 1 95 3 88 92 94 97 85 102</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\sys_main.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 44</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 51</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\Mu2e_Ctrl_DAQ_LVDS.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 161</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 57</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 82 6 25 96 107 159 43 99 2 84 17 91 14 86 152 70 18 54 21 0 93 98 102 46 88 113 158 89 136 24 73 103 109 90 97 1 95 3 92 94 85 100</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\ZestSock-TEK.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 42</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 128</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\emif.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 26</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 127</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\adc.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 153</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 9</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\dabort.asm</name>
+      <outputs>
+        <tool>
+          <name>AARM</name>
+          <file> 58</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\crc.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 23</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 27</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\gio.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 36</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 68</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\het.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 62</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 34</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\i2c.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 20</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 139</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\notification.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 67</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 38</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\Mu2e_Ctrl_i2c.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 163</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 156</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\Mu2e_Ctrl_DAQ_PHY.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 16</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 53</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 24 43 158 25 96 84 89 2 0 14 86 107 136 82 18 73 99 85 100 46 6 88 113 152 17 159 70 54 21 103 109 90 1 95 3 92 94 97 93 98 91 102</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\ZestETM1_SPI.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 12</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 33</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\Mu2e_Ctrl_Misc.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 80</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 28</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\esm.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 69</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 41</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\rti.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 32</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 15</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\sys_intvecs.asm</name>
+      <outputs>
+        <tool>
+          <name>AARM</name>
+          <file> 30</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\sys_phantom.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 164</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 140</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\sys_vim.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 154</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 137</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\sci.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 157</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 160</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\sys_selftest.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 162</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 19</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\spi.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 129</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 71</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\sys_pmm.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 47</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 8</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\pinmux.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 35</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 7</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\sys_mpu.asm</name>
+      <outputs>
+        <tool>
+          <name>AARM</name>
+          <file> 40</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\sys_core.asm</name>
+      <outputs>
+        <tool>
+          <name>AARM</name>
+          <file> 65</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\sys_dma.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 59</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 50</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\sys_pcr.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 49</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 66</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\sys_startup.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 61</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 56</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\sys_pmu.asm</name>
+      <outputs>
+        <tool>
+          <name>AARM</name>
+          <file> 165</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\source\system.c</name>
+      <outputs>
+        <tool>
+          <name>BICOMP</name>
+          <file> 37</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 10</file>
+        </tool>
+      </outputs>
+    </file>
+  </configuration>
+  <configuration>
+    <name>Release</name>
+    <outputs/>
+    <forcedrebuild>
+      <name>[MULTI_TOOL]</name>
+      <tool>ILINK</tool>
+    </forcedrebuild>
+    <forcedrebuild>
+      <name>[REBUILD_ALL]</name>
+    </forcedrebuild>
+  </configuration>
+</project>
+
+
