@@ -1,0 +1,18 @@
+
+MAXC      .equ   0x01ffffff  ;max delay max value allowed 0x01ff ffxx  (100nS per cnt, bits xx not used)
+
+START	   MOV32 {type=IMTOREG, reg=A, data=0, hr_data=0}
+           ECMP  {reg=A, action=PULSEHI, pin=8, en_pin_action=OFF, irq=OFF, data=1, hr_data=0, cond_addr=ENCOUNTER, next=OFFSTATE }
+
+
+DISCOUNTER MOV32 {type=IMTOREG&REM, reg=NONE, remote=START, data=0, hr_data=0}
+OFFSTATE   BR    {event=NOCOND, cond_addr=TEMPL, next=TEMPL}
+TEMPL      PCNT { next=TEMPH,type=RISE2FALL,pin=8};
+TEMPH      PCNT { next=START,type=FALL2RISE,pin=8};
+OFFSTATE1  BR    {event=NOCOND, cond_addr=START, next=START}
+
+
+ENCOUNTER   CNT { reg=T,irq=OFF,max=MAXC};
+TIMERCOMP  ECMP  { reg=T, action=PULSEHI, pin=8, en_pin_action=OFF, irq=ON, data=5, hr_data=16h, cond_addr=DISCOUNTER, next=START }
+
+

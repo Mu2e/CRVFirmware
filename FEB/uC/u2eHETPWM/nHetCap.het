@@ -1,0 +1,40 @@
+
+MAXC      .equ   0x01ffffff  ;max delay max value allowed 0x01ff ffxx  (100nS per cnt, bits xx not used)
+
+START	   MOV32 {type=IMTOREG, reg=A, data=0, hr_data=0}
+           ECMP  {reg=A, action=PULSEHI, pin=8, en_pin_action=OFF, irq=OFF, data=1, hr_data=0, cond_addr=ENCOUNTER, next=OFFSTATE }
+
+
+DISCOUNTER MOV32 {type=IMTOREG&REM, reg=NONE, remote=START, data=0, hr_data=0}
+OFFSTATE   BR    {event=NOCOND, cond_addr=TEMPL, next=TEMPL}
+TEMPL      PCNT { next=TEMPH,type=RISE2FALL,pin=8};
+;TEMPH      PCNT { next=START,type=FALL2RISE,pin=8};
+TEMPH      PCNT { next=L00,type=FALL2RISE,pin=8};
+
+;ADDED PWM PIN 20
+;L00 CNT { next= L01, reg=A, irq=OFF, max = 4 }
+;L01 ECMP { next= START, cond_addr= START, hr_lr=HIGH, en_pin_action=ON, pin=20,action=PULSEHI, reg=A, irq=OFF, data= 1, hr_data = 0x40 }
+
+
+; Output pulse generation with PWCNT
+; to generate pulses of a defined duration
+; Typical use case is that either CPU or NHET writes to the PWCNT data field to generate the pulse
+
+PA      .equ 20 ;   Pin to generate the pulse
+LDATA   .equ  2 ;   ((LDATA-1)*128+HDATA)  * lr/128 * hr/HETCLK =Length of pulse
+HDATA   .equ 64 ; 
+
+L00 	PWCNT {  en_pin_action = ON, pin= PA, action = PULSEHI, reg = NONE, irq=OFF, data= LDATA, hr_data = HDATA}
+L01 	BR         {next=START, cond_addr=START, event=NOCOND}
+
+
+
+
+OFFSTATE1  BR    {event=NOCOND, cond_addr=START, next=START}
+
+
+ENCOUNTER   CNT { reg=T,irq=OFF,max=MAXC};
+	    MOV32 {type=IMTOREG, reg=A, data=0, hr_data=0}
+TIMERCOMP   ECMP  { reg=T, action=PULSEHI, pin=8, en_pin_action=OFF, irq=ON, data=5, hr_data=16h, cond_addr=DISCOUNTER, next=START }
+
+
