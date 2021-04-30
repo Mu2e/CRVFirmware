@@ -104,7 +104,7 @@ _mpuInit_
         mcr   p15, #0,    r0, c6, c2, #0
         ldr   r0,  r5Base
         mcr   p15, #0,    r0, c6, c1, #0
-        mov   r0,  #0x0000
+        mov   r0,  #0x0001
         orr   r0,  r0,    #0x0300
         mcr   p15, #0,    r0, c6, c1, #4
         movw  r0,  #((1 << 15) + (1 << 14) + (0 << 13) + (0 << 12) + (0 << 11) + (0 << 10) + (0 <<  9) + (0 <<  8) + (0x1B << 1) + (1))
@@ -165,7 +165,7 @@ _mpuInit_
         ldr   r0,  r11Base
         mcr   p15, #0,    r0, c6, c1, #0
         mov   r0,  #0x0008
-        orr   r0,  r0,    #0x1100
+        orr   r0,  r0,    #0x1300
         mcr   p15, #0,    r0, c6, c1, #4
         movw  r0,  #((1 << 15) + (1 << 14) + (1 << 13) + (0 << 12) + (0 << 11) + (0 << 10) + (0 <<  9) + (0 <<  8) + (0x0A << 1) + (0))
         mcr   p15, #0,    r0, c6, c1, #2
@@ -203,7 +203,7 @@ r7Base  dcd 0xF0000000
 r8Base  dcd 0xFC000000
 r9Base  dcd 0xFE000000
 r10Base  dcd 0xFF000000
-r11Base  dcd 0x08001000
+r11Base  dcd 0x0803FC00
 r12Base  dcd 0x20000000
 
     

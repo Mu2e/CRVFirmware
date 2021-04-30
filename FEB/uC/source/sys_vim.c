@@ -1,7 +1,7 @@
 /** @file sys_vim.c 
 *   @brief VIM Driver Implementation File
-*   @date 05-Oct-2016
-*   @version 04.06.00
+*   @date 07-July-2017
+*   @version 04.07.00
 *
 */
 
@@ -73,8 +73,8 @@ static const t_isrFuncPTR s_vim_init[96U] =
     &phantomInterrupt,            /* Channel 1 */
     &rtiCompare0Interrupt,            /* Channel 2 */
     &rtiCompare1Interrupt,            /* Channel 3 */
-    &phantomInterrupt,            /* Channel 4 */
-    &phantomInterrupt,            /* Channel 5 */
+    &rtiCompare2Interrupt,            /* Channel 4 */
+    &rtiCompare3Interrupt,            /* Channel 5 */
     &phantomInterrupt,            /* Channel 6 */
     &phantomInterrupt,            /* Channel 7 */
     &phantomInterrupt,            /* Channel 8 */
@@ -92,7 +92,7 @@ static const t_isrFuncPTR s_vim_init[96U] =
     &esmLowInterrupt,            /* Channel 20 */
     &phantomInterrupt,            /* Channel 21 */
     &phantomInterrupt,            /* Channel 22 */
-    &gioLowLevelInterrupt,            /* Channel 23 */
+    &phantomInterrupt,            /* Channel 23 */
     &het1LowLevelInterrupt,            /* Channel 24 */
     &phantomInterrupt,            /* Channel 25 */
     &phantomInterrupt,            /* Channel 26 */
@@ -133,9 +133,9 @@ static const t_isrFuncPTR s_vim_init[96U] =
     &phantomInterrupt,            /* Channel 61 */
     &phantomInterrupt,            /* Channel 62 */
     &phantomInterrupt,            /* Channel 63 */
-    &phantomInterrupt,            /* Channel 64 */
+    &sciHighLevelInterrupt,            /* Channel 64 */
     &phantomInterrupt,            /* Channel 65 */
-    &i2cInterrupt,            /* Channel 66 */
+    &phantomInterrupt,            /* Channel 66 */
     &phantomInterrupt,            /* Channel 67 */
     &phantomInterrupt,            /* Channel 68 */
     &phantomInterrupt,            /* Channel 69 */
@@ -143,12 +143,12 @@ static const t_isrFuncPTR s_vim_init[96U] =
     &phantomInterrupt,            /* Channel 71 */
     &phantomInterrupt,            /* Channel 72 */
     &phantomInterrupt,            /* Channel 73 */
-    &phantomInterrupt,            /* Channel 74 */
+    &sciLowLevelInterrupt,            /* Channel 74 */
     &phantomInterrupt,            /* Channel 75 */
     &phantomInterrupt,            /* Channel 76 */
-    &phantomInterrupt,            /* Channel 77 */
+    &EMACTxIntISR,            /* Channel 77 */
     &phantomInterrupt,            /* Channel 78 */
-    &phantomInterrupt,            /* Channel 79 */
+    &EMACRxIntISR,            /* Channel 79 */
     &phantomInterrupt,            /* Channel 80 */
     &phantomInterrupt,            /* Channel 81 */
     &phantomInterrupt,            /* Channel 82 */
@@ -336,8 +336,8 @@ void vimInit(void)
                         | (uint32)((uint32)1U << 1U)
                         | (uint32)((uint32)1U << 2U)
                         | (uint32)((uint32)1U << 3U)
-                        | (uint32)((uint32)0U << 4U)
-                        | (uint32)((uint32)0U << 5U)
+                        | (uint32)((uint32)1U << 4U)
+                        | (uint32)((uint32)1U << 5U)
                         | (uint32)((uint32)0U << 6U)
                         | (uint32)((uint32)0U << 7U)
                         | (uint32)((uint32)0U << 8U)
@@ -355,7 +355,7 @@ void vimInit(void)
                         | (uint32)((uint32)1U << 20U)
                         | (uint32)((uint32)0U << 21U)
                         | (uint32)((uint32)0U << 22U)
-                        | (uint32)((uint32)1U << 23U)
+                        | (uint32)((uint32)0U << 23U)
                         | (uint32)((uint32)1U << 24U)
                         | (uint32)((uint32)0U << 25U)
                         | (uint32)((uint32)0U << 26U)
@@ -398,9 +398,9 @@ void vimInit(void)
                         | (uint32)((uint32)0U << 30U)
                         | (uint32)((uint32)0U << 31U);
 
-    vimREG->REQMASKSET2 = (uint32)((uint32)0U << 0U)
+    vimREG->REQMASKSET2 = (uint32)((uint32)1U << 0U)
                         | (uint32)((uint32)0U << 1U)
-                        | (uint32)((uint32)1U << 2U)
+                        | (uint32)((uint32)0U << 2U)
                         | (uint32)((uint32)0U << 3U)
                         | (uint32)((uint32)0U << 4U)
                         | (uint32)((uint32)0U << 5U)
@@ -408,7 +408,7 @@ void vimInit(void)
                         | (uint32)((uint32)0U << 7U)
                         | (uint32)((uint32)0U << 8U)
                         | (uint32)((uint32)0U << 9U)
-                        | (uint32)((uint32)0U << 10U)
+                        | (uint32)((uint32)1U << 10U)
                         | (uint32)((uint32)0U << 11U)
                         | (uint32)((uint32)1U << 12U)
                         | (uint32)((uint32)1U << 13U)
@@ -707,64 +707,74 @@ void vimParityErrorHandler(void)
     uint32 error_addr = VIM_ADDERR;
 
     /* Identify the channel number */
-    uint32 error_channel = ((error_addr & 0x1FFU) >> 2U) - 1U;
+    uint32 error_channel = ((error_addr & 0x1FFU) >> 2U);
 
-    /* Correct the corrupted location */
-    vimRAM->ISR[error_channel + 1U] = s_vim_init[error_channel + 1U];
+	if(error_channel >= VIM_CHANNELS)
+	{
+        /* Index is out of bonds */
+        /* This condition should never be true since the HW only implements VIM_CHANNELS (96) channels */
+        /* However, it was added due to defensive programming */
+/* USER CODE BEGIN (2) */
+/* USER CODE END */
+	}
+	else
+	{
+		/* Correct the corrupted location */
+		vimRAM->ISR[error_channel] = s_vim_init[error_channel];
 
-    /* Clear Parity Error Flag */
-    VIM_PARFLG = 1U;
+		/* Clear Parity Error Flag */
+		VIM_PARFLG = 1U;
 
-    /* Disable and enable the highest priority pending channel */
-    if (vimREG->FIQINDEX != 0U)
-    {
-        vec = vimREG->FIQINDEX - 1U;
-    }
-    else 
-    {
-	   /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "Read 32 bit volatile register" */
-        vec = vimREG->IRQINDEX - 1U;
-    }
-    if(vec == 0U)
-    {
-        vimREG->INTREQ0 = 1U;
-	    vec = esmREG->IOFFHR - 1U;
-		
-        if (vec < 32U)
-        {
-            esmREG->SR1[0U] = (uint32)1U << vec;
-            esmGroup1Notification(vec);
-        }
-        else if (vec < 64U)
-        {
-            esmREG->SR1[1U] = (uint32)1U << (vec-32U);
-            esmGroup2Notification(vec-32U);
-        }
-        else if (vec < 96U)
-        {
-            esmREG->SR4[0U] = (uint32)1U << (vec-64U);
-            esmGroup1Notification(vec-32U);
-        }
-        else
-        {
-            esmREG->SR4[1U] = (uint32)1U << (vec-96U);
-            esmGroup2Notification(vec-64U);
-        }
-    }
-    else if (vec < 32U)
-    {
-        vimREG->REQMASKCLR0 = (uint32)1U << vec;
-        vimREG->REQMASKSET0 = (uint32)1U << vec;
-    }
-    else if (vec < 64U)
-    {
-        vimREG->REQMASKCLR1 = (uint32)1U << (vec-32U);
-        vimREG->REQMASKSET1 = (uint32)1U << (vec-32U);
-    }
-    else
-    {
-        vimREG->REQMASKCLR2 = (uint32)1U << (vec-64U);
-        vimREG->REQMASKSET2 = (uint32)1U << (vec-64U);
-    }
-    
+		/* Disable and enable the highest priority pending channel */
+		if (vimREG->FIQINDEX != 0U)
+		{
+			vec = vimREG->FIQINDEX - 1U;
+		}
+		else 
+		{
+		   /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "Read 32 bit volatile register" */
+			vec = vimREG->IRQINDEX - 1U;
+		}
+		if(vec == 0U)
+		{
+			vimREG->INTREQ0 = 1U;
+			vec = esmREG->IOFFHR - 1U;
+			
+			if (vec < 32U)
+			{
+				esmREG->SR1[0U] = (uint32)1U << vec;
+				esmGroup1Notification(vec);
+			}
+			else if (vec < 64U)
+			{
+				esmREG->SR1[1U] = (uint32)1U << (vec-32U);
+				esmGroup2Notification(vec-32U);
+			}
+			else if (vec < 96U)
+			{
+				esmREG->SR4[0U] = (uint32)1U << (vec-64U);
+				esmGroup1Notification(vec-32U);
+			}
+			else
+			{
+				esmREG->SR4[1U] = (uint32)1U << (vec-96U);
+				esmGroup2Notification(vec-64U);
+			}
+		}
+		else if (vec < 32U)
+		{
+			vimREG->REQMASKCLR0 = (uint32)1U << vec;
+			vimREG->REQMASKSET0 = (uint32)1U << vec;
+		}
+		else if (vec < 64U)
+		{
+			vimREG->REQMASKCLR1 = (uint32)1U << (vec-32U);
+			vimREG->REQMASKSET1 = (uint32)1U << (vec-32U);
+		}
+		else
+		{
+			vimREG->REQMASKCLR2 = (uint32)1U << (vec-64U);
+			vimREG->REQMASKSET2 = (uint32)1U << (vec-64U);
+		}
+	}
 }

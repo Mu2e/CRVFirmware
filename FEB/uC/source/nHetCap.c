@@ -14,7 +14,7 @@ HET_MEMORY const HET_INIT0_PST[9] =
  	/* hetlabel_1_0 */ 
 	{
 		0x00006000, 
-		0x0000E818, 
+		0x0000E118, 
 		0x00000080, 
 		0x00000000
 	}, 
@@ -37,7 +37,7 @@ HET_MEMORY const HET_INIT0_PST[9] =
 
  	/* hetlabel_4_0 */ 
 	{
-		0x0000AE48, 
+		0x0000AE41, 
 		0x00000000, 
 		0x00000000, 
 		0x00000000
@@ -45,7 +45,7 @@ HET_MEMORY const HET_INIT0_PST[9] =
 
  	/* hetlabel_5_0 */ 
 	{
-		0x00000E08, 
+		0x00000E01, 
 		0x00000000, 
 		0x00000000, 
 		0x00000000
@@ -70,7 +70,7 @@ HET_MEMORY const HET_INIT0_PST[9] =
  	/* hetlabel_8_0 */ 
 	{
 		0x00000000, 
-		0x0000481D, 
+		0x0000411D, 
 		0x00000296, 
 		0x00000000
 	} 

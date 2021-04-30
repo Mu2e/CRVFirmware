@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<Project>
+  <Desktop>
+    <Static>
+      <Debug-Log>
+        
+        
+      <ColumnWidth0>20</ColumnWidth0><ColumnWidth1>1522</ColumnWidth1></Debug-Log>
+      <Build>
+        <ColumnWidth0>20</ColumnWidth0>
+        <ColumnWidth1>1141</ColumnWidth1>
+        <ColumnWidth2>304</ColumnWidth2>
+        <ColumnWidth3>76</ColumnWidth3>
+      </Build>
+      <Workspace>
+        <ColumnWidths>
+          
+          
+          
+          
+        <Column0>387</Column0><Column1>27</Column1><Column2>27</Column2><Column3>27</Column3></ColumnWidths>
+      </Workspace>
+      <Disassembly>
+        <col-names>
+          
+          
+        <item>Disassembly</item><item>_I0</item></col-names>
+        <col-widths>
+          
+          
+        <item>568</item><item>20</item></col-widths>
+        <DisasmHistory/>
+        
+        
+      <ShowCodeCoverage>1</ShowCodeCoverage><ShowInstrProfiling>1</ShowInstrProfiling></Disassembly>
+      <Locals>
+        <col-names>
+          
+          
+          
+          
+        <item>Location</item><item>Type</item><item>Value</item><item>Variable</item></col-names>
+        <col-widths>
+          
+          
+          
+          
+        <item>150</item><item>100</item><item>187</item><item>175</item></col-widths>
+      </Locals>
+      <WATCH_1>
+        <expressions>
+          
+          
+          
+        <item>g_sciTransfer_t</item><item>g_Cnt</item><item>dataconfig_FRAM</item><item>cmdPtr</item><item>e_HETPROGRAM0_UN</item><item>hetRAMBASE_t1</item><item>HET_L00_0</item><item>hetRAM1</item><item>genFlag</item><item>genFlag</item><item/></expressions>
+        <col-names>
+          
+          
+          
+          
+        <item>Expression</item><item>Location</item><item>Type</item><item>Value</item></col-names>
+        <col-widths>
+          
+          
+          
+          
+        <item>223</item><item>150</item><item>100</item><item>173</item></col-widths>
+      </WATCH_1>
+    <Register/><SymbolicMemory><PreferedWindows><Position>0</Position><ScreenPosX>0</ScreenPosX><ScreenPosY>0</ScreenPosY><Windows/></PreferedWindows><zone>Memory</zone><col-names><item>Data</item><item>Location</item><item>Type</item><item>Value</item><item>Variable</item></col-names><col-widths><item>100</item><item>100</item><item>100</item><item>100</item><item>100</item></col-widths><SymMemHistory/></SymbolicMemory><STACK_1><PreferedWindows><Position>1</Position><ScreenPosX>0</ScreenPosX><ScreenPosY>0</ScreenPosY><Windows/></PreferedWindows><col-names><item>Data</item><item>Frame</item><item>Location</item><item>Type</item><item>Value</item><item>Variable</item></col-names><col-widths><item>100</item><item>100</item><item>100</item><item>100</item><item>100</item><item>100</item></col-widths></STACK_1><WATCH_2><expressions><item>TX_dmaDATA</item><item>RX_dmaDATA</item><item>g_dmaCTRLPKT</item><item>phyHdr</item><item>USB_Rec</item><item>g_timeMs</item><item>Ris2Fall</item><item>Fall2Ris</item><item>het2PROGRAM</item><item>HET_INIT0_PST</item><item>RX_dmaDATA</item><item>g_Cnt</item><item>cnt</item><item>lp</item><item>wrdCnt</item><item>g_dmaCTRLPKT1</item><item>bBuf1000</item><item/></expressions><col-names><item>Expression</item><item>Location</item><item>Type</item><item>Value</item></col-names><col-widths><item>165</item><item>150</item><item>200</item><item>142</item></col-widths></WATCH_2><Memory><PreferedWindows><Position>3</Position><ScreenPosX>0</ScreenPosX><ScreenPosY>0</ScreenPosY><Windows/></PreferedWindows><FindDirection>1</FindDirection><FindAsHex>0</FindAsHex></Memory><Select-Ambiguous-Definitions><ColumnWidth0>534</ColumnWidth0><ColumnWidth1>76</ColumnWidth1><ColumnWidth2>916</ColumnWidth2></Select-Ambiguous-Definitions><PHYSBPWIN><col-names><item>#</item><item>Breakpoint</item></col-names><col-widths><item>60</item><item>400</item></col-widths><PreferedWindows><Position>3</Position><ScreenPosX>0</ScreenPosX><ScreenPosY>0</ScreenPosY><Windows/></PreferedWindows></PHYSBPWIN></Static>
+    <Windows>
+      
+      
+      
+      
+    <Wnd1>
+        <Tabs>
+          <Tab>
+            <Identity>TabID-896-4443</Identity>
+            <TabName>Debug Log</TabName>
+            <Factory>Debug-Log</Factory>
+            <Session/>
+          </Tab>
+          <Tab>
+            <Identity>TabID-374-4453</Identity>
+            <TabName>Build</TabName>
+            <Factory>Build</Factory>
+            <Session/>
+          </Tab>
+        <Tab><Identity>TabID-17522-20265</Identity><TabName>Ambiguous Definitions</TabName><Factory>Select-Ambiguous-Definitions</Factory><Session/></Tab></Tabs>
+        
+      <SelectedTab>0</SelectedTab></Wnd1><Wnd2>
+        <Tabs>
+          <Tab>
+            <Identity>TabID-11645-4447</Identity>
+            <TabName>Workspace</TabName>
+            <Factory>Workspace</Factory>
+            <Session>
+              
+            <NodeDict><ExpandedNode>RM48_DEMO</ExpandedNode><ExpandedNode>RM48_DEMO/SRC</ExpandedNode></NodeDict></Session>
+          </Tab>
+        </Tabs>
+        
+      <SelectedTab>0</SelectedTab></Wnd2><Wnd3><Tabs><Tab>
+            <Identity>TabID-22393-4450</Identity>
+            <TabName>Disassembly</TabName>
+            <Factory>Disassembly</Factory>
+            <Session/>
+          </Tab><Tab>
+            <Identity>TabID-21938-2803</Identity>
+            <TabName>Locals</TabName>
+            <Factory>Locals</Factory>
+          </Tab><Tab><Identity>TabID-24508-7233</Identity><TabName>Watch 2</TabName><Factory>WATCH_2</Factory></Tab><Tab><Identity>TabID-4702-26225</Identity><TabName>Register</TabName><Factory>Register</Factory><Session><State11>SCI1BRS</State11><REG1>0</REG1><REG2>0</REG2><Group>40</Group><States>11</States><State0>DMASTAT</State0><State1>EMIF_CE2CFG</State1><State2>EMIF_CE3CFG</State2><State3>GIOCLRA</State3><State4>GIODINA</State4><State5>GIODIRA</State5><State6>GIOSETA</State6><State7>HET1GCR</State7><State8>HET1PFR</State8><State9>LIN1MBRS</State9><State10>SCI1BRS</State10></Session></Tab><Tab><Identity>TabID-4523-29594</Identity><TabName>Register</TabName><Factory>Register</Factory><Session><REG1>0</REG1><REG2>0</REG2><Group>36</Group><States>44</States><State0>DMACP0CHCTRL</State0><State1>DMACP0ITCOUNT</State1><State2>DMAPTCRL</State2><State3>EFCBOUND</State3><State4>EMIF_CE2CFG</State4><State5>EMIF_CE3CFG</State5><State6>EMIF_CE4CFG</State6><State7>EMIF_SDCR0</State7><State8>ESMIECR4</State8><State9>ESMIESR4</State9><State10>ESMSR1</State10><State11>GIODINB</State11><State12>GIODIRB</State12><State13>GIOSETA</State13><State14>GPREG1</State14><State15>HET1DCLR</State15><State16>HET1DOUT</State16><State17>HET1DSET</State17><State18>HET1PULDIS</State18><State19>I2CDRR</State19><State20>I2CDXR</State20><State21>I2CMDR</State21><State22>I2COAR</State22><State23>I2CPDIS</State23><State24>I2CPDR</State24><State25>I2CPSC</State25><State26>I2CPSEL</State26><State27>I2CSAR</State27><State28>I2CSRS</State28><State29>I2CSTR</State29><State30>IODFT1CTRL</State30><State31>MDIO_CONTROL</State31><State32>MIBSPI3BUF</State32><State33>MIBSPI3DAT0</State33><State34>MIBSPI3DAT1</State34><State35>MIBSPI3FMT0</State35><State36>MIBSPI5GCR0</State36><State37>MIBSPI5GCR1</State37><State38>MIBSPI5PC4</State38><State39>MIBSPI5PC5</State39><State40>SCI1BRS</State40><State41>SPCR</State41><State42>SPI2FMT1</State42><State43>SYSESR</State43></Session></Tab><Tab>
+            <Identity>TabID-21415-2813</Identity>
+            <TabName>Watch 1</TabName>
+            <Factory>WATCH_1</Factory>
+          </Tab></Tabs><SelectedTab>2</SelectedTab></Wnd3><Wnd7><Tabs><Tab><Identity>TabID-32081-24157</Identity><TabName>Memory</TabName><Factory>Memory</Factory><Session><ZoneNumber>0</ZoneNumber><SelectionAnchor>4282777738</SelectionAnchor><SelectionEnd>4282777738</SelectionEnd><UnitsPerGroup>4</UnitsPerGroup><EndianMode>0</EndianMode><DataCovEnabled>0</DataCovEnabled><DataCovShown>0</DataCovShown><AutoRefresh>0</AutoRefresh><HScroll>0</HScroll><VScroll>267673602</VScroll></Session></Tab></Tabs><SelectedTab>0</SelectedTab></Wnd7></Windows>
+    <Editor>
+      
+      
+      
+      
+    <Pane><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_DEMO\source\sys_mu2e.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>787</YPos2><SelStart2>28772</SelStart2><SelEnd2>28772</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_DEMO\source\ver_io.h</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>137</YPos2><SelStart2>7637</SelStart2><SelEnd2>7637</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_DEMO\source\Wizmain.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>111</YPos2><SelStart2>3748</SelStart2><SelEnd2>3748</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_DEMO\source\w5300.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>33</YPos2><SelStart2>1846</SelStart2><SelEnd2>1846</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_DEMO\source\sys_main.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>77</YPos2><SelStart2>3125</SelStart2><SelEnd2>3125</SelEnd2></Tab><ActiveTab>4</ActiveTab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_DEMO\source\emac.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>1618</YPos2><SelStart2>61174</SelStart2><SelEnd2>61174</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_DEMO\source\sys_mu2e_misc.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>819</YPos2><SelStart2>29719</SelStart2><SelEnd2>29725</SelEnd2></Tab></Pane><ActivePane>0</ActivePane><Sizes><Pane><X>1000000</X><Y>1000000</Y></Pane></Sizes><SplitMode>1</SplitMode></Editor>
+    <Positions>
+      
+      
+      
+      
+      
+    <Top><Row0><Sizes><Toolbar-02A0DBF8><key>iaridepm.enu1</key></Toolbar-02A0DBF8><Toolbar-0CA455A8><key>debuggergui.enu1</key></Toolbar-0CA455A8></Sizes></Row0></Top><Left><Row0><Sizes><Wnd2><Rect><Top>-2</Top><Left>-2</Left><Bottom>648</Bottom><Right>478</Right><x>-2</x><y>-2</y><xscreen>13</xscreen><yscreen>49</yscreen><sizeHorzCX>7761</sizeHorzCX><sizeHorzCY>44749</sizeHorzCY><sizeVertCX>286567</sizeVertCX><sizeVertCY>593607</sizeVertCY></Rect></Wnd2></Sizes></Row0></Left><Right><Row0><Sizes><Wnd3><Rect><Top>-2</Top><Left>-2</Left><Bottom>648</Bottom><Right>457</Right><x>-2</x><y>-2</y><xscreen>35</xscreen><yscreen>92</yscreen><sizeHorzCX>20896</sizeHorzCX><sizeHorzCY>84018</sizeHorzCY><sizeVertCX>274030</sizeVertCX><sizeVertCY>593607</sizeVertCY></Rect></Wnd3></Sizes></Row0></Right><Bottom><Row0><Sizes><Wnd1><Rect><Top>-2</Top><Left>-2</Left><Bottom>220</Bottom><Right>1677</Right><x>-2</x><y>-2</y><xscreen>1679</xscreen><yscreen>222</yscreen><sizeHorzCX>1002388</sizeHorzCX><sizeHorzCY>202740</sizeHorzCY><sizeVertCX>7761</sizeVertCX><sizeVertCY>44749</sizeVertCY></Rect></Wnd1></Sizes></Row0><Row1><Sizes><Wnd7><Rect><Top>218</Top><Left>-2</Left><Bottom>402</Bottom><Right>1677</Right><x>-2</x><y>218</y><xscreen>1679</xscreen><yscreen>184</yscreen><sizeHorzCX>1002388</sizeHorzCX><sizeHorzCY>168037</sizeHorzCY><sizeVertCX>149254</sizeVertCX><sizeVertCY>105936</sizeVertCY></Rect></Wnd7></Sizes></Row1></Bottom><Float><Sizes/></Float></Positions>
+  </Desktop>
+</Project>
+
+

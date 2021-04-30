@@ -1,7 +1,7 @@
-/** @file adc.c
+/** @file adc.c 
 *   @brief ADC Driver Source File
-*   @date 05-Oct-2016
-*   @version 04.06.00
+*   @date 20.May.2014
+*   @version 04.00.00
 *
 *   This file contains:
 *   - API Functions
@@ -10,40 +10,7 @@
 *   which are relevant for the ADC driver.
 */
 
-/* 
-* Copyright (C) 2009-2016 Texas Instruments Incorporated - www.ti.com  
-* 
-* 
-*  Redistribution and use in source and binary forms, with or without 
-*  modification, are permitted provided that the following conditions 
-*  are met:
-*
-*    Redistributions of source code must retain the above copyright 
-*    notice, this list of conditions and the following disclaimer.
-*
-*    Redistributions in binary form must reproduce the above copyright
-*    notice, this list of conditions and the following disclaimer in the 
-*    documentation and/or other materials provided with the   
-*    distribution.
-*
-*    Neither the name of Texas Instruments Incorporated nor the names of
-*    its contributors may be used to endorse or promote products derived
-*    from this software without specific prior written permission.
-*
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-*  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
-*  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
-*  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
-*  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-*  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-*  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
-*  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*
-*/
-
+/* (c) Texas Instruments 2009-2014, All rights reserved. */
 
 /* USER CODE BEGIN (0) */
 /* USER CODE END */
@@ -80,14 +47,14 @@ void adcInit(void)
 
     /** - Enable 12-BIT ADC  */
     adcREG1->OPMODECR |= 0x80000000U;
-
+	
     /** - Setup prescaler */
     adcREG1->CLOCKCR = 10U;
-
+ 
     /** - Setup memory boundaries */
     adcREG1->BNDCR  = (uint32)((uint32)16U << 16U) | (16U + 8U);
     adcREG1->BNDEND = (adcREG1->BNDEND & 0xFFFF0000U) | (2U);
-
+ 
     /** - Setup event group conversion mode
     *     - Setup data format
     *     - Enable/Disable channel id in conversion result
@@ -107,7 +74,7 @@ void adcInit(void)
     /** - Setup event group sample window */
     adcREG1->EVSAMP = 0U;
 
-    /** - Setup event group sample discharge
+    /** - Setup event group sample discharge 
     *     - Setup discharge prescaler
     *     - Enable/Disable discharge
     */
@@ -122,7 +89,7 @@ void adcInit(void)
     adcREG1->GxMODECR[1U] = (uint32)ADC_12_BIT
                           | (uint32)0x00000020U
                           | (uint32)0x00000000U
-                          | (uint32)0x00000002U;
+                          | (uint32)0x00000000U;   //0x00000000U=single conversion tek mod June2019
 
     /** - Setup group 1 hardware trigger
      *     - Setup hardware trigger edge
@@ -134,12 +101,12 @@ void adcInit(void)
     /** - Setup group 1 sample window */
     adcREG1->G1SAMP = 0U;
 
-    /** - Setup group 1 sample discharge
+    /** - Setup group 1 sample discharge 
     *     - Setup discharge prescaler
     *     - Enable/Disable discharge
     */
-    adcREG1->G1SAMPDISEN = (uint32)((uint32)0U << 8U)
-                         | (uint32)0x00000000U;
+    adcREG1->G1SAMPDISEN = (uint32)((uint32)1U << 8U)
+                         | (uint32)0x00000001U; //discharge cap enable,tek mod June2019
 
     /** - Setup group 2 conversion mode
      *     - Setup data format
@@ -152,16 +119,16 @@ void adcInit(void)
                           | (uint32)0x00000000U;
 
     /** - Setup group 2 hardware trigger
-    *     - Setup hardware trigger edge
+	*     - Setup hardware trigger edge
     *     - Setup hardware trigger source
-    */
+	*/
     adcREG1->G2SRC = (uint32)0x00000000U
                    | (uint32)ADC1_EVENT;
 
     /** - Setup group 2 sample window */
     adcREG1->G2SAMP = 0U;
 
-    /** - Setup group 2 sample discharge
+    /** - Setup group 2 sample discharge 
     *     - Setup discharge prescaler
     *     - Enable/Disable discharge
     */
@@ -173,25 +140,25 @@ void adcInit(void)
 
     /** - ADC1 EVT pin direction */
     adcREG1->EVTDIR = 0U;
-
+	
     /** - ADC1 EVT pin open drain enable */
-    adcREG1->EVTPDR = 0U;
+	adcREG1->EVTPDR = 0U;
 
     /** - ADC1 EVT pin pullup / pulldown selection */
-    adcREG1->EVTPSEL = 1U;
+	adcREG1->EVTPSEL = 1U;
 
     /** - ADC1 EVT pin pullup / pulldown enable*/
-    adcREG1->EVTDIS = 0U;
-
-    /** - Enable ADC module */
+	adcREG1->EVTDIS = 0U;
+	
+	/** - Enable ADC module */
     adcREG1->OPMODECR |= 0x80140001U;
-
+	
     /** - Wait for buffer initialization complete */
     /*SAFETYMCUSW 28 D MR:NA <APPROVED> "Hardware status bit read check" */
-    while (((adcREG1->BNDEND & 0xFFFF0000U) >> 16U ) != 0U)
-    {
-    } /* Wait */
-
+    while (((adcREG1->BNDEND & 0xFFFF0000U) >> 16U ) != 0U) 
+    { 
+	} /* Wait */
+    
     /** - Setup parity */
     adcREG1->PARCR = 0x00000005U;
 
@@ -210,7 +177,7 @@ static const uint32 s_adcSelect[2U][3U] =
     {0x00000000U |
     0x00000000U |
     0x00000000U |
-    0x00000008U |
+    0x00000000U |
     0x00000000U |
     0x00000000U |
     0x00000000U |
@@ -233,26 +200,26 @@ static const uint32 s_adcSelect[2U][3U] =
     0x00000000U,
     0x00000001U |
     0x00000002U |
-    0x00000004U |
+    0x00000000U |
     0x00000008U |
     0x00000000U |
     0x00000000U |
+    0x00000040U |
+    0x00000080U |
     0x00000000U |
+    0x00000200U |
     0x00000000U |
+    0x00000800U |
+    0x00001000U |
+    0x00002000U |
+    0x00004000U |
     0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
+    0x00010000U |
+    0x00020000U |
+    0x00040000U |
+    0x00080000U |
+    0x00100000U |
+    0x00200000U |
     0x00000000U |
     0x00000000U,
     0x00000000U |
@@ -441,7 +408,7 @@ void adcResetFiFo(adcBASE_t *adc, uint32 group)
     adc->GxFIFORESETCR[group] = 1U;
 
     /**   @note The function adcInit has to be called before this function can be used.\n
-    *           the conversion should be stopped before calling this function.
+    *           the conversion should be stopped before calling this function. 
     */
 
 /* USER CODE BEGIN (14) */
@@ -474,12 +441,10 @@ uint32 adcGetData(adcBASE_t *adc, uint32 group, adcData_t * data)
 {
     uint32       i;
     uint32  buf;
-    uint32  mode;
+    uint32  mode;    
     uint32  index = (adc == adcREG1) ? 0U : 1U;
-
-	uint32  intcr_reg = adc->GxINTCR[group];
-    uint32  count = (intcr_reg >= 256U) ? s_adcFiFoSize[index][group] : (s_adcFiFoSize[index][group] - (uint32)(intcr_reg & 0xFFU));
-    adcData_t *ptr = data;
+    uint32       count = (adc->GxINTCR[group] >= 256U) ? s_adcFiFoSize[index][group] : (s_adcFiFoSize[index][group] - (uint32)(adc->GxINTCR[group] & 0xFFU));
+    adcData_t *ptr = data; 
 
 /* USER CODE BEGIN (16) */
 /* USER CODE END */
@@ -492,11 +457,11 @@ uint32 adcGetData(adcBASE_t *adc, uint32 group, adcData_t * data)
         for (i = 0U; i < count; i++)
         {
           buf        = adc->GxBUF[group].BUF0;
-          /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are only allowed in this driver" */
+		  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are only allowed in this driver" */
           ptr->value = (uint16)(buf & 0xFFFU);
           ptr->id    = (uint32)((buf >> 16U) & 0x1FU);
           /*SAFETYMCUSW 567 S MR:17.1,17.4 <APPROVED> "Pointer increment needed" */
-          ptr++;
+		  ptr++;
         }
       }
       else
@@ -505,11 +470,11 @@ uint32 adcGetData(adcBASE_t *adc, uint32 group, adcData_t * data)
         for (i = 0U; i < count; i++)
         {
           buf        = adc->GxBUF[group].BUF0;
-          /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are only allowed in this driver" */
+		  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are only allowed in this driver" */
           ptr->value = (uint16)(buf & 0x3FFU);
           ptr->id    = (uint32)((buf >> 10U) & 0x1FU);
           /*SAFETYMCUSW 567 S MR:17.1,17.4 <APPROVED> "Pointer increment needed" */
-          ptr++;
+		  ptr++;
         }
       }
 
@@ -540,9 +505,9 @@ uint32 adcGetData(adcBASE_t *adc, uint32 group, adcData_t * data)
 *              - adcGROUP1: ADC group 1
 *              - adcGROUP2: ADC group 2
 *   @return The function will return:
-*           - 0: When FiFo buffer is not full
-*           - 1: When FiFo buffer is full
-*           - 3: When FiFo buffer overflow occurred
+*           - 0: When FiFo buffer is not full   
+*           - 1: When FiFo buffer is full   
+*           - 3: When FiFo buffer overflow occurred    
 *
 *   This function checks FiFo buffer status.
 *
@@ -582,8 +547,8 @@ uint32 adcIsFifoFull(adcBASE_t *adc, uint32 group)
 *              - adcGROUP1: ADC group 1
 *              - adcGROUP2: ADC group 2
 *   @return The function will return:
-*           - 0: When is not finished
-*           - 8: When conversion is complete
+*           - 0: When is not finished   
+*           - 8: When conversion is complete   
 *
 *   This function checks if conversion is complete.
 *
@@ -627,86 +592,86 @@ void adcCalibration(adcBASE_t *adc)
 {
 /* USER CODE BEGIN (25) */
 /* USER CODE END */
+    
+	uint32 conv_val[5U]={0U,0U,0U,0U,0U};
+	uint32 loop_index=0U;
+	uint32 offset_error=0U;
+	uint32 backup_mode;
+	
+	/** - Backup Mode before Calibration  */
+	backup_mode = adc->OPMODECR;
+	
+	/** - Enable 12-BIT ADC  */
+	adcREG1->OPMODECR |= 0x80000000U;
 
-    uint32 conv_val[5U]={0U,0U,0U,0U,0U};
-    uint32 loop_index=0U;
-    uint32 offset_error=0U;
-    uint32 backup_mode;
+	/* Disable all channels for conversion */
+	adc->GxSEL[0U]=0x00U;
+	adc->GxSEL[1U]=0x00U;
+	adc->GxSEL[2U]=0x00U;
 
-    /** - Backup Mode before Calibration  */
-    backup_mode = adc->OPMODECR;
+	for(loop_index=0U;loop_index<4U;loop_index++)
+	{
+		/* Disable Self Test and Calibration mode */
+		adc->CALCR=0x0U;
+	
+		switch(loop_index)
+		{
+			case 0U : 	/* Test 1 : Bride En = 0 , HiLo =0 */
+						adc->CALCR=0x0U;
+						break;
 
-    /** - Enable 12-BIT ADC  */
-    adcREG1->OPMODECR |= 0x80000000U;
+			case 1U :	/* Test 1 : Bride En = 0 , HiLo =1 */
+						adc->CALCR=0x0100U;
+						break;
 
-    /* Disable all channels for conversion */
-    adc->GxSEL[0U]=0x00U;
-    adc->GxSEL[1U]=0x00U;
-    adc->GxSEL[2U]=0x00U;
+			case 2U : 	/* Test 1 : Bride En = 1 , HiLo =0 */
+						adc->CALCR=0x0200U;
+						break;
+		
+			case 3U : 	/* Test 1 : Bride En = 1 , HiLo =1 */
+						adc->CALCR=0x0300U;
+						break;
+			default :
+			            break;
+		}
+	
+		/* Enable Calibration mode */
+		adc->CALCR|=0x1U;
+	
+		/* Start calibration conversion */
+		adc->CALCR|=0x00010000U;
 
-    for(loop_index=0U;loop_index<4U;loop_index++)
-    {
-        /* Disable Self Test and Calibration mode */
-        adc->CALCR=0x0U;
+		/* Wait for calibration conversion to complete */
+		/*SAFETYMCUSW 28 D MR:NA <APPROVED> "Hardware status bit read check" */
+		while((adc->CALCR & 0x00010000U)==0x00010000U)
+	    { 
+	    } /* Wait */
 
-        switch(loop_index)
-        {
-            case 0U :   /* Test 1 : Bride En = 0 , HiLo =0 */
-                        adc->CALCR=0x0U;
-                        break;
+		/* Read converted value */
+		conv_val[loop_index]= adc->CALR;
+	}
 
-            case 1U :   /* Test 1 : Bride En = 0 , HiLo =1 */
-                        adc->CALCR=0x0100U;
-                        break;
+	/* Disable Self Test and Calibration mode */
+	adc->CALCR=0x0U;
 
-            case 2U :   /* Test 1 : Bride En = 1 , HiLo =0 */
-                        adc->CALCR=0x0200U;
-                        break;
+	/* Compute the Offset error correction value */
+	conv_val[4U]=conv_val[0U]+ conv_val[1U] + conv_val[2U] + conv_val[3U];
 
-            case 3U :   /* Test 1 : Bride En = 1 , HiLo =1 */
-                        adc->CALCR=0x0300U;
-                        break;
-            default :
-                        break;
-        }
+	conv_val[4U]=(conv_val[4U]/4U);
 
-        /* Enable Calibration mode */
-        adc->CALCR|=0x1U;
+	offset_error=conv_val[4U]-0x7FFU;
 
-        /* Start calibration conversion */
-        adc->CALCR|=0x00010000U;
+	/*Write the offset error to the Calibration register */
+	/* Load 2;s complement of the computed value to ADCALR register */
+	offset_error=~offset_error;
+	offset_error=offset_error & 0xFFFU;
+	offset_error=offset_error+1U;
 
-        /* Wait for calibration conversion to complete */
-        /*SAFETYMCUSW 28 D MR:NA <APPROVED> "Hardware status bit read check" */
-        while((adc->CALCR & 0x00010000U)==0x00010000U)
-        {
-        } /* Wait */
-
-        /* Read converted value */
-        conv_val[loop_index]= adc->CALR;
-    }
-
-    /* Disable Self Test and Calibration mode */
-    adc->CALCR=0x0U;
-
-    /* Compute the Offset error correction value */
-    conv_val[4U]=conv_val[0U]+ conv_val[1U] + conv_val[2U] + conv_val[3U];
-
-    conv_val[4U]=(conv_val[4U]/4U);
-
-    offset_error=conv_val[4U]-0x7FFU;
-
-    /*Write the offset error to the Calibration register */
-    /* Load 2;s complement of the computed value to ADCALR register */
-    offset_error=~offset_error;
-    offset_error=offset_error & 0xFFFU;
-    offset_error=offset_error+1U;
-
-    adc->CALR = offset_error;
+	adc->CALR = offset_error;
 
   /** - Restore Mode after Calibration  */
-    adc->OPMODECR = backup_mode;
-
+	adc->OPMODECR = backup_mode;
+	
  /**   @note The function adcInit has to be called before using this function. */
 
 /* USER CODE BEGIN (26) */
@@ -719,7 +684,7 @@ void adcCalibration(adcBASE_t *adc)
 *   @param[in] adc Pointer to ADC module:
 *              - adcREG1: ADC1 module pointer
 *              - adcREG2: ADC2 module pointer
-*   @return This function will return offset error using Mid Point Calibration mode
+*	@return This function will return offset error using Mid Point Calibration mode
 *
 *   This function computes offset error using Mid Point Calibration mode
 *
@@ -731,81 +696,81 @@ uint32 adcMidPointCalibration(adcBASE_t *adc)
 {
 /* USER CODE BEGIN (27) */
 /* USER CODE END */
+    
+	uint32 conv_val[3U]={0U,0U,0U};
+	uint32 loop_index=0U;
+	uint32 offset_error=0U;
+	uint32 backup_mode;
+	
+	/** - Backup Mode before Calibration  */
+	backup_mode = adc->OPMODECR;
+	
+	/** - Enable 12-BIT ADC  */
+	adcREG1->OPMODECR |= 0x80000000U;
 
-    uint32 conv_val[3U]={0U,0U,0U};
-    uint32 loop_index=0U;
-    uint32 offset_error=0U;
-    uint32 backup_mode;
+	/* Disable all channels for conversion */
+	adc->GxSEL[0U]=0x00U;
+	adc->GxSEL[1U]=0x00U;
+	adc->GxSEL[2U]=0x00U;
 
-    /** - Backup Mode before Calibration  */
-    backup_mode = adc->OPMODECR;
+	for(loop_index=0U;loop_index<2U;loop_index++)
+	{
+		/* Disable Self Test and Calibration mode */
+		adc->CALCR=0x0U;
+	
+		switch(loop_index)
+		{
+			case 0U : 	/* Test 1 : Bride En = 0 , HiLo =0 */
+						adc->CALCR=0x0U;
+						break;
 
-    /** - Enable 12-BIT ADC  */
-    adcREG1->OPMODECR |= 0x80000000U;
+			case 1U :	/* Test 1 : Bride En = 0 , HiLo =1 */
+						adc->CALCR=0x0100U;
+						break;
 
-    /* Disable all channels for conversion */
-    adc->GxSEL[0U]=0x00U;
-    adc->GxSEL[1U]=0x00U;
-    adc->GxSEL[2U]=0x00U;
+			default :
+			            break;						
 
-    for(loop_index=0U;loop_index<2U;loop_index++)
-    {
-        /* Disable Self Test and Calibration mode */
-        adc->CALCR=0x0U;
+		}
+	
+		/* Enable Calibration mode */
+		adc->CALCR|=0x1U;
+	
+		/* Start calibration conversion */
+		adc->CALCR|=0x00010000U;
 
-        switch(loop_index)
-        {
-            case 0U :   /* Test 1 : Bride En = 0 , HiLo =0 */
-                        adc->CALCR=0x0U;
-                        break;
+		/* Wait for calibration conversion to complete */
+		/*SAFETYMCUSW 28 D MR:NA <APPROVED> "Hardware status bit read check" */
+		while((adc->CALCR & 0x00010000U)==0x00010000U)
+	    { 
+	    } /* Wait */
 
-            case 1U :   /* Test 1 : Bride En = 0 , HiLo =1 */
-                        adc->CALCR=0x0100U;
-                        break;
+		/* Read converted value */
+		conv_val[loop_index]= adc->CALR;
+	}
 
-            default :
-                        break;
+	/* Disable Self Test and Calibration mode */
+	adc->CALCR=0x0U;
 
-        }
+	/* Compute the Offset error correction value */
+	conv_val[2U]=(conv_val[0U])+ (conv_val[1U]);
 
-        /* Enable Calibration mode */
-        adc->CALCR|=0x1U;
+	conv_val[2U]=(conv_val[2U]/2U);
 
-        /* Start calibration conversion */
-        adc->CALCR|=0x00010000U;
+	offset_error=conv_val[2U]-0x7FFU;
 
-        /* Wait for calibration conversion to complete */
-        /*SAFETYMCUSW 28 D MR:NA <APPROVED> "Hardware status bit read check" */
-        while((adc->CALCR & 0x00010000U)==0x00010000U)
-        {
-        } /* Wait */
+	/* Write the offset error to the Calibration register           */
+	/* Load 2's complement of the computed value to ADCALR register */
+	offset_error=~offset_error;
+	offset_error=offset_error & 0xFFFU;
+	offset_error=offset_error+1U;
 
-        /* Read converted value */
-        conv_val[loop_index]= adc->CALR;
-    }
-
-    /* Disable Self Test and Calibration mode */
-    adc->CALCR=0x0U;
-
-    /* Compute the Offset error correction value */
-    conv_val[2U]=(conv_val[0U])+ (conv_val[1U]);
-
-    conv_val[2U]=(conv_val[2U]/2U);
-
-    offset_error=conv_val[2U]-0x7FFU;
-
-    /* Write the offset error to the Calibration register           */
-    /* Load 2's complement of the computed value to ADCALR register */
-    offset_error=~offset_error;
-    offset_error=offset_error+1U;
-    offset_error=offset_error & 0xFFFU;
-
-    adc->CALR = offset_error;
+	adc->CALR = offset_error;
 
   /** - Restore Mode after Calibration  */
-    adc->OPMODECR = backup_mode;
-
-    return(offset_error);
+	adc->OPMODECR = backup_mode;
+	
+	return(offset_error);
 
  /**   @note The function adcInit has to be called before this function can be used. */
 
@@ -918,15 +883,15 @@ uint32 adcGetEVTPin(adcBASE_t *adc)
 /** @fn void adc1GetConfigValue(adc_config_reg_t *config_reg, config_value_type_t type)
 *   @brief Get the initial or current values of the configuration registers
 *
-*   @param[in] *config_reg: pointer to the struct to which the initial or current
+*	@param[in] *config_reg: pointer to the struct to which the initial or current 
 *                           value of the configuration registers need to be stored
-*   @param[in] type:    whether initial or current value of the configuration registers need to be stored
-*                       - InitialValue: initial value of the configuration registers will be stored
+*	@param[in] type: 	whether initial or current value of the configuration registers need to be stored
+*						- InitialValue: initial value of the configuration registers will be stored 
 *                                       in the struct pointed by config_reg
-*                       - CurrentValue: initial value of the configuration registers will be stored
+*						- CurrentValue: initial value of the configuration registers will be stored 
 *                                       in the struct pointed by config_reg
 *
-*   This function will copy the initial or current value (depending on the parameter 'type')
+*   This function will copy the initial or current value (depending on the parameter 'type') 
 *   of the configuration registers to the struct pointed by config_reg
 *
 */
@@ -935,8 +900,8 @@ uint32 adcGetEVTPin(adcBASE_t *adc)
 /* Requirements : HL_SR203 */
 void adc1GetConfigValue(adc_config_reg_t *config_reg, config_value_type_t type)
 {
-    if (type == InitialValue)
-    {
+	if (type == InitialValue)
+	{
         config_reg->CONFIG_OPMODECR = ADC1_OPMODECR_CONFIGVALUE;
         config_reg->CONFIG_CLOCKCR = ADC1_CLOCKCR_CONFIGVALUE;
         config_reg->CONFIG_GxMODECR[0U] = ADC1_G0MODECR_CONFIGVALUE;
@@ -954,9 +919,9 @@ void adc1GetConfigValue(adc_config_reg_t *config_reg, config_value_type_t type)
         config_reg->CONFIG_G1SAMPDISEN = ADC1_G1SAMPDISEN_CONFIGVALUE;
         config_reg->CONFIG_G2SAMPDISEN = ADC1_G2SAMPDISEN_CONFIGVALUE;
         config_reg->CONFIG_PARCR = ADC1_PARCR_CONFIGVALUE;
-    }
-    else
-    {
+	}
+	else
+	{
         config_reg->CONFIG_OPMODECR = adcREG1->OPMODECR;
         config_reg->CONFIG_CLOCKCR = adcREG1->CLOCKCR;
         config_reg->CONFIG_GxMODECR[0U] = adcREG1->GxMODECR[0U];
@@ -974,7 +939,7 @@ void adc1GetConfigValue(adc_config_reg_t *config_reg, config_value_type_t type)
         config_reg->CONFIG_G1SAMPDISEN = adcREG1->G1SAMPDISEN;
         config_reg->CONFIG_G2SAMPDISEN = adcREG1->G2SAMPDISEN;
         config_reg->CONFIG_PARCR = adcREG1->PARCR;
-    }
+	}
 }
 
 

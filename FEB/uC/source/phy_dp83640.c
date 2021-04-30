@@ -6,13 +6,50 @@
  *   This file contains the device abstraction APIs for PHY DP83640.
  */
 
-/* Copyright (C) 2010 Texas Instruments Incorporated - www.ti.com
- * ALL RIGHTS RESERVED
- */
+/* 
+* Copyright (C) 2009-2016 Texas Instruments Incorporated - www.ti.com  
+* 
+* 
+*  Redistribution and use in source and binary forms, with or without 
+*  modification, are permitted provided that the following conditions 
+*  are met:
+*
+*    Redistributions of source code must retain the above copyright 
+*    notice, this list of conditions and the following disclaimer.
+*
+*    Redistributions in binary form must reproduce the above copyright
+*    notice, this list of conditions and the following disclaimer in the 
+*    documentation and/or other materials provided with the   
+*    distribution.
+*
+*    Neither the name of Texas Instruments Incorporated nor the names of
+*    its contributors may be used to endorse or promote products derived
+*    from this software without specific prior written permission.
+*
+*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+*  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+*  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+*  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+*  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+*  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+*  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+*  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+*/
 
+
+/* USER CODE BEGIN (0) */
+/* USER CODE END */
+ 
 #include "sys_common.h"
 #include "mdio.h"
 #include "phy_dp83640.h"
+
+/* USER CODE BEGIN (1) */
+/* USER CODE END */
 
 /*******************************************************************************
 *                        API FUNCTION DEFINITIONS
@@ -244,12 +281,14 @@ boolean Dp83640PartnerAbilityGet(uint32 mdioBaseAddr,
 /* Requirements : HL_ETH_SR44 */
 void Dp83640Reset(uint32 mdioBaseAddr, uint32 phyAddr)
 {
-	uint32 delay = 0x1FFFU;
-	MDIOPhyRegWrite(mdioBaseAddr, phyAddr, PHY_BCR, PHY_LPBK_ENABLE);
-	/* A wait of 3us is required before allowing further operation. */
-	while(delay > 0U)
+	uint16 regVal = 0U;
+	MDIOPhyRegWrite(mdioBaseAddr, phyAddr, PHY_BCR, PHY_SOFTRESET);
+	(void)MDIOPhyRegRead(mdioBaseAddr, phyAddr, PHY_BCR, &regVal);
+
+	/* : This bit is self-clearing and returns 1 until the reset process is complete. */
+	while((regVal & PHY_SOFTRESET) != 0U)
 	{
-		delay--;
+		(void)MDIOPhyRegRead(mdioBaseAddr, phyAddr, PHY_BCR, &regVal);
 	}
 }
 
@@ -369,4 +408,24 @@ uint64 Dp83640GetTimeStamp(uint32 mdioBaseAddr, uint32 phyAddr, phyTimeStamp_t t
 	return timeStamp;
 }
 
+/**
+ * \brief   Reads the Speed info from Status register of the PHY.
+ *
+ * \param   mdioBaseAddr  Base Address of the MDIO Module Registers.
+ * \param   phyAddr       PHY Adress.
+ * \param   ptnerAblty    The partner abilities of the EMAC
+ *
+ * \return  status after reading \n
+ *          TRUE if reading successful
+ *          FALSE if reading failed
+ **/
+boolean Dp83640PartnerSpdGet(uint32 mdioBaseAddr,
+                            uint32 phyAddr,
+                            uint16 *ptnerAblty)
+{
+    return (MDIOPhyRegRead(mdioBaseAddr, phyAddr, PHY_LINK_PARTNER_SPD,
+                           ptnerAblty));
+}
+/* USER CODE BEGIN (2) */
+/* USER CODE END */
 /**************************** End Of File ***********************************/

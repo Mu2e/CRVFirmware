@@ -1,7 +1,7 @@
 /** @file crc.c
 *   @brief CRC Driver Source File
-*   @date 02-Mar-2016
-*   @version 04.05.02
+*   @date 05-Oct-2016
+*   @version 04.06.00
 *
 *   This file contains:
 *   - API Functions

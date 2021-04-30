@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<Project>
+  <Desktop>
+    <Static>
+      <Debug-Log>
+        
+        
+      <ColumnWidth0>20</ColumnWidth0><ColumnWidth1>1535</ColumnWidth1></Debug-Log>
+      <Build>
+        
+        
+        
+        
+      <ColumnWidth0>20</ColumnWidth0><ColumnWidth1>1151</ColumnWidth1><ColumnWidth2>307</ColumnWidth2><ColumnWidth3>76</ColumnWidth3></Build>
+      <Workspace>
+        <ColumnWidths>
+          
+          
+          
+          
+        <Column0>314</Column0><Column1>27</Column1><Column2>27</Column2><Column3>27</Column3></ColumnWidths>
+      </Workspace>
+      <Disassembly>
+        <col-names>
+          
+          
+        <item>Disassembly</item><item>_I0</item></col-names>
+        <col-widths>
+          
+          
+        <item>500</item><item>20</item></col-widths>
+        <DisasmHistory/>
+        
+        
+      <ShowCodeCoverage>1</ShowCodeCoverage><ShowInstrProfiling>1</ShowInstrProfiling></Disassembly>
+    <WATCH_1><expressions><item>genFlag</item><item>oneWireTemp[fpga][ch]</item><item>oneWireTemp</item><item>one</item><item>mStime</item><item>oneWireRom</item><item>chan</item><item/></expressions><col-names><item>Expression</item><item>Location</item><item>Type</item><item>Value</item></col-names><col-widths><item>189</item><item>150</item><item>100</item><item>299</item></col-widths></WATCH_1><Register><RegFindHistory/></Register><Locals><col-names><item>Location</item><item>Type</item><item>Value</item><item>Variable</item></col-names><col-widths><item>150</item><item>100</item><item>238</item><item>145</item></col-widths></Locals><STACK_1><col-names><item>Data</item><item>Frame</item><item>Location</item><item>Type</item><item>Value</item><item>Variable</item></col-names><col-widths><item>100</item><item>100</item><item>100</item><item>100</item><item>100</item><item>100</item></col-widths><PreferedWindows><Position>1</Position><ScreenPosX>0</ScreenPosX><ScreenPosY>0</ScreenPosY><Windows/></PreferedWindows></STACK_1><STACK_2><col-names><item>Data</item><item>Frame</item><item>Location</item><item>Type</item><item>Value</item><item>Variable</item></col-names><col-widths><item>100</item><item>100</item><item>100</item><item>100</item><item>100</item><item>100</item></col-widths><PreferedWindows><Position>1</Position><ScreenPosX>0</ScreenPosX><ScreenPosY>0</ScreenPosY><Windows><Window><Factory>STACK_1</Factory></Window></Windows></PreferedWindows></STACK_2><CallStack><col-names><item>Frame</item><item>_I0</item></col-names><col-widths><item>3500</item><item>20</item></col-widths><PreferedWindows><Position>1</Position><ScreenPosX>0</ScreenPosX><ScreenPosY>0</ScreenPosY><Windows><Window><Factory>STACK_1</Factory></Window></Windows></PreferedWindows></CallStack><WATCH_2><expressions><item>genFlag</item><item>BinSt</item><item>g_dmaCTRLPKT</item><item>tBuf</item><item>f_RegConst</item><item>eCmdBuf</item><item>g_Sock</item><item>Buf1500</item><item>FPGA_Trig_Cnts</item><item>BinSt.gSndBytCnt</item><item>BinSt.gDMA_Fpga2Mem</item><item>USB_Rec</item><item>chan</item><item>fpga</item><item>ch</item><item>oneWireRom[fpga][ch]</item><item>oneWireTemp</item><item>one</item><item>oneWireRom</item><item>mStime</item><item>adc_ms</item><item>genFlag</item><item/></expressions><col-names><item>Expression</item><item>Location</item><item>Type</item><item>Value</item></col-names><col-widths><item>218</item><item>150</item><item>100</item><item>192</item></col-widths></WATCH_2><Memory><PreferedWindows><Position>3</Position><ScreenPosX>0</ScreenPosX><ScreenPosY>0</ScreenPosY><Windows/></PreferedWindows><FindDirection>1</FindDirection><MemGotoHistory><item>0x80188d0</item><item>0x801d8d0</item></MemGotoHistory><FindAsHex>0</FindAsHex></Memory><Select-Ambiguous-Definitions><ColumnWidth0>502</ColumnWidth0><ColumnWidth1>71</ColumnWidth1><ColumnWidth2>861</ColumnWidth2></Select-Ambiguous-Definitions><PHYSBPWIN><col-names><item>#</item><item>Breakpoint</item></col-names><col-widths><item>60</item><item>400</item></col-widths><PreferedWindows><Position>3</Position><ScreenPosX>0</ScreenPosX><ScreenPosY>0</ScreenPosY><Windows/></PreferedWindows></PHYSBPWIN><PROJECT_GUI_CALL_GRAPH><PreferedWindows><Position>3</Position><ScreenPosX>0</ScreenPosX><ScreenPosY>0</ScreenPosY><Windows/></PreferedWindows><col-names><item>File</item><item>Function</item><item>Line</item></col-names><col-widths><item>200</item><item>700</item><item>100</item></col-widths></PROJECT_GUI_CALL_GRAPH><Find-All-References><ColumnWidth0>766</ColumnWidth0><ColumnWidth1>109</ColumnWidth1><ColumnWidth2>1313</ColumnWidth2></Find-All-References><DRIVER_TIMELINE_GRAPH><PreferedWindows><Position>3</Position><ScreenPosX>0</ScreenPosX><ScreenPosY>0</ScreenPosY><Windows/></PreferedWindows></DRIVER_TIMELINE_GRAPH><Extra-Trace><PreferedWindows><Position>3</Position><ScreenPosX>0</ScreenPosX><ScreenPosY>0</ScreenPosY><Windows/></PreferedWindows><col-names><item>Comment</item><item>Cycles</item><item>SWO Packet</item><item>Trace</item><item>Value</item></col-names><col-widths><item>400</item><item>100</item><item>100</item><item>300</item><item>100</item></col-widths></Extra-Trace><DRIVER_STATE><PreferedWindows><Position>2</Position><ScreenPosX>0</ScreenPosX><ScreenPosY>0</ScreenPosY><Windows/></PreferedWindows><col-names><item>Property</item><item>Value</item></col-names><col-widths><item>400</item><item>400</item></col-widths></DRIVER_STATE></Static>
+    <Windows>
+      
+      
+      
+    <Wnd2>
+        <Tabs>
+          <Tab>
+            <Identity>TabID-20493-25753</Identity>
+            <TabName>Debug Log</TabName>
+            <Factory>Debug-Log</Factory>
+            <Session/>
+          </Tab>
+          <Tab>
+            <Identity>TabID-19971-25763</Identity>
+            <TabName>Build</TabName>
+            <Factory>Build</Factory>
+            <Session/>
+          </Tab>
+        <Tab><Identity>TabID-25987-358</Identity><TabName>Ambiguous Definitions</TabName><Factory>Select-Ambiguous-Definitions</Factory><Session/></Tab><Tab><Identity>TabID-20608-30977</Identity><TabName>References</TabName><Factory>Find-All-References</Factory><Session/></Tab></Tabs>
+        
+      <SelectedTab>0</SelectedTab></Wnd2><Wnd4>
+        <Tabs>
+          <Tab>
+            <Identity>TabID-31242-25756</Identity>
+            <TabName>Workspace</TabName>
+            <Factory>Workspace</Factory>
+            <Session>
+              
+            <NodeDict><ExpandedNode>RM48_MU2E_V2</ExpandedNode><ExpandedNode>RM48_MU2E_V2/MU2E</ExpandedNode><ExpandedNode>RM48_MU2E_V2/Output</ExpandedNode><ExpandedNode>RM48_MU2E_V2/SRC</ExpandedNode><ExpandedNode>RM48_MU2E_V2/Wiznet</ExpandedNode></NodeDict></Session>
+          </Tab>
+        </Tabs>
+        
+      <SelectedTab>0</SelectedTab></Wnd4><Wnd6><Tabs><Tab><Identity>TabID-19582-2177</Identity><TabName>Watch 1</TabName><Factory>WATCH_1</Factory></Tab><Tab><Identity>TabID-4088-8812</Identity><TabName>Register</TabName><Factory>Register</Factory><Session><REG1>0</REG1><REG2>0</REG2><Group>24</Group><States>17</States><State0>EMAC_BOFFTEST</State0><State1>EMAC_MACADDRHI</State1><State2>EMAC_MACADDRLO</State2><State3>EMAC_MACEOIVECTOR</State3><State4>EMAC_RX0FREEBUFFER</State4><State5>EMAC_RXFILTERLOWTHRESH</State5><State6>EMAC_RXMBPENABLE</State6><State7>EMIF_CE2CFG</State7><State8>ESMEPSR</State8><State9>HET1DIN</State9><State10>HET1DOUT</State10><State11>MDIO_CONTROL</State11><State12>SCI1BRS</State12><State13>SCI1GCR1</State13><State14>SPI2BUF</State14><State15>SPI2DAT0</State15><State16>SPI2DAT1</State16></Session></Tab><Tab><Identity>TabID-2193-4778</Identity><TabName>Watch 2</TabName><Factory>WATCH_2</Factory></Tab><Tab>
+            <Identity>TabID-9222-25759</Identity>
+            <TabName>Disassembly</TabName>
+            <Factory>Disassembly</Factory>
+            <Session/>
+          </Tab></Tabs><SelectedTab>2</SelectedTab></Wnd6><Wnd7><Tabs><Tab><Identity>TabID-24372-9456</Identity><TabName>Locals</TabName><Factory>Locals</Factory></Tab></Tabs><SelectedTab>0</SelectedTab></Wnd7></Windows>
+    <Editor>
+      
+      
+      
+      
+    <Pane><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_MU2E_V2\source\sys_mu2e.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>16</YPos2><SelStart2>2732</SelStart2><SelEnd2>2736</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_MU2E_V2\source\socket.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>21</YPos2><SelStart2>1440</SelStart2><SelEnd2>1440</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_MU2E_V2\source\Wizmain.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>0</YPos2><SelStart2>949</SelStart2><SelEnd2>949</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_MU2E_V2\source\w5300.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>0</YPos2><SelStart2>1346</SelStart2><SelEnd2>1346</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_MU2E_V2\source\ver_io.h</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>712</YPos2><SelStart2>33305</SelStart2><SelEnd2>33316</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_MU2E_V2\source\sys_mu2e_misc.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>60</YPos2><SelStart2>516</SelStart2><SelEnd2>516</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_MU2E_V2\source\notification.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>306</YPos2><SelStart2>9563</SelStart2><SelEnd2>9595</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_MU2E_V2\source\sys_startup.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>75</YPos2><SelStart2>2936</SelStart2><SelEnd2>2936</SelEnd2></Tab><ActiveTab>7</ActiveTab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\RM48_MU2E_V2\source\ver_help.h</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>0</YPos2><SelStart2>685</SelStart2><SelEnd2>685</SelEnd2></Tab></Pane><ActivePane>0</ActivePane><Sizes><Pane><X>1000000</X><Y>1000000</Y></Pane></Sizes><SplitMode>1</SplitMode></Editor>
+    <Positions>
+      
+      
+      
+      
+      
+    <Top><Row0><Sizes><Toolbar-0099CA50><key>iaridepm.enu1</key></Toolbar-0099CA50><Toolbar-19CA1910><key>debuggergui.enu1</key></Toolbar-19CA1910></Sizes></Row0></Top><Left><Row0><Sizes><Wnd4><Rect><Top>-2</Top><Left>-2</Left><Bottom>1081</Bottom><Right>388</Right><x>-2</x><y>-2</y><xscreen>62</xscreen><yscreen>170</yscreen><sizeHorzCX>30708</sizeHorzCX><sizeHorzCY>130069</sizeHorzCY><sizeVertCX>193165</sizeVertCX><sizeVertCY>828615</sizeVertCY></Rect></Wnd4></Sizes></Row0></Left><Right><Row0><Sizes><Wnd6><Rect><Top>-2</Top><Left>-2</Left><Bottom>597</Bottom><Right>523</Right><x>-2</x><y>-2</y><xscreen>73</xscreen><yscreen>210</yscreen><sizeHorzCX>36157</sizeHorzCX><sizeHorzCY>160673</sizeHorzCY><sizeVertCX>260030</sizeVertCX><sizeVertCY>458301</sizeVertCY></Rect></Wnd6><Wnd7><Rect><Top>0</Top><Left>0</Left><Bottom>0</Bottom><Right>7</Right><x>-2</x><y>595</y><xscreen>159</xscreen><yscreen>204</yscreen><sizeHorzCX>78752</sizeHorzCX><sizeHorzCY>156083</sizeHorzCY><sizeVertCX>260030</sizeVertCX><sizeVertCY>371844</sizeVertCY></Rect></Wnd7></Sizes></Row0></Right><Bottom><Row0><Sizes><Wnd2><Rect><Top>-2</Top><Left>-2</Left><Bottom>181</Bottom><Right>2021</Right><x>-2</x><y>-2</y><xscreen>2023</xscreen><yscreen>183</yscreen><sizeHorzCX>1001981</sizeHorzCX><sizeHorzCY>140015</sizeHorzCY><sizeVertCX>30708</sizeVertCX><sizeVertCY>130069</sizeVertCY></Rect></Wnd2></Sizes></Row0></Bottom><Float><Sizes/></Float></Positions>
+  </Desktop>
+</Project>
+
+

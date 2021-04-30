@@ -1,7 +1,7 @@
 /** @file emif.h
 *   @brief emif Driver Definition File
-*   @date 05-Oct-2016
-*   @version 04.06.00
+*   @date 07-July-2017
+*   @version 04.07.00
 *   
 */
 
@@ -136,21 +136,21 @@ typedef struct emif_config_reg
                                 | (uint32)((uint32)0U)          \
 								| (uint32)0xC0000000U)
 								
-#define EMIF_SDCR_CONFIGVALUE    ((uint32)((uint32)0U << 31U) \
+#define EMIF_SDCR_CONFIGVALUE    ((uint32)((uint32)1U << 31U) \
                                 | (uint32)((uint32)1U << 14U) \
                                 | (uint32)((uint32)0U << 9U) \
-                                | (uint32)((uint32)0U << 4U) \
+								| (uint32)((uint32)0U << 4U) \
                                 | (uint32)((uint32)elements_256))
 								
-#define EMIF_SDRCR_CONFIGVALUE  ((2U * 0U) + 1U)
+#define EMIF_SDRCR_CONFIGVALUE   0U
 
 #define EMIF_CE2CFG_CONFIGVALUE  ((uint32)((uint32)0U << 31U) \
                                 | (uint32)((uint32)0U << 30U) \
                                 | (uint32)((uint32)0U << 26U) \
-                                | (uint32)((uint32)4U << 20U) \
+                                | (uint32)((uint32)5U << 20U) \
                                 | (uint32)((uint32)0U << 17U) \
                                 | (uint32)((uint32)0U << 13U) \
-                                | (uint32)((uint32)4U << 7U) \
+                                | (uint32)((uint32)5U << 7U) \
                                 | (uint32)((uint32)0U << 4U) \
                                 | (uint32)((uint32)0U << 2U) \
                                 | (uint32)((uint32)emif_16_bit_port))
@@ -158,10 +158,10 @@ typedef struct emif_config_reg
 #define EMIF_CE3CFG_CONFIGVALUE  ((uint32)((uint32)0U << 31U) \
                                 | (uint32)((uint32)0U << 30U) \
                                 | (uint32)((uint32)0U << 26U) \
-                                | (uint32)((uint32)7U << 20U) \
+                                | (uint32)((uint32)6U << 20U) \
                                 | (uint32)((uint32)0U << 17U) \
                                 | (uint32)((uint32)0U << 13U) \
-                                | (uint32)((uint32)7U << 7U) \
+                                | (uint32)((uint32)6U << 7U) \
                                 | (uint32)((uint32)0U << 4U) \
                                 | (uint32)((uint32)0U << 2U) \
                                 | (uint32)((uint32)emif_16_bit_port))
@@ -169,12 +169,12 @@ typedef struct emif_config_reg
 #define EMIF_CE4CFG_CONFIGVALUE  ((uint32)((uint32)0U << 31U) \
                                 | (uint32)((uint32)0U << 30U) \
                                 | (uint32)((uint32)0U << 26U) \
-                                | (uint32)((uint32)4U << 20U) \
+                                | (uint32)((uint32)5U << 20U) \
                                 | (uint32)((uint32)0U << 17U) \
                                 | (uint32)((uint32)0U << 13U) \
-                                | (uint32)((uint32)10U << 7U) \
+                                | (uint32)((uint32)9U << 7U) \
                                 | (uint32)((uint32)0U << 4U) \
-                                | (uint32)((uint32)0U << 2U) \
+                                | (uint32)((uint32)8U << 2U) \
                                 | (uint32)((uint32)emif_16_bit_port))
 								
 #define EMIF_CE5CFG_CONFIGVALUE   0x3FFFFFFDU
@@ -199,7 +199,7 @@ typedef struct emif_config_reg
                                 | (uint32)((uint32)0U << 8U) \
                                 | (uint32)((uint32)0U << 18U) \
                                 | (uint32)((uint32)emif_8_words << 17U) \
-                                | (uint32)((uint32)0U << 17U))
+                                | (uint32)((uint32)0U << 16U))
 
 
 

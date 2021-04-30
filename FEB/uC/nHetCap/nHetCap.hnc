@@ -5,7 +5,7 @@
 	.word 0x00000000 
 	.word 0x00000000 
 	.word 0x00006000 
-	.word 0x0000E818 
+	.word 0x0000E118 
 	.word 0x00000080 
 	.word 0x00000000 
 	.word 0x00006800 
@@ -16,15 +16,15 @@
 	.word 0x00008000 
 	.word 0x00000000 
 	.word 0x00000000 
-	.word 0x0000AE48 
+	.word 0x0000AE41 
 	.word 0x00000000 
 	.word 0x00000000 
 	.word 0x00000000 
-	.word 0x0000CE08 
+	.word 0x00000E01 
 	.word 0x00000000 
 	.word 0x00000000 
 	.word 0x00000000 
-	.word 0x00400F1F 
+	.word 0x00001A00 
 	.word 0x00000000 
 	.word 0x00000000 
 	.word 0x00000000 
@@ -33,6 +33,6 @@
 	.word 0x00000000 
 	.word 0x00000000 
 	.word 0x00000000 
-	.word 0x0000481D 
+	.word 0x0000411D 
 	.word 0x00000296 
 	.word 0x00000000 

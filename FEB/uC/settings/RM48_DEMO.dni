@@ -1,0 +1,92 @@
+[InterruptLog]
+LogEnabled=0
+SumEnabled=0
+GraphEnabled=0
+ShowTimeLog=1
+ShowTimeSum=1
+SumSortOrder=0
+[DataLog]
+LogEnabled=0
+SumEnabled=0
+GraphEnabled=0
+ShowTimeLog=1
+ShowTimeSum=1
+[Stack]
+FillEnabled=0
+OverflowWarningsEnabled=1
+WarningThreshold=90
+SpWarningsEnabled=1
+WarnLogOnly=1
+UseTrigger=1
+TriggerName=main
+LimitSize=0
+ByteLimit=50
+[Interrupts]
+Enabled=1
+[MemConfig]
+Base=1
+Manual=0
+Ddf=1
+TypeViol=0
+Stop=1
+[Simulator]
+Freq=10000000
+MultiCoreRunAll=1
+[JLinkDriver]
+WatchCond=_ 0
+Watch0=_ 0 "" 0 "" 0 "" 0 "" 0 0 0 0
+Watch1=_ 0 "" 0 "" 0 "" 0 "" 0 0 0 0
+CStepIntDis=_ 0
+[DebugChecksum]
+Checksum=-59504859
+[Exceptions]
+StopOnUncaught=_ 0
+StopOnThrow=_ 0
+[CallStack]
+ShowArgs=0
+[Disassembly]
+MixedMode=1
+[struct_types]
+Fmt0=Reg_Data-Reg_Addr	3	0
+Fmt1=g_dmaCTRL-ELCNT	3	0
+Fmt2=pbuf_t-len	3	0
+Fmt3=pbuf_t-tot_len	3	0
+Fmt4=struct phyHeader-msgCnt	3	0
+Fmt5=struct vB-Cnt	3	0
+[watch_formats]
+Fmt0={W}1:g_Cnt	3	0
+Fmt1={W}1:tout	3	0
+Fmt2={W}2:Fall2Ris	4	0
+Fmt3={W}2:Ris2Fall	4	0
+Fmt4={W}2:cnt	3	0
+Fmt5={W}2:g_Cnt	3	0
+Fmt6={W}2:g_timeFlag	3	0
+Fmt7={W}2:g_timeMs	4	0
+Fmt8={W}2:lp	3	0
+Fmt9={W}2:rxCnt	3	0
+Fmt10={W}2:tout	3	0
+Fmt11={W}2:wrdCnt	3	0
+[Log file]
+LoggingEnabled=_ 0
+LogFile=_ ""
+Category=_ 0
+[TermIOLog]
+LoggingEnabled=_ 0
+LogFile=_ ""
+[CallStackLog]
+Enabled=0
+[DriverProfiling]
+Enabled=0
+Mode=0
+Graph=0
+Symbiont=0
+Exclusions=
+[Disassemble mode]
+mode=0
+[Breakpoints2]
+Bp0=_ 0 "EMUL_CODE" "0x00004378" 0 0 1 "" 0 "" 0
+Bp1=_ 1 "EMUL_CODE" "{$PROJ_DIR$\source\emac.c}.1423.11" 0 0 1 "" 0 "" 0
+Count=2
+[Aliases]
+Count=0
+SuppressDialog=0

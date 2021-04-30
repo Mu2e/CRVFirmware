@@ -1,0 +1,44 @@
+# config version=3.5
+$ uscif
+  ecom_drvr=xds2xxu.out
+  ecom_port=5
+$ /
+$ xds2xx
+  bio_0="BIO_0,Active_High"
+  bio_1="BIO_1,Active_High"
+  bio_2="BIO_2,Active_High"
+  bio_3="BIO_3,Active_High"
+  txd1="TXD1,Active_High"
+  rxd1="RXD1,Active_High"
+  expio_4="EXPIO_4,Active_High"
+  expio_5="EXPIO_5,Active_High"
+  expio_6="EXPIO_6,Active_High"
+  expio_7="EXPIO_7,Active_High"
+$ /
+$ uscif
+  jtagboot_mode=disable
+  jtagboot_value=hiz
+  powerboot_mode=disable
+  powerboot_value=hiz
+  tclk_program=specific
+  tclk_frequency=1.0MHz
+  loopback_mode=disable
+  loopback_value=disable
+  jtag_isolate=enable
+  extrareset_system=false
+$ /
+$ dot7
+  dts_usage=nothing
+$ /
+$ swd
+  mode=disabled
+$ /
+@ icepick family=icepick_c irbits=6 drbits=1 subpaths=2
+  & port17 address=17 default=no custom=no force=yes pseudo=no
+  & port16 address=16 default=no custom=no force=yes pseudo=no
+    @ dap family=cs_dap irbits=4 drbits=1 subpaths=1 identify=0
+      & portr4 type=legacy address=0 default=no custom=no force=no pseudo=yes
+        @ cortexr4 family=cortex_rxx irbits=0 drbits=0 address=0x80001000 identify=0 traceid=0x0
+      & /
+  & /
+# /

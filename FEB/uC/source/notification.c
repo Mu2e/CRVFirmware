@@ -1,7 +1,7 @@
 /** @file notification.c 
 *   @brief User Notification Definition File
-*   @date 05-Oct-2016
-*   @version 04.06.00
+*   @date 07-July-2017
+*   @version 04.07.00
 *
 *   This file  defines  empty  notification  routines to avoid
 *   linker errors, Driver expects user to define the notification. 
@@ -58,26 +58,36 @@
 #include "rti.h"
 #include "i2c.h"
 #include "sys_dma.h"
+#include "emac.h" 
 
 /* USER CODE BEGIN (0) */
-//  Fermilab Terry Kiper 2016-2021
-//  @file notification.c
-//  part interrupt handler
-
 
 #include "ver_io.h" 
-#include "mu2e_Ctrl_i2c.h"          //mu2e i2c link functions
-#include "ZestETM1_SOCKET.h"
-extern void nError();
 
 extern int esm_Ch;
 extern int esm_Cnt;
-extern adcData_t adc_data[];
-extern uint32 genFlag;
+extern uint32 genFlag, iFlag;
 extern struct vB USB_Rec;
+
 extern struct msTimers mStime;
-extern struct sLVDS lvLnk;
+extern struct uC_Store uC_FRAM;
 extern struct HappyBusReg HappyBus;
+
+
+//emac stuff
+#include "emac.h"
+#include "ver_ePHY.h"
+#include "sys_mu2e.h"
+#include "sys_mu2e_functions.h"
+
+extern rxch_t *mu_rxch_int;
+extern struct phyHeader phyHdr;
+
+struct phyPACSTAT paKet;                //all daq packets, status/counter
+extern struct phyPAC_ERRORS PaketStats; //storage for packet errors, counters
+
+
+
 
 /* USER CODE END */
 void esmGroup1Notification(uint32 channel)
@@ -85,12 +95,8 @@ void esmGroup1Notification(uint32 channel)
 /*  enter user code between the USER CODE BEGIN and USER CODE END. */
 /* USER CODE BEGIN (1) */
   //tek 
-  
-  RG45LEDS(0xaaaa);
   esm_Ch= channel;
   esm_Cnt++;
-  //nError();
-  
   
   //esmTriggerErrorPinReset();            //same as esmREG->EKR = 0x5U;
   //esmClearStatus(0,channel);
@@ -124,7 +130,8 @@ void esmGroup1Notification(uint32 channel)
 
         /* disable diagnostic mode */
         flashWREG->FDIAGCTRL = 0x000A0007U;
-              
+      
+  
     /* clear ESM group1 channel 6 flag */
     //esmREG->SR1[0U] = 0x40U;
     // fmcECCcheck();    
@@ -172,8 +179,8 @@ void memoryPort1TestFailNotification(uint32 groupSelect, uint32 dataSelect, uint
 
 /* USER CODE BEGIN (8) */
 extern int adc_ms;
-extern int g_IntrCnt;
-extern void SocketISRTEK(SOCKET s);
+extern struct uSums u_SRAM;     //DwnLdSdRamCnt, DwnLdSdRamSum,stat,time
+
 /* USER CODE END */
 void rtiNotification(uint32 notification)
 {
@@ -182,102 +189,173 @@ void rtiNotification(uint32 notification)
 
     //heartbeat led and 1mS update code here
     static int m=0;
-    static uint16_t rg45=0;
     if (USB_Rec.Cnt< 2)
-          DSR_LO                            //LOW enables data flow
-  
-    if (notification==1)
-        {
-        mStime.g_timeMs++;                  //sysTick 1mSec timer used in mDelay
-        mStime.gBusy_mSec++;
-        mStime.g_wTicks++;
- 
-        //tek mod aug 2018, let daq packs control leds
-        LEDs_OFF
+        DSR_LO                              //LOW enables data flow
 
+    //********************************************************************
+    //**********  rtiNOTIFICATION_COMPARE0             *******************
+    //**********  interrupt handler, 1 milli-Second    *******************
+    //********************************************************************
+    if (notification== rtiNOTIFICATION_COMPARE0) //RTI Compare Req 0 intr notification
+        {
+        if (mStime.g_wARP++>(ARP_TIME))     //wait 5 min, then flag ARP req
+            {
+            genFlag |= ARP_REQ;
+            mStime.g_wARP=0;
+            }
+        
+        //status for feb controller pgm flash
+        if(u_SRAM.LdStatus_Tick)
+            {
+            FMDataSnd= u_SRAM.LdStatus_Tick;
+            u_SRAM.LdStatus_Tick=0;
+            }
+        
+        //keyboard input timer    
+        mStime.g_wTicks++;                  //emac recption testing            
+
+        //led timer    
+        mStime.g_timeMs++;                  //sysTick 1mSec timer
         if(m==0)
-            ucLED_HI                        //ucLED_HI
-        else if(m==500)
-            ucLED_LO                        //ucLED_LO
-          
-        if ((genFlag & hDelay)==0)          //read adc if uS delay not active
-            {
-            if (adc_ms++==500)
-                {
-                adcStartConversion(adcREG1,adcGROUP1);
-                genFlag |= ADC_Trig;
-                }
-              else if (adc_ms++==502)       //allow plenty of time for samples
-                {
-                adc_ms=0;
-                genFlag |= ADC_Rdy;         //main loop check, data should be rdy
-                }
-             }          
-        if(++rg45== 50)                     //counts active ports, read one ch per 50 mSec
-            {
-            rg45=0;
-            genFlag |= POE_CHECK_DUE;       //update POE port's status
-            }
-        
-        
-        //data pooling request and readout timers
-        //at present its on a 30 second update
-        if(lvLnk.PoolMode==1)
-            {
-            //if pool request enabled, req data, wait read data or get timeout
-            lvLnk.PoolChkmSec++;              
-            //Pool Data Request timers, req,get,getTimeout
-            if(lvLnk.PoolChkmSec== ReqPoolTime) 
-                genFlag &= ~PoolReqNow;            
-            if (lvLnk.PoolChkmSec== ReqPoolTime) 
-                genFlag |= PoolReqNow;              //cleared after returned data checked
-            else if (lvLnk.PoolChkmSec== GetPoolTime)//return data pool data should be ready
-                genFlag |= PoolReqGetData;
-            
-            if (lvLnk.PoolChkmSec>= GetPoolTime+500)//return data pool data should be ready
-                {
-                //Cycles complete normally in test above, this is abnormal cleanup
-                genFlag &= ~PoolReqNow;             //off
-                lvLnk.PoolChkmSec=0;                //reset seq timer
-                }
-             }
-        else
-            {
-            //added to prevent cycle lookout of happy bus if 'Pool Data' didnt finish correctly
-            lvLnk.PoolChkmSec=0;                 //timer reset 
-            genFlag &= ~(PoolReqNow | PoolReqGetData); //clear all pool flags
-            }
-                  
-        //msec intr here
+            hHI_ucLED                       //hetREG1->DSET=  BIT22;
+        else if(m==250)
+            hLO_ucLED                       //hetREG1->DCLR=  BIT22;
+        if(m==500)
+            hHI_ucLED
+        else if(m==750)
+            hLO_ucLED
         if (m++==1000)
             {
-            //1 second counter routines
             m=0;
-                        
-            //active FEB Scan, used fpga status register now (every 4 sec)
-            if (++lvLnk.IDChkSec== ID_RegTime)      //reads fpga to see if FEBs active
-                {
-                genFlag |= ID_ReqNow;               //main code loop check this
-                lvLnk.IDChkSec=0;                   //repeat
-                }
-            }  //end 1 second counter routines
-        
-        if (mStime.g_SockIntrSec++ > 1000*10)       //10 Sec chk in case missed by Interrupt
-            {
-            genFlag |= ZEST_ETM1_INTR;              //set flag to check in main loop
-            mStime.g_SockIntrSec=0;
-            }                             
-        } //end notification==1
+            }
 
-    if (notification==2)
+        //oneWireRead read timing, CMB device link readout time (approx 9.5 mSec per req)
+        if (mStime.g_OneWireTime)           //check if timer non-zero
+                {
+                if (mStime.g_OneWireTime++ == 15)   //every 15 mSec
+                    {
+                    genFlag |= OneWireDatRdy;       //req next chan
+                    }
+                }
+        
+        //oneWireRead auto update Scan Interval Timer
+        if (mStime.g_OneWireNewScanDelay)             //check if timer non-zero
+            if (mStime.g_OneWireNewScanDelay++>10000) //10 seconds
+                {
+                mStime.g_OneWireNewScanDelay=0;       //stop scan delay check
+                genFlag |= OneWireDatReq;             //start new scan
+                }
+
+        //Flag for data buffer update
+        if (mStime.g_ADCms++> 10000)
+            {
+            //Flag for data buffer update
+            genFlag |= (ADC_REFRESH+ ADC_TRIG);
+            mStime.g_ADCms=0;
+            }
+          
+        //monitor bais over voltage current status bit
+        //set flag if trip is temporary set
+        if (canOVCstat)
+            {
+            genFlag |= OVC_TRIP;                //trip auto clears after 80mS, latch trip status
+            }
+
+        /*
+        //add if flash load valid  
+        if (iFlag & WHATCHDOGENA)
+            {
+            if(mStime.WatchDog++> (2000*10))    //10Sec timeout for code/hardware lock
+                {
+                //add code to write fRAM stats
+                FRAM_WR_ENABLE();               //WREN op-code issued prior to Wr_Op
+                //wDogTimOut
+                uC_FRAM.wDogTimOutCnt++;
+                FRAM_WR(fPAGE_0400, (uint8*)&uC_FRAM.wDogTimOut, 2); //addr,data,cnt
+                _disable_interrupt_();
+                resetEntry();
+                }
+            }
+        */      
+        
+        }  //end ofrtiNOTIFICATION_COMPARE0 section
+    
+    //********************************************************************
+    //*************  rtiNOTIFICATION_COMPARE1          *******************
+    //*************  interrupt handler for uDelay()    *******************
+    //********************************************************************
+    else if (notification== rtiNOTIFICATION_COMPARE1)
         {
          //Enable RTI Compare 1 interrupt notification
          rtiDisableNotification(rtiNOTIFICATION_COMPARE1);
-         genFlag &= ~uTimeOut;                      //clr timeout bit
+         genFlag &= ~uTimeOut;                //clr timeout bit
         }
-     
     
-/* USER CODE END */
+    //********************************************************************
+    //***  rtiNOTIFICATION_COMPARE1                                     **
+    //***  interrupt handler for uTimer(), 1.3uS code seqment RTI CMP2  **
+    //********************************************************************
+    else if (notification== rtiNOTIFICATION_COMPARE2)
+        {
+#define def_cmpCnt  (10*256)        //~10 cnts per uS (allow delay of 256uS)
+#define SndSiz256   (256)           //max words to send per pass    
+#define AddDly      (256*3)         //add extra holdoff delay for larger xfers, Controller needs more time 
+        
+        //tek 02-27-20 Setup for interrupt handler to return data pool data
+        //tek 02-27-20 as of this date the block is (22+(4*38) 16bit words
+        //tek 02-27-20 Takes 4*16uS to xfer 4*64 words (~250nS per word)
+        //tek 02-27-20 Repeats as needed after a ~256uS upto ~750uS Delay
+        //tek 02-27-20 Breaks xmits into segments, allow ubunch code to have more time  
+                    
+         int cmpCnt=def_cmpCnt;
+         //Disable RTI Compare 2 interrupt notification
+         rtiDisableNotification(rtiNOTIFICATION_COMPARE2);
+         genFlag &= ~uTimeOut;      //clr timeout bit
+         
+        //set for a def_cmpCnt or def_cmpCnt*2 delayed re-entry
+        //limit period to allow other code like packet xmits priority     
+        //todo set interrupt priority lower than ethernet receive interrupts
+        //hHI_TP45; //only for scope time testing
+        //Send data on LVDS FM PORT if word count non zero?
+        if (HappyBus.SndWrds)
+            {
+            int timeout=0;            
+            if (HappyBus.SndWrds>AddDly)                //allow more time for large xfers
+                cmpCnt=(def_cmpCnt*2);                  //controller needs time to read data before overrun              
+            //send data block on LVDS PORT (256 words)
+            for(int i=0; i<SndSiz256; i++)              //limit max 256 words per intr
+                {
+                FMDataSnd= *HappyBus.Src++;             //fpga xmits at 250nS per word
+                if ((--HappyBus.SndWrds)==0)
+                    break;
+                }         
+            rtiDisableNotification(rtiNOTIFICATION_COMPARE2);         
+            rtiStopCounter(rtiCOUNTER_BLOCK1);
+            while(!rtiResetCounter(rtiCOUNTER_BLOCK1))  //counter stopped before reset
+              if (timeout++>1000) break;                //normally no delay here            
+            rtiSetPeriod(rtiCOMPARE2, cmpCnt);
+            rtiREG1->CMP[rtiCOMPARE2].UDCPx = cmpCnt;  //Added to the compare value on each compare match
+            rtiREG1->CMP[rtiCOMPARE2].COMPx = cmpCnt;  //Compared with selected free running counter
+            rtiStartCounter(rtiCOUNTER_BLOCK1);
+            rtiEnableNotification(rtiNOTIFICATION_COMPARE2);
+            //timeout via interrupt
+            }
+         else
+            {
+            rtiDisableNotification(rtiNOTIFICATION_COMPARE2);         
+            rtiStopCounter(rtiCOUNTER_BLOCK1);
+            }
+        //hLO_TP45; //only for scope time testing
+        }
+    //interrupt handler, unused so far
+    else if (notification== rtiNOTIFICATION_COMPARE3)
+        {
+         //Enable RTI Compare 3 interrupt notification
+         rtiDisableNotification(rtiNOTIFICATION_COMPARE3);
+        }
+    
+    
+    /* USER CODE END */
 }
 
 /* USER CODE BEGIN (10) */
@@ -295,17 +373,6 @@ void gioNotification(gioPORT_t *port, uint32 bit)
 {
 /*  enter user code between the USER CODE BEGIN and USER CODE END. */
 /* USER CODE BEGIN (19) */
-//Two source for interupts  
-//Use below call to enable interrupts
-//gioEnableNotification(gioPORTA, BIT5) ; //ETHERNET INTERRUPT ENABLE ETHERNET ZEST BRD 
-//gioEnableNotification(gioPORTA, BIT4) ; //ETHERNET INTERRUPT ENABLE FPGA LOGIC
-
-  //ETHER IRQ         (B5) GIOA5 INPUT
-  SocketISRTEK(0);  
-
-  //FPGA IRQ          (A6) GIOA4 INPUT
-  //DAQ_Interrupt(under construction)
-  
 /* USER CODE END */
 }
 
@@ -394,7 +461,9 @@ void hetNotification(hetBASE_t *het, uint32 offset)
 
 
 /* USER CODE BEGIN (53) */
-extern struct      blocksnd BinSt;
+extern struct  blocksnd BinSt;
+extern struct  blocksndWrd BinStRDX;
+
 /* USER CODE END */
 
 void dmaGroupANotification(dmaInterrupt_t inttype, uint32 channel)
@@ -419,7 +488,25 @@ void dmaGroupANotification(dmaInterrupt_t inttype, uint32 channel)
         else if(BinSt.gDMA_Mem2Wiz==2)
             BinSt.gDMA_Mem2Wiz=3;
         }
-   
+
+      //ch 0, Fpga to Mem PHY xFER MODE
+    if(channel==0)       
+        {
+        if(BinStRDX.gDMA_Fpga2Mem==1)
+            BinStRDX.gDMA_Fpga2Mem=2;
+        else if(BinStRDX.gDMA_Fpga2Mem==2)
+            BinStRDX.gDMA_Fpga2Mem=3;
+        }
+    
+    //ch 1, Mem to Wiznet PHY xFER MODE
+    if(channel==1)       
+        {
+        if(BinStRDX.gDMA_Mem2Wiz==1)
+            BinStRDX.gDMA_Mem2Wiz=2;
+        else if(BinStRDX.gDMA_Mem2Wiz==2)
+            BinStRDX.gDMA_Mem2Wiz=3;
+        }
+
 /* USER CODE END */
 }
 /* USER CODE BEGIN (55) */
@@ -427,9 +514,80 @@ void dmaGroupANotification(dmaInterrupt_t inttype, uint32 channel)
 
 /* USER CODE BEGIN (56) */
 /* USER CODE END */
+void emacTxNotification(hdkif_t *hdkif)
+{
+/*  enter user code between the USER CODE BEGIN and USER CODE END. */
+/* USER CODE BEGIN (57) */
+    //g_EMACTxBsy=0;   //moved to EMACTxIntISR(void) in 'emac.c'
+    //hHI_TP45;
+   // hLO_TP45;
+
+/* USER CODE END */
+}
 
 /* USER CODE BEGIN (58) */
+
+struct emac_tx_int_status emac0TXS;
+
+
 /* USER CODE END */
+/* USER CODE BEGIN (58) */
+/* USER CODE END */
+
+void emacRxNotification(hdkif_t *hdkif)
+{
+/*  enter user code between the USER CODE BEGIN and USER CODE END. */
+/* USER CODE BEGIN (59) */
+  rxch_t *rxch_int;
+  volatile emac_rx_bd_t *curr_bd; // *last_bd;
+  uint32 rxptr;   
+  uint32 rxCnt;   
+    if (paKet.EMACRxRdy==1)                 //rec still busy
+        {
+        if (phyHdr.PacNext==phyHdr.PacActive)  //buffers all full
+            {
+            PaketStats.eREC_BSY_DROP++;     //counter
+            return;                         //skip it
+            }
+        }
+  
+    //The receive structure that holds data about a particular receive channel
+    rxch_int = &(hdkif->rxchptr);
+
+    //Get the buffer descriptors which contain the earliest filled data
+    curr_bd = rxch_int->active_head;
+    //last_bd = rxch_int->active_tail;
+
+    //Process the descriptors as long as data is available
+    //when the DMA is receiving data, SOP flag will be set
+
+    //Start processing once the packet is loaded
+    if((curr_bd->flags_pktlen & EMAC_BUF_DESC_OWNER)!= EMAC_BUF_DESC_OWNER ) 
+        { 
+        //this bd chain will be freed after processing
+        rxch_int->free_head = curr_bd;
+  
+        //Start processing once the packet is loaded
+        //this bd chain will be freed after processing
+        //rxch_int->free_head = curr_bd;
+        hHI_TP46;
+        rxptr= rxch_int->free_head->bufptr;       //tek
+        rxCnt= rxch_int->free_head->bufoff_len;   //tek
+        if(rxCnt>ePayLdMaxAndHdr)                 //MsgBytMax==64
+            rxCnt=ePayLdMaxAndHdr;
+        phyHdr.PacBytCnt[phyHdr.PacNext]= rxCnt;
+        //16bit moves, cnt is in word count Note: limit stored bytes to 'ePayLdMax'
+        movStr16((sPTR)rxptr,(sPTR)&phyHdr.PacPayLd1024w[phyHdr.PacNext], rxCnt/2);
+        hLO_TP46;
+        
+        phyHdr.PacNext++;
+        if (phyHdr.PacNext>= PacBufs)           //out of buffer?
+            phyHdr.PacNext=0;
+        paKet.EMACRxRdy=1;                      //flag as rec'd packet
+        }
+}
+/* USER CODE END */
+
 
 /* USER CODE BEGIN (60) */
 /* USER CODE END */

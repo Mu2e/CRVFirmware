@@ -1,7 +1,7 @@
 /** @file rti.c 
 *   @brief RTI Driver Source File
-*   @date 05-Oct-2016
-*   @version 04.06.00
+*   @date 07-July-2017
+*   @version 04.07.00
 *
 *   This file contains:
 *   - API Functions
@@ -896,6 +896,58 @@ void rtiCompare1Interrupt(void)
 }
 
 
+/* USER CODE BEGIN (79) */
+/* USER CODE END */
+
+/** @fn void rtiCompare2Interrupt(void)
+*   @brief RTI1 Compare 2 Interrupt Handler
+*
+*   RTI1 Compare 2 interrupt handler 
+*
+*/
+IRQ
+
+/* SourceId : RTI_SourceId_024 */
+/* DesignId : RTI_DesignId_022 */
+/* Requirements : HL_SR95 */
+void rtiCompare2Interrupt(void)
+{
+/* USER CODE BEGIN (80) */
+/* USER CODE END */
+
+    rtiREG1->INTFLAG = 4U;
+    rtiNotification(rtiNOTIFICATION_COMPARE2);
+
+/* USER CODE BEGIN (81) */
+/* USER CODE END */
+}
+
+
+/* USER CODE BEGIN (82) */
+/* USER CODE END */
+
+/** @fn void rtiCompare3Interrupt(void)
+*   @brief RTI1 Compare 3 Interrupt Handler
+*
+*   RTI1 Compare 3 interrupt handler 
+*
+*/
+IRQ
+
+/* SourceId : RTI_SourceId_025 */
+/* DesignId : RTI_DesignId_022 */
+/* Requirements : HL_SR95 */
+void rtiCompare3Interrupt(void)
+{
+/* USER CODE BEGIN (83) */
+/* USER CODE END */
+
+    rtiREG1->INTFLAG = 8U;
+    rtiNotification(rtiNOTIFICATION_COMPARE3);
+
+/* USER CODE BEGIN (84) */
+/* USER CODE END */
+}
 
 
 

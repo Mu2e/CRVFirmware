@@ -72,10 +72,10 @@ extern "C" {
 #define EMAC_TX_ENABLE					(1U)				
 #define EMAC_RX_ENABLE					(1U)
 #define EMAC_MII_ENABLE					(1U)
-#define EMAC_FULL_DUPLEX_ENABLE			(0U)
+#define EMAC_FULL_DUPLEX_ENABLE			(1U)
 #define EMAC_LOOPBACK_ENABLE			(0U)
-#define EMAC_BROADCAST_ENABLE			(0U)
-#define EMAC_UNICAST_ENABLE				(0U)
+#define EMAC_BROADCAST_ENABLE			(1U)
+#define EMAC_UNICAST_ENABLE				(1U)
 #define EMAC_CHANNELNUMBER					(0U)
 #define EMAC_PHYADDRESS						(1U)
 
@@ -133,7 +133,7 @@ extern "C" {
 #define MAX_EMAC_INSTANCE 	      1U
 #define SIZE_EMAC_CTRL_RAM        0x2000U
 #define MAX_TRANSFER_UNIT         1514U
-#define MAX_RX_PBUF_ALLOC 		  (1U)
+#define MAX_RX_PBUF_ALLOC 		  (2U)
 #define MIN_PKT_LEN               60U
 #define MIN_PACKET_SIZE          (46U)
 
@@ -159,8 +159,8 @@ extern "C" {
 #define EMAC_TXINTMASKCLEAR_CONFIGVALUE 0x00000001U
 #define EMAC_RXINTMASKSET_CONFIGVALUE 0x00000001U
 #define EMAC_RXINTMASKCLEAR_CONFIGVALUE 0x00000001U
-#define EMAC_MACSRCADDRHI_CONFIGVALUE ((uint32)((uint32)0xFFU << 24U) | (uint32)((uint32)0xFFU << 16U) | (uint32)((uint32)0xFFU << 8U) | (uint32)((uint32)0xFFU))
-#define EMAC_MACSRCADDRLO_CONFIGVALUE ((uint32)((uint32)0xFFU << 8U) | (uint32)((uint32)0xFFU))
+#define EMAC_MACSRCADDRHI_CONFIGVALUE ((uint32)((uint32)0x3U << 24U) | (uint32)((uint32)0xEEU << 16U) | (uint32)((uint32)0x8U << 8U) | (uint32)((uint32)0x0U))
+#define EMAC_MACSRCADDRLO_CONFIGVALUE ((uint32)((uint32)0x6CU << 8U) | (uint32)((uint32)0xA6U))
 #define EMAC_MDIOCONTROL_CONFIGVALUE 0x4114001FU
 #define EMAC_C0RXEN_CONFIGVALUE 0x00000001U
 #define EMAC_C0TXEN_CONFIGVALUE 0x00000001U

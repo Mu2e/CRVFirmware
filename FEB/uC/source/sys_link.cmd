@@ -42,8 +42,8 @@ define memory mem with size = 4G;
 define region VECTORS = mem:[from 0x00000000 size 0x00000020];
 define region FLASH   = mem:[from 0x00000020 size 0x0017FFE0]
                       | mem:[from 0x00180000 size 0x00180000];
-define region STACK   = mem:[from 0x08000000 size 0x00001500];
-define region RAM     = mem:[from 0x08001500 size 0x0003eb00];
+define region STACK   = mem:[from 0x0803EB00 size 0x00001500];
+define region RAM     = mem:[from 0x08000000 size 0x0003eb00];
 define block HEAP with size = 0x800, alignment = 8{ };
 
 initialize by copy {readwrite};

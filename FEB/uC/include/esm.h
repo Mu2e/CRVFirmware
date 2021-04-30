@@ -1,7 +1,7 @@
 /** @file esm.h
 *   @brief Error Signaling Module Driver Header File
-*   @date 05-Oct-2016
-*   @version 04.06.00
+*   @date 07-July-2017
+*   @version 04.07.00
 *   
 *   This file contains:
 *   - Definitions
@@ -689,7 +689,7 @@ typedef struct esm_config_reg
 } esm_config_reg_t;
 
 /* Configuration registers initial value */
-#define ESM_EEPAPR1_CONFIGVALUE	((uint32)((uint32)0U << 31U)\
+#define ESM_EEPAPR1_CONFIGVALUE	((uint32)((uint32)1U << 31U)\
                                | (uint32)((uint32)0U << 30U)\
                                | (uint32)((uint32)0U << 29U)\
                                | (uint32)((uint32)0U << 28U)\
@@ -721,7 +721,7 @@ typedef struct esm_config_reg
                                | (uint32)((uint32)0U <<  2U)\
                                | (uint32)((uint32)0U <<  1U)\
                                | (uint32)((uint32)0U <<  0U))
-#define ESM_IESR1_CONFIGVALUE	((uint32)((uint32)0U << 31U)\
+#define ESM_IESR1_CONFIGVALUE	((uint32)((uint32)1U << 31U)\
                                | (uint32)((uint32)0U << 30U)\
                                | (uint32)((uint32)0U << 29U)\
                                | (uint32)((uint32)0U << 28U)\
@@ -785,7 +785,7 @@ typedef struct esm_config_reg
                                | (uint32)((uint32)0U <<  2U)\
                                | (uint32)((uint32)0U <<  1U)\
                                | (uint32)((uint32)0U <<  0U))
-#define ESM_LTCPR_CONFIGVALUE	 (16384U - 1U)
+#define ESM_LTCPR_CONFIGVALUE	 (65536U - 1U)
 #define ESM_EKR_CONFIGVALUE      0U
 #define ESM_IEPSR4_CONFIGVALUE ((uint32)((uint32)0U << 31U)\
                               | (uint32)((uint32)0U << 30U)\
@@ -841,13 +841,13 @@ typedef struct esm_config_reg
                              | (uint32)((uint32)0U << 12U)\
                              | (uint32)((uint32)0U << 11U)\
                              | (uint32)((uint32)0U << 10U)\
-                             | (uint32)((uint32)0U <<  9U)\
-                             | (uint32)((uint32)0U <<  8U)\
-                             | (uint32)((uint32)0U <<  7U)\
+                             | (uint32)((uint32)1U <<  9U)\
+                             | (uint32)((uint32)1U <<  8U)\
+                             | (uint32)((uint32)1U <<  7U)\
                              | (uint32)((uint32)0U <<  6U)\
                              | (uint32)((uint32)0U <<  5U)\
-                             | (uint32)((uint32)0U <<  4U)\
-                             | (uint32)((uint32)0U <<  3U)\
+                             | (uint32)((uint32)1U <<  4U)\
+                             | (uint32)((uint32)1U <<  3U)\
                              | (uint32)((uint32)0U <<  2U)\
                              | (uint32)((uint32)0U <<  1U)\
                              | (uint32)((uint32)0U <<  0U))

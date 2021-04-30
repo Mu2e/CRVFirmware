@@ -1,7 +1,7 @@
 /** @file sys_startup.c 
 *   @brief Startup Source File
-*   @date 05-Oct-2016
-*   @version 04.06.00
+*   @date 07-July-2017
+*   @version 04.07.00
 *
 *   This file contains:
 *   - Include Files
@@ -63,9 +63,7 @@
 #include "mibspi.h"
 
 /* USER CODE BEGIN (1) */
-#include "sys_mpu.h"
-
-extern int d_nErrBoot;  //diag on boot error instead of code lockup 
+#include "ver_io.h"  //for CLR_ERR_LO
 /* USER CODE END */
 
 
@@ -79,6 +77,8 @@ extern void __cmain(void);
 
 
 /* USER CODE BEGIN (3) */
+extern int _mpuInit_();
+extern int _mpuEnable_();
 /* USER CODE END */
 
 /* Startup Routine */
@@ -89,6 +89,13 @@ void _c_int00(void);
 /* Note: stackless keyword is supported since compiler version 6.20.1 */
 __stackless
 __arm
+
+
+
+
+
+
+ 
 
 /* SourceId : STARTUP_SourceId_001 */
 /* DesignId : STARTUP_DesignId_001 */
@@ -109,12 +116,12 @@ void _c_int00(void)
     _coreInitStackPointer_();
 
 /* USER CODE BEGIN (7) */
-//TEK 09-2014, required if you want the EMIF port to actually work!!!
-//The MPU setup was configured through Halcogen, the config function isn't actually 
-//called by the generated code. Please place the following calls in sys_startup.c
+    //TEK 09-2014, required if you want the EMIF port to actually work!!!
+    //The MPU setup was configured through Halcogen, the config function isn't actually 
+    //called by the generated code. Please place the following calls in sys_startup.c
     _mpuInit_();
     _mpuEnable_();
-
+    
 /* USER CODE END */
 
     /* Work Around for Errata DEVICE#140: ( Only on Rev A silicon) 
@@ -241,6 +248,7 @@ void _c_int00(void)
         Add user code to handle software reset. */
 
 /* USER CODE BEGIN (22) */
+    esmREG->EKR = 5U;  //tek fix this
 /* USER CODE END */
     }
     else
@@ -249,6 +257,7 @@ void _c_int00(void)
         Add user code to handle external reset. */
 
 /* USER CODE BEGIN (23) */
+    //esmREG->EKR = 5U;  //this is due to hardware reset, needs reset (longer pulse) tek fix this
 /* USER CODE END */
     }
 
@@ -263,16 +272,29 @@ void _c_int00(void)
     if ((esmREG->SR1[2]) != 0U)
     {
 /* USER CODE BEGIN (24) */
+    //tek June2017
+    //for a reset
+     
+                        esmTriggerErrorPinReset();
+                        esmActivateNormalOperation(); 
+                        //mDelay(20);                 //milli second delay
+                        CLR_ERR_LO
+                        //uDelay(10);
+                      //CLR_ERR_HI
+      
 /* USER CODE END */
     /*SAFETYMCUSW 5 C MR:NA <APPROVED> "for(;;) can be removed by adding "# if 0" and "# endif" in the user codes above and below" */
     /*SAFETYMCUSW 26 S MR:NA <APPROVED> "for(;;) can be removed by adding "# if 0" and "# endif" in the user codes above and below" */
     /*SAFETYMCUSW 28 D MR:NA <APPROVED> "for(;;) can be removed by adding "# if 0" and "# endif" in the user codes above and below" */
-    //tek Apr2020 comment out this lookup, add diag msg on boot    
-    //for(;;)
+    # if 0
+    //tek May2019 skip this code
+        for(;;)
         { 
-        d_nErrBoot++;  
-        }/* Wait */                 
+        }/* Wait */
+    # endif
 /* USER CODE BEGIN (25) */
+        //tek jun2015 fix needed, if we get here with nError 
+        //            output cleared hardware FF reset 'CLR_ERR_LO' won't work
 /* USER CODE END */
     }
 

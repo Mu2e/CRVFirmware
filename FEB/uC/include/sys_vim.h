@@ -1,7 +1,7 @@
 /** @file sys_vim.h
 *   @brief Vectored Interrupt Module Header File
-*   @date 05-Oct-2016
-*   @version 04.06.00
+*   @date 07-July-2017
+*   @version 04.07.00
 *   
 *   This file contains:
 *   - VIM Type Definitions
@@ -93,18 +93,20 @@ extern void esmHighInterrupt(void);
 extern void phantomInterrupt(void);
 extern void rtiCompare0Interrupt(void);
 extern void rtiCompare1Interrupt(void);
+extern void rtiCompare2Interrupt(void);
+extern void rtiCompare3Interrupt(void);
 extern void het1HighLevelInterrupt(void);
 extern void linHighLevelInterrupt(void);
 extern void esmLowInterrupt(void);
-extern void gioLowLevelInterrupt(void);
 extern void het1LowLevelInterrupt(void);
 extern void linLowLevelInterrupt(void);
 extern void dmaFTCAInterrupt(void);
-extern void i2cInterrupt(void);
+extern void sciHighLevelInterrupt(void);
+extern void sciLowLevelInterrupt(void);
 extern void phantomInterrupt(void);
+extern void EMACTxIntISR(void);
 extern void phantomInterrupt(void);
-extern void phantomInterrupt(void);
-extern void phantomInterrupt(void);
+extern void EMACRxIntISR(void);
 
 /* USER CODE BEGIN (3) */
 /* USER CODE END */
@@ -273,8 +275,8 @@ typedef struct vim_config_reg
                                     |(uint32)((uint32)1U << 1U)\
                                     |(uint32)((uint32)1U << 2U)\
                                     |(uint32)((uint32)1U << 3U)\
-                                    |(uint32)((uint32)0U << 4U)\
-                                    |(uint32)((uint32)0U << 5U)\
+                                    |(uint32)((uint32)1U << 4U)\
+                                    |(uint32)((uint32)1U << 5U)\
                                     |(uint32)((uint32)0U << 6U)\
                                     |(uint32)((uint32)0U << 7U)\
                                     |(uint32)((uint32)0U << 8U)\
@@ -292,7 +294,7 @@ typedef struct vim_config_reg
                                     |(uint32)((uint32)1U << 20U)\
                                     |(uint32)((uint32)0U << 21U)\
                                     |(uint32)((uint32)0U << 22U)\
-                                    |(uint32)((uint32)1U << 23U)\
+                                    |(uint32)((uint32)0U << 23U)\
                                     |(uint32)((uint32)1U << 24U)\
                                     |(uint32)((uint32)0U << 25U)\
                                     |(uint32)((uint32)0U << 26U)\
@@ -335,9 +337,9 @@ typedef struct vim_config_reg
                                     |(uint32)((uint32)0U << 30U)\
                                     |(uint32)((uint32)0U << 31U))
                         
-#define VIM_REQMASKSET2_CONFIGVALUE ((uint32)((uint32)0U << 0U)\
+#define VIM_REQMASKSET2_CONFIGVALUE ((uint32)((uint32)1U << 0U)\
                                     |(uint32)((uint32)0U << 1U)\
-                                    |(uint32)((uint32)1U << 2U)\
+                                    |(uint32)((uint32)0U << 2U)\
                                     |(uint32)((uint32)0U << 3U)\
                                     |(uint32)((uint32)0U << 4U)\
                                     |(uint32)((uint32)0U << 5U)\
@@ -345,7 +347,7 @@ typedef struct vim_config_reg
                                     |(uint32)((uint32)0U << 7U)\
                                     |(uint32)((uint32)0U << 8U)\
                                     |(uint32)((uint32)0U << 9U)\
-                                    |(uint32)((uint32)0U << 10U)\
+                                    |(uint32)((uint32)1U << 10U)\
                                     |(uint32)((uint32)0U << 11U)\
                                     |(uint32)((uint32)1U << 12U)\
                                     |(uint32)((uint32)1U << 13U)\

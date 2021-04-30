@@ -1,14 +1,15 @@
 //*******************************************************************************
-// mu2e CRV Readout Controller 
-// 'ver_io.h'
-// Fermilab Terry Kiper 2016-2021
-//
+// mu2e RM48L 'ver_io.h'
+// Fermilab Terry Kiper 2016-2019
 //*******************************************************************************
 
 #ifndef _VER_IO
 #define _VER_IO
 
-#define MU2Ever   494
+#include "het.h"
+
+
+#define MU2EvER   423
 //code version, Major(1), Minor(00)
 
 typedef	unsigned char   u_8Bit;                 //8-bit value
@@ -27,16 +28,7 @@ typedef unsigned long*  volatile lPTR;
 typedef void*           volatile vPTR;
 
 
-#define MAX_WORD_PER_FPGA (0x02000000*4)  //max data to allow on rdb commands
-
-// shortcut macros for reading/writing to 32-bit memory mapped registers
-#define REG32(addr) *(volatile unsigned int *)(addr)
-#define REG16(addr) *(volatile unsigned short *)(addr)
-
-
-/*
-** usefull for bitmask operations
-*/
+//Bit Mask
 #define BIT0  ( 0x00000001 )
 #define BIT1  ( 0x00000002 )
 #define BIT2  ( 0x00000004 )
@@ -71,279 +63,608 @@ typedef void*           volatile vPTR;
 #define BIT31 ( 0x80000000 )
 
 
-//----------   RM48 Memory Map -------------
-//Start         End           HDK
-//Address       Address 
-//0x0000 0000   0x002FFFFF    Flash
-//0x0800 0000   0x0803FFFF    RAM
-//0x0840 0000   0x0843 FFFF   RAM-ECC
-//0x6000 0000   0x63FF FFFF   CS2 Async RAM
-//0x6400 0000   0x67FF FFFF   CS3 Async RAM
-//0x6800 0000   0x7BFF FFFF   CS4 Async RAM
-//0x8000 0000   0x87FF FFFF   CS0 Sync SDRAM 
+#define MAX_WORD_PER_FPGA (0x07800000)
 
-
-//ver TI RM48L board base address,  4-FPGA on board
-#define fOffset         0x00000400                  //fpgas addr offset
-#define fpgaBase0       0x60000000                  //FPGA  base address0   (uC hardware, chip sel 2)
-#define fpgaBase1       0x60000800                  //FPGA  base address1   (uC hardware, chip sel 2)
-#define fpgaBase2       0x60001000                  //FPGA  base address2   (uC hardware, chip sel 2)
-#define fpgaBase3       0x60001800                  //FPGA  base address3   (uC hardware, chip sel 2)
-#define flashBase       0x64000000                  //FLASH base addr       (uC hardware, chip sel 3)
-#define ZestETM1        0x68000000                  //ETHERNET base address (uC hardware, chip sel 4)
+// shortcut macros for reading/writing to 32-bit memory mapped registers
+#define REG32(addr) *(volatile unsigned int *)(addr)
+#define REG16(addr) *(volatile unsigned short *)(addr)
 
 //fpga short pointers offsets, this value doubles when used 
+#define fPtrOffset1     0x0000
 #define fPtrOffset2     0x0400
 #define fPtrOffset3     0x0800
 #define fPtrOffset4     0x0C00
 
 #define fPtrSDramCnt    0x0009                      //SDram count reg offset
 
+
+//ver STM43F4xx board base address
+#define fpgaBase        0x60000000                  //fpga base address0   (uC hardware, chip sel 2)
+#define fpgaBase1       0x60000800                  //fpga base address1   (uC hardware, chip sel 2)
+#define fpgaBase2       0x60001000                  //fpga base address2   (uC hardware, chip sel 2)
+#define fpgaBase3       0x60001800                  //fpga base address3   (uC hardware, chip sel 2)
+#define flashBase       0x64000000                  //flash base addr      (uC hardware, chip sel 3)
+#define wizBase         0x68000000                  //wiznet base address  (uC hardware, chip sel 4)
+#define fOffset         0x00000400                  //fpgas addr offset
+
 #define pFLASHbase    (sPTR) flashBase              //short ptr, parallel flash base address
-#define f_Addr_CSR    (sPTR)(fpgaBase0+ 0x00)        //FPGA CSR reg
-//#define CSR0         *(sPTR)(fpgaBase0+ (0x00))      //CSR (FPGA0)
+#define f_Addr_CSR    (sPTR)(fpgaBase+ 0x00)        //FPGA CSR reg
+#define CSR0         *(sPTR)(fpgaBase+ (0x00))      //CSR (FPGA0)
+
+#define LNG_SDR_WR   *(lPTR)(fpgaBase+ (0x02*2))    //SDram read address long (32bit ptr)
+#define SDramWrHI    *(sPTR)(fpgaBase+ (0x02*2))    //SDram HIGH write address register in FPGA
+#define SDramWrLO    *(sPTR)(fpgaBase+ (0x03*2))    //SDram LOW  write address register in FPGA
+
+#define LNG_SDR_RD   *(lPTR)(fpgaBase+ (0x04*2))    //SDram read address long (32bit ptr)
+#define SDramRdHI    *(sPTR)(fpgaBase+ (0x04*2))    //SDram HIGH write address register in FPGA
+#define SDramRdLO    *(sPTR)(fpgaBase+ (0x05*2))    //SDram LOW  write address register in FPGA
+
+#define HISTPTR14    *(sPTR)(fpgaBase+ (0x14*2))    //SDram uC read/write 16bit normal format
+#define HISTDAT16    *(sPTR)(fpgaBase+ (0x16*2))    //SDram uC read/write 16bit normal format
+
+#define SDR_RD16SWP  *(sPTR)(fpgaBase+ (0x06*2))    //SDram uC read 16bit as byte swapped data
+#define SDR_RD16     *(sPTR)(fpgaBase+ (0x07*2))    //SDram uC read/write 16bit normal format
+#define SDramMIGStat *(sPTR)(fpgaBase+ (0x08*2))    //SDram status reg
+
+#define SDramCnt     *(sPTR)(fpgaBase+ (0x09*2))    //SDram count reg
+#define FMDataSnd    *(sPTR)(fpgaBase+ (0x0A*2))    //LVDS FM Xmit Data 16bit port
 
 
-//Harmonica Jack RJ45 LED registers
-#define csLED1       *(sPTR)(fpgaBase0+ (0x10*2))   //LEDs RJ45 1of6
-#define csLED2       *(sPTR)(fpgaBase0+ (0x11*2))   //LEDs RJ45 2of6
-#define csLED3       *(sPTR)(fpgaBase0+ (0x12*2))   //LEDs RJ45 3of6
-#define csLED4       *(sPTR)(fpgaBase0+ (0x13*2))   //LEDs RJ45 4of6
-#define csLED5       *(sPTR)(fpgaBase0+ (0x14*2))   //LEDs RJ45 5of6
-#define csLED6       *(sPTR)(fpgaBase0+ (0x15*2))   //LEDs RJ45 6of6
+#define sMuxCntrl    *(sPTR)(fpgaBase+ (0x20*2))    //analog mux control
+#define sIN_MASK0    *(sPTR)(fpgaBase+ (0x21*2))    //input mask address
+#define sTstCntHI    *(sPTR)(fpgaBase+ (0x22*2))    //test counter hi
+#define sTstCntLO    *(sPTR)(fpgaBase+ (0x23*2))    //test counter lo
+
+#define ONEWIREcmd  (u_32Bit)(fpgaBase+ (0x24*2))   //one wire command reg
+    #define ONE_TEMP   BIT8
+    #define ONE_ROM    BIT9
+
+#define ONEWIREcntr (u_32Bit)(fpgaBase+ (0x25*2))   //one wire control reg
+    #define ONE_RST    BIT6
+    #define ONE_BSY    BIT7
+
+#define ONEWIREdata  (u_32Bit)(fpgaBase+0x26*2)     //one wire return data reg 0x28-2A
+#define sAFE_FFstat  *(sPTR)(fpgaBase+ (0x2F*2))    //AFE fifo status
+#define s0AFE_DACbias (u_32Bit)(fpgaBase+(0x30*2))  //AFE bias dacs fpga0
+#define s1AFE_DACbias (u_32Bit)(fpgaBase1+(0x30*2)) //AFE bias dacs fpga1
+#define s2AFE_DACbias (u_32Bit)(fpgaBase2+(0x30*2)) //AFE bias dacs fpga2
+#define s3AFE_DACbias (u_32Bit)(fpgaBase3+(0x30*2)) //AFE bias dacs fpga3
+
+#define s0TRGCNT_HI  *(sPTR)(fpgaBase+ (0x66*2))    //Spill Trigger count addr High 
+#define s0TRGCNT_LO  *(sPTR)(fpgaBase+ (0x67*2))    //Spill Trigger count addr Low
+
+#define s0SP_COUNT   *(sPTR)(fpgaBase+ (0x068*2))   //Spill counter addr
+#define s0WORD_CNTH  *(sPTR)(fpgaBase+ (0x06A*2))   //Spill word count high
+#define s0WORD_CNTL  *(sPTR)(fpgaBase+ (0x06B*2))   //Spill word count low
+#define sUPTIMEHI    *(sPTR)(fpgaBase+ (0x06C*2))   //up time HI
+#define sUPTIMELO    *(sPTR)(fpgaBase+ (0x06D*2))   //up time LO
+#define sTIMSTAMPHI  *(sPTR)(fpgaBase+ (0x072*2))   //time stamp hi
+#define sTIMSTAMPLO  *(sPTR)(fpgaBase+ (0x073*2))   //time stamp lo
+
+#define sPULTRIGdly  *(sPTR)(fpgaBase+ (0x074*2))   //pulser trigger delay value
+#define sSPILLERROR  *(sPTR)(fpgaBase+ (0x075*2))   //spill error
+#define sSpillStatus *(sPTR)(fpgaBase+ (0x076*2))   //spill status
+    #define SPIL_BUSY     BIT0                      //seq busy
+    #define SPIL_END      BIT1                      //end of spill(goes high)
+    #define SPIL_GATE     BIT2                      //spill active (high)
+
+#define sAFE_FIFO_AR  (fpgaBase+ (0x080*2))         //AFE-FIFO 0x80-0x8f
+#define sAFE_RdData  *(sPTR)(fpgaBase+ (0x0FF*2))   //AFE-rd-data
+#define AFE_RdData    (fpgaBase+ (0x0FF*2))         //AFE-rd-data
+
+#define sAFE_0x100   *(sPTR)(fpgaBase+ (0x100*2))   //AFE-Reg at addr 100
+#define AFE_0x100     (fpgaBase+ (0x100*2))         //AFE-Reg at addr 100
+
+#define sFlashGate   *(sPTR)(fpgaBase+ (0x300*2))   //flash gate control
+#define sFlashOnTim  *(sPTR)(fpgaBase+ (0x301*2))   //flash gate on time
+#define sFlashOffTim *(sPTR)(fpgaBase+ (0x302*2))   //flash gate off time
+#define sTrigCntrl   *(sPTR)(fpgaBase+ (0x303*2))   //trigger control 0=lemo, 1=rj45, 2=reset deserializer
+    #define TRIG_SOFT   BIT0                        //software trigger, set high
+    #define FMHI_PULLO  BIT1                        //trig source 0=lemo pulse, 1=fm on rj45 input 
+    #define TRIG_INH    BIT2                        //trigg inhibit, goes high on trigger(wr 1 allows more trigs)
+    #define TRG_INHen   BIT3                        //trigg inhibit enable (allows bit2 function)
+    #define SPIL_INH    BIT4                        //spill inhibit, goes high at end of spill
+    #define SPIL_INHen  BIT5                        //spill inhibit enable (allows bit4 function)
+#define sPipeLinDly  *(sPTR)(fpgaBase+ (0x304*2))   //pile line delay
+#define sSampleLen   *(sPTR)(fpgaBase+ (0x305*2))   //sample length
+
+#define LNG_TSTPULSE *(lPTR)(fpgaBase+ (0x306*2))   //test pulser(32bit ptr)
+#define sTstPulFreqH *(sPTR)(fpgaBase+ (0x306*2))   //test pulser freg high
+#define sTstPulFreqL *(sPTR)(fpgaBase+ (0x307*2))   //test pulser freg low
+#define sTstPulSpDur *(sPTR)(fpgaBase+ (0x308*2))   //test pulser spill duration
+#define sTstPulIntSp *(sPTR)(fpgaBase+ (0x309*2))   //test pulser spill interspill spill duraton
+
+#define SDPTR_BCST_ADH *(sPTR)(fpgaBase+ (0x310*2)) //Broadcast sdRam read addr upper
+#define SDPTR_BCST_ADL *(sPTR)(fpgaBase+ (0x311*2)) //Broadcast sdRam read addr lower
+
+#define SDPTR_BCASTHA (0x312)                       //Broadcast sdRam read addr
+#define SDPTR_BCASTLA (0x313)                       //Broadcast sdRam read addr
+
+#define SDPTR_BCASTH0 *(sPTR)(fpgaBase+ (SDPTR_BCASTHA*2)) //broadcast sdRam read addr
+#define SDPTR_BCASTL0 *(sPTR)(fpgaBase+ (SDPTR_BCASTLA*2)) //broadcast sdRam read addr
+#define SDPTR_BCASTH1 *(sPTR)(fpgaBase1+ (SDPTR_BCASTHA*2)) //broadcast sdRam read addr
+#define SDPTR_BCASTL1 *(sPTR)(fpgaBase1+ (SDPTR_BCASTLA*2)) //broadcast sdRam read addr
+#define SDPTR_BCASTH2 *(sPTR)(fpgaBase2+ (SDPTR_BCASTHA*2)) //broadcast sdRam read addr
+#define SDPTR_BCASTL2 *(sPTR)(fpgaBase2+ (SDPTR_BCASTLA*2)) //broadcast sdRam read addr
+#define SDPTR_BCASTH3 *(sPTR)(fpgaBase3+ (SDPTR_BCASTHA*2)) //broadcast sdRam read addr
+#define SDPTR_BCASTL3 *(sPTR)(fpgaBase3+ (SDPTR_BCASTLA*2)) //broadcast sdRam read addr
 
 
-#define GTP_RX_CSR   *(sPTR)(fpgaBase0+ (0x02*2))   //GTP RX FIFO CSR
+#define BCST_GEO_312 *(sPTR)(fpgaBase+ (0x312*2))   //Broadcast DAQ GEO Address
+#define BCST_GEO_313 *(sPTR)(fpgaBase+ (0x313*2))   //Broadcast DAQ GEO Address
 
-#define GTP0_RQ_PAC0D *(sPTR)(fpgaBase0+ (0x0D*2))  //GTP0 Sorted Data Req Packet Buffer
-#define GTP0_RQ_CNT0E *(sPTR)(fpgaBase0+ (0x0E*2))  //GTP0 Sorted Data Req Packet Buffer count
+#define BCST_GEO_314 *(sPTR)(fpgaBase+ (0x314*2))   //Broadcast GEO Address Ctrl# and Brd#
+#define BCST_GEO_317 *(sPTR)(fpgaBase+ (0x317*2))   //Rd/Wr Global FPGA Event FIFO Reg, 0xf==data ready in fifos
 
-#define GTP0_PREAM   *(sPTR)(fpgaBase0+ (0x1A*2))   //GTP0 PREAMBLE 
-#define GTP1_PREAM   *(sPTR)(fpgaBase0+ (0x1B*2))   //GTP1 PREAMBLE 
-#define GTP0_PAYLD   *(sPTR)(fpgaBase0+ (0x1C*2))   //GTP0 PAYLOAD 
-#define GTP1_PAYLD   *(sPTR)(fpgaBase0+ (0x1D*2))   //GTP1 PAYLOAD 
-#define GTP0_XMIT    *(sPTR)(fpgaBase0+ (0x1E*2))   //GTP0 CKSUM/XMIT
-#define GTP1_XMIT    *(sPTR)(fpgaBase0+ (0x1F*2))   //GTP1 CKSUM/XMIT
-#define GTP0_RECFIFO *(sPTR)(fpgaBase0+ (0x20*2))   //GTP0 RECEIVE FIFO
-#define GTP1_RECFIFO *(sPTR)(fpgaBase0+ (0x21*2))   //GTP1 RECEIVE FIFO
+#define DAQ_FIFO1     *(sPTR)(fpgaBase+ (0x00C*2))  //Read FPGA0 daq fifo data reg
+#define DAQ_FIFO2     *(sPTR)(fpgaBase+ (0x40C*2))  //Read FPGA0 daq fifo data reg
+#define DAQ_FIFO3     *(sPTR)(fpgaBase+ (0x80C*2))  //Read FPGA0 daq fifo data reg
+#define DAQ_FIFO4     *(sPTR)(fpgaBase+ (0xc0C*2))  //Read FPGA0 daq fifo data reg
 
-#define fLNK_RECFIFO *(sPTR)(fpgaBase0+ (0x27*2))   //FPGA Link Rec FIFO status
+#define eFIFO_wCNT1   *(sPTR)(fpgaBase+ (0x00D*2))  //Event fifo words used counter FPAG1
+#define eFIFO_wCNT2   *(sPTR)(fpgaBase+ (0x40D*2))  //Event fifo words used counter FPAG2
+#define eFIFO_wCNT3   *(sPTR)(fpgaBase+ (0x80D*2))  //Event fifo words used counter FPAG3
+#define eFIFO_wCNT4   *(sPTR)(fpgaBase+ (0xC0D*2))  //Event fifo words used counter FPAG4
 
-
-#define LNG_SDR_WR   *(lPTR)(fpgaBase0+ (0x02*2))   //SDram read address long (32bit ptr)
-#define SDramWrHI    *(sPTR)(fpgaBase0+ (0x02*2))   //SDram HIGH write address register in FPGA
-#define SDramWrLO    *(sPTR)(fpgaBase0+ (0x03*2))   //SDram LOW  write address register in FPGA
-
-#define LNG_SDR_RD   *(lPTR)(fpgaBase0+ (0x04*2))   //SDram read address long (32bit ptr)
-#define SDramRdHI    *(sPTR)(fpgaBase0+ (0x04*2))   //SDram HIGH write address register in FPGA
-#define SDramRdLO    *(sPTR)(fpgaBase0+ (0x05*2))   //SDram LOW  write address register in FPGA
-
-#define SDR_RD16SWP  *(sPTR)(fpgaBase0+ (0x06*2))   //SDram uC read 16bit as byte swapped data
-#define SDR_RD16     *(sPTR)(fpgaBase0+ (0x07*2))   //SDram uC read/write 16bit normal format
-
-#define ACT_PORTS_HI *(sPTR)(fpgaBase0+ (0x08*2))   //Active Port Dectected (rec'd clock) upper poe ch 17-14
-#define ACT_PORTS_LO *(sPTR)(fpgaBase0+ (0x09*2))   //Active Port Dectected (rec'd clock) lower poe ch 16-00
-
-//#define CLKFANOUT    *(sPTR)(fpgaBase0+ (0x3A*2))   //CDCUN1208LPRHBR read/write 16bit
-#define sUPTIMEHI    *(sPTR)(fpgaBase0+ (0x6C*2))   //up time HI
-#define sUPTIMELO    *(sPTR)(fpgaBase0+ (0x6D*2))   //up time LO
-
-#define sTST_CNT_HI  *(sPTR)(fpgaBase0+ (0x34*2))   //32 bit test counter HIGH 16
-#define sTST_CNT_LO  *(sPTR)(fpgaBase0+ (0x35*2))   //32 bit test counter LOW 16
+#define CSR1        *(sPTR)(fpgaBase1+ (0x00))      //CSR (FPGA1)
+#define SDramWrHI1  *(sPTR)(fpgaBase1+ (0x02*2))    //SDram HIGH write address register in FPGA
+#define CSR2        *(sPTR)(fpgaBase2+ (0x00))      //CSR (FPGA2)
+#define CSR3        *(sPTR)(fpgaBase3+ (0x00))      //CSR (FPGA3)
 
 
-// shortcut macros for reading/writing to 32-bit memory mapped registers
-#define REG32(addr) *(volatile unsigned int *)(addr)
-#define REG16(addr) *(volatile unsigned short *)(addr)
+#define sAFE_01  *(sPTR)(fpgaBase+ (0x101*2))       //Ultra Sound Fpga0 AFE5807 power enable
+#define sAFE_02  *(sPTR)(fpgaBase+ (0x201*2))       //Ultra Sound Fpga0 AFE5807 power enable
+#define sAFE_03  *(sPTR)(fpgaBase+ (0x135*2))       //Ultra Sound Fpga0 AFE5807 power enable
+#define sAFE_04  *(sPTR)(fpgaBase+ (0x235*2))       //Ultra Sound Fpga0 AFE5807 power enable
 
-//#define off_sdWRH       (0x002)                     //sdWR High Addr offset from fpga base
-//#define off_sdWRL       (0x003)                     //sdWR Low Addr offset from fpga base
-//#define off_MIG         (0x009)                     //MIG offset from fpga base
+#define sAFE_11  *(sPTR)(fpgaBase1+ (0x101*2))      //Ultra Sound Fpga1 AFE5807 power enable
+#define sAFE_12  *(sPTR)(fpgaBase1+ (0x201*2))      //Ultra Sound Fpga1 AFE5807 power enable
+#define sAFE_13  *(sPTR)(fpgaBase1+ (0x135*2))      //Ultra Sound Fpga1 AFE5807 power enable
+#define sAFE_14  *(sPTR)(fpgaBase1+ (0x235*2))      //Ultra Sound Fpga1 AFE5807 power enable
 
-//#define PHY_XMT_ENA     *(sPTR)(fpgaBase1+ (0x00E*2))   //ePHY XMIT CH 0-7 ENABLE AS BIT0-7 (FF==ALL ENABLED)
-//#define PHY_FIFO        *(sPTR)(fpgaBase1+ (0x011*2))   //ePHY XMIT DATA FIFO WR
-//#define PHY_XMIT_PAC    *(sPTR)(fpgaBase1+ (0x012*2))   //ePHY XMIT STATUS R/W (read 1=empty), (wr 1 to xmit)
-//#define PHY_FIFOCNT     *(sPTR)(fpgaBase1+ (0x013*2))   //ePHY BROADCAST FIFO WORD COUNT RD
+#define sAFE_21  *(sPTR)(fpgaBase2+ (0x101*2))      //Ultra Sound Fpga2 AFE5807 power enable
+#define sAFE_22  *(sPTR)(fpgaBase2+ (0x201*2))      //Ultra Sound Fpga2 AFE5807 power enable
+#define sAFE_23  *(sPTR)(fpgaBase2+ (0x135*2))      //Ultra Sound Fpga2 AFE5807 power enable
+#define sAFE_24  *(sPTR)(fpgaBase2+ (0x235*2))      //Ultra Sound Fpga2 AFE5807 power enable
 
-//offset address to ethernet phy regs
-#define oPHY0E_XMTMASK  (0x00E)                     //ePHY XMIT CH 0-7 ENABLE MASK AS BIT0-7 (FF==ALL ENABLED)
-#define oPHY11_BCAST_FILLFIFO (0x011)               //ePHY XMIT BROADCAST FIFO DATA
-#define oPHY12_XMIT     (0x012)                     //ePHY XMIT STATUS R/W (RD 1=empty), (WR 1 to xmit)
-#define oPHY13_WRDCNT   (0x013)                     //ePHY BROADCAST FIFO WORD COUNT RD
-#define oPHY16_RXSTAT   (0x016)                     //PHY 8-Port Rec data Status (bit7-0, 1=empty)
-#define oPHY18_1F_RXCNT (0x018)                     //PHY Rec Word Cnt port0 (1of8)
+#define sAFE_31  *(sPTR)(fpgaBase3+ (0x101*2))      //Ultra Sound Fpga3 AFE5807 power enable
+#define sAFE_32  *(sPTR)(fpgaBase3+ (0x201*2))      //Ultra Sound Fpga3 AFE5807 power enable
+#define sAFE_33  *(sPTR)(fpgaBase3+ (0x135*2))      //Ultra Sound Fpga3 AFE5807 power enable
+#define sAFE_34  *(sPTR)(fpgaBase3+ (0x235*2))      //Ultra Sound Fpga3 AFE5807 power enable
 
-#define oPHY20_27_RXDAT (0x020)                     //PHY Rec data port0 (1of8)
-#define oFM30_37_RXDAT  (0x030)                     //lvds RX data 0x30-37
+#define sDACsBIAS_0  *(sPTR)(fpgaBase+ (0x30*2))    //DAC Regs chip0 0x30-0x3f
+#define sDACsBIAS_1  *(sPTR)(fpgaBase1+(0x30*2))    //DAC Regs chip1 0x30-0x3f
+#define sDACsBIAS_2  *(sPTR)(fpgaBase2+(0x30*2))    //DAC Regs chip2 0x30-0x3f
+#define sDACsBIAS_3  *(sPTR)(fpgaBase3+(0x30*2))    //DAC Regs chip3 0x30-0x3f
 
-//offset to lvds fm reg
-                                                    //oFMData30[] array LVDS rx bufs
-                                                    //oFMWrdCnt38[] array LVDS word cnt
-#define oFMStat40       (0x040)                     //LVDS FM Status reg offset
-#define oFMPerr41       (0x041)                     //LVDS FM RX Port Parity Error (WR BIT8 up==ClrBuffer)
-#define FMRstBit8       (0x100)                     //LVDS FM RX Port clear rec buffer 'oFMPerr39'
+#define sDAC_FLASH0  *(sPTR)(fpgaBase+ (0x40*2))    //FLASHER DAC Regs chip0 0x40-0x43
+#define sDAC_FLASH1  *(sPTR)(fpgaBase0+(0x40*2))    //FLASHER DAC Regs chip1 0x40-0x43
+#define sDAC_FLASH2  *(sPTR)(fpgaBase1+(0x40*2))    //FLASHER DAC Regs chip2 0x40-0x43
+#define sDAC_FLASH3  *(sPTR)(fpgaBase2+(0x40*2))    //FLASHER DAC Regs chip3 0x40-0x43
 
-#define POE01  1                                    //1st ch of fpga1 for board cast packet purpose
-#define POE09  9                                    //1st ch of fpga2 for board cast packet purpose
-#define POE17  17                                   //1st ch of fpga3 for board cast packet purpose
+//cnts on fpga0 done, now do cnts on fpga 1-3
+#define s1WORD_CNTH  *(sPTR)(fpgaBase+ (0x46A*2))   //Spill word count high
+#define s1WORD_CNTL  *(sPTR)(fpgaBase+ (0x46B*2))   //Spill word count low
+#define s2WORD_CNTH  *(sPTR)(fpgaBase+ (0x86A*2))   //Spill word count high
+#define s2WORD_CNTL  *(sPTR)(fpgaBase+ (0x86B*2))   //Spill word count low
+#define s3WORD_CNTH  *(sPTR)(fpgaBase+ (0xC6A*2))   //Spill word count high
+#define s3WORD_CNTL  *(sPTR)(fpgaBase+ (0xC6B*2))   //Spill word count low
 
-//ePHY RX Status Bits
-#define ePHY_RX_STA_416 *(sPTR)(fpgaBase1+(0x16*2)) //ePHY Rx buffer Non empty Status ports 1of8
-#define ePHY_RX_STA_816 *(sPTR)(fpgaBase2+(0x16*2)) //ePHY Rx buffer Non empty Status ports 1of8
-#define ePHY_RX_STA_C16 *(sPTR)(fpgaBase3+(0x16*2)) //ePHY Rx buffer Non empty Status ports 1of8
+//mask on fpga0 done, now do mask on fpga 1-3
+#define sIN_MASK1    *(sPTR)(fpgaBase+ (0x421*2))   //input mask address
+#define sIN_MASK2    *(sPTR)(fpgaBase+ (0x821*2))   //input mask address
+#define sIN_MASK3    *(sPTR)(fpgaBase+ (0xC21*2))   //input mask address
 
+//SDram Read Address 4of4
+#define LNG_SDR_RD0  *(lPTR)(fpgaBase+ (0x004*2))    //SDram read address fpga0
+#define LNG_SDR_RD1  *(lPTR)(fpgaBase+ (0x404*2))    //SDram read address fpga1
+#define LNG_SDR_RD2  *(lPTR)(fpgaBase+ (0x804*2))    //SDram read address fpga2
+#define LNG_SDR_RD3  *(lPTR)(fpgaBase+ (0xC04*2))    //SDram read address fpga3
 
-#define SDramWrHI1   *(sPTR)(fpgaBase1+ (0x02*2))   //SDram HIGH write address register in FPGA1
-#define SDramWrLO1   *(sPTR)(fpgaBase1+ (0x03*2))   //SDram LOW  write address register in FPGA1
-#define SDramWrHI2   *(sPTR)(fpgaBase2+ (0x02*2))   //SDram HIGH write address register in FPGA2
-#define SDramWrLO2   *(sPTR)(fpgaBase2+ (0x03*2))   //SDram LOW  write address register in FPGA2
-#define SDramWrHI3   *(sPTR)(fpgaBase3+ (0x02*2))   //SDram HIGH write address register in FPGA3
-#define SDramWrLO3   *(sPTR)(fpgaBase3+ (0x03*2))   //SDram LOW  write address register in FPGA3
+//SDram Write Address 4of4
+#define LNG_SDR_WR0  *(lPTR)(fpgaBase+ (0x002*2))    //SDram write address fpga0
+#define LNG_SDR_WR1  *(lPTR)(fpgaBase+ (0x402*2))    //SDram write address fpga1
+#define LNG_SDR_WR2  *(lPTR)(fpgaBase+ (0x802*2))    //SDram write address fpga2
+#define LNG_SDR_WR3  *(lPTR)(fpgaBase+ (0xC02*2))    //SDram write address fpga3
 
+//Swap data ptr (1of4)
+#define SDR_RD16SWP0  *(sPTR)(fpgaBase+ (0x006*2))   //SDram uC read 16bit as byte swapped data fpga0
+#define SDR_RD16SWP1  *(sPTR)(fpgaBase+ (0x406*2))   //SDram uC read 16bit as byte swapped data fpga1
+#define SDR_RD16SWP2  *(sPTR)(fpgaBase+ (0x806*2))   //SDram uC read 16bit as byte swapped data fpga2
+#define SDR_RD16SWP3  *(sPTR)(fpgaBase+ (0xC06*2))   //SDram uC read 16bit as byte swapped data fpga3
 
-//#define SDramRdHI1   *(sPTR)(fpgaBase1+ (0x04*2))   //SDram HIGH read address register in FPGA1
-//#define SDramRdLO1   *(sPTR)(fpgaBase1+ (0x05*2))   //SDram LOW  read address register in FPGA1
-//#define SDramRdHI2   *(sPTR)(fpgaBase2+ (0x04*2))   //SDram HIGH read address register in FPGA2
-//#define SDramRdLO2   *(sPTR)(fpgaBase2+ (0x05*2))   //SDram LOW  read address register in FPGA2
-//#define SDramRdHI3   *(sPTR)(fpgaBase3+ (0x04*2))   //SDram HIGH read address register in FPGA3
-//#define SDramRdLO3   *(sPTR)(fpgaBase3+ (0x05*2))   //SDram LOW  read address register in FPGA3
-
-//feb readout fpga1
-#define f1_RD16SWP   *(sPTR)(fpgaBase1+ (0x06*2))   //SDram uC read 16bit as byte swapped data
-#define f1_RD16      *(sPTR)(fpgaBase1+ (0x07*2))   //SDram uC read 16bit as byte
-#define fpga1binSzHi *(sPTR)(fpgaBase1+ (0x6A*2))   //word cnt via phy high
-#define fpga1binSzLo *(sPTR)(fpgaBase1+ (0x6B*2))   //word cnt via phy low
-
-//feb readout fpga2
-#define f2_RD16SWP   *(sPTR)(fpgaBase2+ (0x06*2))   //SDram uC read 16bit as byte swapped data
-#define f2_RD16      *(sPTR)(fpgaBase2+ (0x07*2))   //SDram uC read 16bit as byte
-#define fpga2binSzHi *(sPTR)(fpgaBase2+ (0x6A*2))   //word cnt via phy high
-#define fpga2binSzLo *(sPTR)(fpgaBase2+ (0x6B*2))   //word cnt via phy low
-
-#define ePHY301_BCAST_DATA *(sPTR)(fpgaBase0+(0x301*2))//ePhy link global_24 data (fifo) loader
-#define ePHY302_BCAST_XMIT *(sPTR)(fpgaBase0+(0x302*2))//ePhy link global_24 data (broadcast) xmit
+//Swap data ptr (1of4)
+#define SDR_RD16_0  *(sPTR)(fpgaBase+ (0x007*2))   //SDram uC read 16bit as byte unswapped data fpga0
+#define SDR_RD16_1  *(sPTR)(fpgaBase+ (0x407*2))   //SDram uC read 16bit as byte unswapped data fpga1
+#define SDR_RD16_2  *(sPTR)(fpgaBase+ (0x807*2))   //SDram uC read 16bit as byte unswapped data fpga2
+#define SDR_RD16_3  *(sPTR)(fpgaBase+ (0xC07*2))   //SDram uC read 16bit as byte unswapped data fpga3
 
 
+//uController Error Triggers
+#define TrgSinBitErr *(sPTR) 0xF00803F0
+#define TrgDouBitErr *(sPTR) 0xF00803F8
 
-//reg bit assignments
-#define FMRXENA     BIT3
-
-
-//error triggers
-#define TrgSinBitErr (unsigned int *) 0xF00803F0
-#define TrgDouBitErr (unsigned int *) 0xF00803F8
-
-//new stuff mu2e controller End
-
-//FRAM
-#define hdrSize          15                 //QIE HEADER SIZE in words
+//FRAM SETUP
+#define hdrSize          15                     //QIE HEADER SIZE in words
 #define DWNLD_VALID      0xAA55
-#define PASSCODE         123                //simple password for param entry
+#define PASSCODE         123                    //simple password for param entry
 
-#define fram_FPGA0_REG   0x0000             //store fpga regs chip 0
-#define fram_FPGA1_REG   0x0100             //store fpga regs chip 1
-#define fram_FPGA2_REG   0x0200             //store fpga regs chip 2
-#define fram_FPGA3_REG   0x0300             //store fpga regs chip 3
-#define fram_serNUMB     0x0400             //controller serial number
-#define fram_cntrlNUMB   0x0402             //controller daq number 1-nn
-#define fram_Spill_REGs  0x0410
+#define fPAGE_FPGA0      0x0000                 //store fpga regs chip 0
+#define fPAGE_FPGA1      0x0100                 //store fpga regs chip 1
+#define fPAGE_FPGA2      0x0200                 //store fpga regs chip 2
+#define fPAGE_FPGA3      0x0300                 //store fpga regs chip 3
+
+#define fPAGE_0400       0x0400                 //uC Misc for MUX,GAIN,TRIG,LINKDIR,nERROR
+#define fPAGE_Net500     0x0500                 //network stuff store byte addr base
+
+#define MAIN_ADDR_VALID  0x0600                 //fpga misc MAIN FPGA FLAG
+#define MAIN_ADDR_COUNT  0x0604                 //fpga misc MAIN FPGA DOWNLOAD CNT
+#define MAIN_ADDR_CSUM   0x0608                 //fpga misc MAIN FPGA DOWNLOAD CSUM
+#define BACKUP_WCOUNT    0x060A                 //fpga misc store count for backup use
+#define BACKUP_BYTES     0x0610                 //fpga image backup bytes
+#define BACKUP_CSUM      0x0614                 //fpga image backup chksum
 
 
-#define FRAM_AddrNet500 0x0500              //network stuff store byte addr base
-#define DWNLD_1_VALID   0x0600              //2 BYTES fpga1 valid download
-#define DWNLD_1_COUNT   0x0604              //4 BYTES fpga1 byte cnt
-#define DWNLD_1_CSUM    0x0608              //2 BYTES fpga1 cksum
-#define SERIAL_NUMB_ADR 0x060A              //2 BYTES board serial number
-#define DWNLD_2_VALID   0x0610              //2 BYTES fpga2 valid download
-#define DWNLD_2_COUNT   0x0614              //4 BYTES fpga2 byte cnt
-#define DWNLD_2_CSUM    0x0618              //2 BYTES fpga2 cksum
-#define fram_NERROR_CNT 0x061A              //2 BYTES nError counter
+#define const_FPGADACs0  0x0A00                 //constants bias, led, afe dacs fpga0
+#define const_FPGADACs1  0x0B00                 //constants bias, led, afe dacs fpga1
+#define const_FPGADACs2  0x0C00                 //constants bias, led, afe dacs fpga2
+#define const_FPGADACs3  0x0D00                 //constants bias, led, afe dacs fpga3
+#define const_FPGADACend 0x0DFF                 //constants bias, led, afe dacs addr max
+//FRAM  0x1000 repeats
 
+//constants
+#define SAVE30      0x030                       //reserve 30 bytes between offset grp and ped grp on each FRAM PAGE
+#define addr030     0x030                       //dac addr begin fpga0
+#define addr047     0x047                       //dac addr range end
+#define addr430     0x430                       //dac addr begin fpga1
+#define addr447     0x447                       //dac addr range end
+#define addr830     0x830                       //dac addr begin fpga2
+#define addr847     0x847                       //dac addr range end
+#define addrC30     0xC30                       //dac addr begin fpga3
+#define addrC47     0xC47                       //dac addr range end
 
 //F-RAM
-#define fWRSR           0x01                //Write Status Register   0000_0001b
-#define fWRITE          0x02                //Write Memory Data       0000_0010b
-#define fREAD           0x03                //Read Memory Data        0000_0011b
-#define fWRDI           0x04                //Write Disable           0000_0100b
-#define fRDSR           0x05                //Read Status Register    0000_0101b
-#define fWREN           0x06                //Set Write Enable Latch  0000_0110b
-#define fs_WEL          0x02                //Write Enable Latch Bit
-#define fs_WPEN         0x80                //FRAM, WPEN High, /WP pin controls wr access
+#define fWRSR       0x01                        //Write Status Register   0000_0001b
+#define fWRITE      0x02                        //Write Memory Data       0000_0010b
+#define fREAD       0x03                        //Read Memory Data        0000_0011b
+#define fWRDI       0x04                        //Write Disable           0000_0100b
+#define fRDSR       0x05                        //Read Status Register    0000_0101b
+#define fWREN       0x06                        //Set Write Enable Latch  0000_0110b
+#define fs_WEL      0x02                        //Write Enable Latch Bit
+#define fs_WPEN     0x80                        //FRAM, WPEN is high, /WP pin controls write access
 
 
 // Flag Bits for Register (genFlag )
-#define ADC_Trig        0x0001              //flag as ADC triggered
-#define ADC_Rdy         0x0002              //flag as ADC data is avail
-#define uTimeOut        0x0004              //uS timer flag 0==timeout
-#define hDelay          0x0008              //delay flag nHet Delay function
-#define POE_CHECK_DUE   0x0010              //POE CHECK DUE via systick counter
-#define ZEST_ETM1_OK    0x0020              //Orange Tree gigabit ethernet active
-#define DAQREQ_2FEB     0x0040              //FEB DAQ data request
-#define DAQuB_Trig_OLD  0x0080              //uBunch trigger mode flag
-#define ECHO_ACT_PORT   0x0100              //echo link poe port number with newline prompt
-//#define POOL_Active     0x0200               //data req for link check active
-#define ZEST_ETM1_INTR  0x0400              //Orange Tree gigabit ethernet intr check
-#define PoolReqNow      0x1000              //Start poe link feb finder req data
-#define PoolReqGetData  0x2000              //Req Time out FEB get pool data now
-#define ID_ReqNow       0x4000              //Start poe link feb id req data
-#define DAQuB_Trig_NEW  0x8000              //uBunch trigger mode flag 1 (for testing short packets)
+#define ADC_REFRESH     0x0001                  //ADC Data local Buf refresh 
+#define ADC_READY       0x0002                  //flag as ADC data is avail
+#define ADC_TRIG        0x0004                  //ADC new data req
+#define uTimeOut        0x0008                  //uS timer flag 0==timeout
+#define not used        0x0010                  //
+#define hDelay          0x0020                  //delay flag nHet Delay function
+#define ARP_REQ         0x0040                  //send network ARP, incase gateway cant find board
+#define ADC_REQ         0x0080                  //ADC_REQ=1 active read in progress
+#define ADC_DONE        0x0100                  //ADC_DONE=1 Read in finished
+#define SPILLGATEOPEN   0x0200                  //SEQ spill gate active
+#define SPILL_ABORT     0x0400                  //SPILL BUSY timeout, abort seq
+#define OneWireDatReq   0x0800                  //request data via one wire
+#define OneWireDatRdy   0x1000                  //requested data now ready
+#define OneWireRefresh  0x2000                  //oneWire data refresh active
+#define NO_ECHO         0x4000                  //console, no echo reply
+#define OVC_TRIP        0x8000                  //bais voltage trip flag
 
-
-#define ID_RegTime      4                   //link id number check time in Secs
-#define ReqPoolTime     30000               //link req pooled data time in mSecs
-#define GetPoolTime     (ReqPoolTime+500)   //link get pooled data after delay in mSecs
 
 
 // Flag Bits for Register (iFlag)
-#define CONFIGFAIL      0x0001              //FPGA config status
-#define OTREE_CONFIG    0x0002              //ORG TREE Zest board config error
-#define iNoPrompt       0x0004              //echo new line prompt
+#define CONFIGFAIL      0x01                    //alter cyclone config status
+#define CONFIGBACKUP    0x02                    //alter cyclone config status use backup file
+#define iWiznetACK      0x04                    //wiznet chip valid response
+#define SI5338FAIL      0x08                    //SI5338 init flag 1==failed
+#define DAQ_BUSY        0x10                    //spill active check, DAQ process ready
+#define XMIT_PHY_ON     0x20                    //end of spill check daq, enable==1
+#define WHATCHDOGENA    0x40                    //whatdog timer enable
+#define CMB_RD_ENA      0x80                    //CMB readout enable bit
+
 
 //flash variables
-#define adr555 (0x555 << 1)                 //flash chip command codes
-#define adr2aa (0x2aa << 1)                 //flash chip command codes
-#define VALID           0xaa55              //valid data mask for saved data structure
+#define adr555 (0x555 << 1)                     //flash chip command codes
+#define adr2aa (0x2aa << 1)                     //flash chip command codes
+#define VALID           0xaa55                  //valid data mask for saved data structure
+#define FLBASE          1                       //use flash base to load fpga
+#define FLBACKUP        0                       //use flash backup to load fpga
 
 //sector to erase in parallel flash
-#define SECTORES        40     
+#define SECTORES        40                      //ERASE 500k Words, fpga file take 802,294 byts
+
+#define     UART scilinREG                      //lin module configured as UART
+#define     USB_inBufSz 256
+
+//wiznet defs and dma
+#define CHAR_BUF_SZ_1600      1600              //dma buffer max byte count (SOCKET SIZE)
+
+//wiznet defs and dma
+#define D_SIZE_BYTE  2048
+#define D_SIZE_WRDS  2048/2
+
 
 #define putchar     __putchar
-#define cmdbufsiz       128                 //uart1 command line buffer size
-#define CmdSiz80         80                 //limit repeat command line size
-
-#define     UART scilinREG                  //lin module configured as UART
-#define     USB_inBufSz 256
-#define     ADC_CHS  4                      //4 ACTVIE channels       
-
+#define cmdbufsiz       128                     //uart1 command line buffer size
+#define CmdSiz80         80                     //limit repeat command line size
 
 //#define PROMPT_ER   SendStrTxI("FPGA_Error>");  //err prompt
 
-//LINK INITs
-#define CLR_ENTRY       0xFF
-
 // ASCII Constants
 #define BACKSP          0x08
-#define ACK_            0x06
-#define NACK_           0x15
+#define ACK             0x06
+#define NACK            0x15
 #define SP              0x20
 #define DELETE          0x7F
 
-//NUM_SOCKETS                               //defined in ZestETMI_SOCKET.h
-#define tty             232                 //i/o stream port uart0
-#define Sock0           0                   //i/o stream port socket 0
-#define Sock1           1                   //i/o stream port socket 1
-#define Sock2           2                   //i/o stream port socket 2
-#define Sock3           3                   //i/o stream port socket 3
-#define NoPmt1          9                   //port adj to prevent prompts after certain commands
-#define eCmdBufBytSiz   128                 //socket(s) command line buffer size
+#define MaxSock         5                       //max socket used, defined for rec buffer, eRecDatBuf[]
+#define tty             232                     //i/o stream port uart0
+#define sock0           0                       //i/o stream port socket 0  line based telnet
+#define sock1           1                       //i/o stream port socket 1  line based telnet
+#define sock2           2                       //i/o stream port socket 2, line based telnet
+#define ePhyIO          3                       //mac phy link (does not use wiznets buffers)
+#define LoopEnd         3                       //look 0-3 times, loop 3 checks local ePHY input data
 
-//socket xt/rt byte siz
-#define TXRX_BytSiz1600  1600               //buffer max byte count (SOCKET SIZE)
+#define sockARP         4                       //ARP request on time interval
+#define eRecSz1024   1024                       //socket(s) cmd line buf size, must match 'setSn_MSSR'
 
-#define     LED_DRIVERS 6                   //RJ45 CONNECTOR LED DRIVER PORTS '74LVC595APW'
-#define     POEChipCnt  6                   //POE CHIPs 'LTC4266A' per board
-#define     POECHs      4                   //Channels per'LTC4266A' chip
-#define     POECHsALL   POEChipCnt*POECHs   //Channels per'LTC4266A' chip * chip count
+#define ARP_TIME     (1000*60*5)                //ARP request, once ever 5 minutes;
+#define ARP_TIME_NOW (ARP_TIME-3000)            //ARP request, now;
+
+
+// USB/TTY Baud Rates
+#define BAUD115200  115200
+#define BAUD230400  230400
+#define BAUD460800  460800
+#define BAUD921600  921600
+
+
+//*********** HET1 OUTPUTS *************
+//*********** HET1 OUTPUTS *************
+            
+//FLASH RESET       (K18) HET1_0 
+#define FlashRst_LO    hetREG1->DCLR=  BIT0;   //500nS low pulse, wait 50-nS to read
+#define FlashRst_HI    hetREG1->DSET=  BIT0;
+ 
+//SRCSEL            (V2) HET1_1
+//TMP05A Temperature Input
+
+//15V_ENA           (U1) HET1_3
+#define LO_15V_ENA     hetREG1->DCLR=  BIT3;
+#define HI_15V_ENA     hetREG1->DSET=  BIT3;
+
+//FLASH_WP          (V6) HET1_5
+#define FLASH_WP_LO    hetREG1->DCLR=  BIT5;
+#define FLASH_WP_HI    hetREG1->DSET=  BIT5;
+
+//TP46              (T1) HET1_7
+#define hLO_TP46        hetREG1->DCLR=  BIT7
+#define hHI_TP46        hetREG1->DSET=  BIT7
+            
+//ETHERNET_DOWN     (N2) HET1_13
+#define EthDown_LO     hetREG1->DCLR=  BIT13;
+#define EthDown_HI     hetREG1->DSET=  BIT13;
+            
+//Suspend           (A11) HET1_14
+#define Suspend_LO      hetREG1->DCLR=  BIT14;
+#define Suspend_HI      hetREG1->DSET=  BIT14;
+            
+//TEST PNT          (N1) HET1_15    
+#define hLO_TP45        hetREG1->DCLR=  BIT15
+#define hHI_TP45        hetREG1->DSET=  BIT15
+
+//CLR_ERR           (A13) HET1_17  nError reset
+#define CLR_ERR_LO      hetREG1->DCLR=  BIT17;
+#define CLR_ERR_HI      hetREG1->DSET=  BIT17;
+
+//DSR               (J1) HET1_18
+#define DSR_LO          hetREG1->DCLR=  BIT18;
+#define DSR_HI          hetREG1->DSET=  BIT18;
+
+//LINK_DIR          (B13) HET1_19
+#define LINK_DIR_LO     hetREG1->DCLR=  BIT19;
+#define LINK_DIR_HI     hetREG1->DSET=  BIT19;
+
+//WIZRST            (P2) HET1_20
+#define WIZRST_LO      hetREG1->DCLR=  BIT20;
+#define WIZRST_HI      hetREG1->DSET=  BIT20;
+
+//ucLED             (B3) HET1_22
+#define hLO_ucLED       hetREG1->DCLR=  BIT22;
+#define hHI_ucLED       hetREG1->DSET=  BIT22;
+
+//RDWR_B            (J4) HET1_23
+#define RDWR_B_LO      hetREG1->DCLR=  BIT23;
+#define RDWR_B_HI      hetREG1->DSET=  BIT23;
+
+//SHUTDOWN          (M3) HET1_25
+#define hLO_ShtDwn      hetREG1->DCLR=  BIT25;
+#define hHI_ShtDwn      hetREG1->DSET=  BIT25;
+
+//#define INIT_Bx[] = {29,16,27,6}; //Init array list of 'init' het port#
+
+//Read InitB3 pin   (W3) HET1_6
+#define InitB3_Read    ((hetREG1->DIN>>6) & 1U)
+            
+//Read InitB1 pin   (A4) HET1_16
+#define InitB1_Read    ((hetREG1->DIN>>16) & 1U)
+
+//Read InitB2 pin   (A9) HET1_27
+#define InitB2_Read    ((hetREG1->DIN>>27) & 1U)
+
+//Read InitB0 pin   (A3) HET1_29
+#define InitB0_Read    ((hetREG1->DIN>>29) & 1U)
+
+    
+//*********** HET1 INPUTS ************
+//*********** HET1 INPUTS ************
+
+//ERROR LATCH       (B12) HET1_4 INPUT  nError Monitor
+#define hERR_Latch  ((hetREG1->DIN >> 4) & 1U) 
+
+//FLASH RDY         (V7) HET1_9 INPUT
+#define FLASH_RDY   ((hetREG1->DIN >> 9) & 1U)
+            
+//DTR USB BRIDGE    (E3) HET1_11
+#define hDTR        ((hetREG1->DIN >> 11) & 1U))
+
+//CARRIER SENSE: MII mode pin is asserted high when receive medium is non-idle
+//ETHER CAR_SENSE   (B4) HET1_12 INPUT
+#define hCAR_SENSE  ((hetREG1->DIN >> 12) & 1U)
+
+//DONE2             (H4) HET1_21
+#define DONE2       ((hetREG1->DIN >> 21) & 1U)
+
+//WIZNET IRQ        (J17)HET1_31
+#define hWIZ_IRQ    ((hetREG1->DIN >> 31) & 1U)
+
+
+            
+//*********** SPI $ GIO OUUTS ************
+//*********** SPI $ GIO OUTPUTS ************
+
+//EQUALIZER CS         (B2, SPI3_CS2) OUTPUT
+//#define EQCS_LO      spiPORT5->DCLR=(uint32)1U<<27;
+//#define EQCS_HI      spiPORT5->DSET=(uint32)1U<<27;
+
+//ADC_START         (G16, SPI5_SOMI3) OUTPUT
+#define ADCSTART_LO  spiPORT5->DCLR=(uint32)1U<<27;
+#define ADCSTART_HI  spiPORT5->DSET=(uint32)1U<<27;
+
+//ADC_RESET         (G17, SPI5_SIMO3) OUTPUT
+#define ADCRESET_LO  spiPORT5->DCLR=(uint32)1U<<19;
+#define ADCRESET_HI  spiPORT5->DSET=(uint32)1U<<19;
+            
+//ETHERNET_RESET    (W6, SPI5_CS2) OUTPUT
+#define ETH_RST_LO  spiPORT5->DCLR=(uint32)1U<<2;
+#define ETH_RST_HI  spiPORT5->DSET=(uint32)1U<<2;
+            
+//#define CSI_Bx[]={2,3,4,5};  //Init array list of chip select gio port#
+
+//CSI_B0            (C1) GIOA2 OUTPUT
+#define CSI_B0_LO   gioPORTA->DCLR = (uint32)1U << 2;
+#define CSI_B0_HI   gioPORTA->DSET = (uint32)1U << 2;
+
+//CSI_B1            (E1) GIOA3 OUTPUT
+#define CSI_B1_LO   gioPORTA->DCLR = (uint32)1U << 3;
+#define CSI_B1_HI   gioPORTA->DSET = (uint32)1U << 3;
+
+//CSI_B2            (A6) GIOA4 OUTPUT
+#define CSI_B2_LO   gioPORTA->DCLR = (uint32)1U << 4;
+#define CSI_B2_HI   gioPORTA->DSET = (uint32)1U << 4;
+
+//CSI_B3            (B5) GIOA5 OUTPUT
+#define CSI_B3_LO   gioPORTA->DCLR = (uint32)1U << 5;
+#define CSI_B3_HI   gioPORTA->DSET = (uint32)1U << 5;
+
+//PROG_B0           (J2) GIOB6 OUTPUT
+#define PROG0_LO    gioPORTB->DCLR = (uint32)1U << 6;
+#define PROG0_HI    gioPORTB->DSET = (uint32)1U << 6;
+
+//PROG_B1           (G1) GIOB4 OUTPUT
+#define PROG1_LO    gioPORTB->DCLR = (uint32)1U << 4;
+#define PROG1_HI    gioPORTB->DSET = (uint32)1U << 4;
+
+//PROG_B5           (G2) GIOB5 OUTPUT
+#define PROG2_LO    gioPORTB->DCLR = (uint32)1U << 5;
+#define PROG2_HI    gioPORTB->DSET = (uint32)1U << 5;
+
+//PROG_B3           (W10) GIOB3 OUTPUT
+#define PROG3_LO    gioPORTB->DCLR = (uint32)1U << 3;
+#define PROG3_HI    gioPORTB->DSET = (uint32)1U << 3;
+
+//PROG_ALL          BITS 3,4,5,6 GIOBx OUTPUT
+#define PROGx_LO    gioPORTB->DCLR = (uint32)(1U<<3)+(1U<<4)+(1U<<5)+(1U<<6);
+#define PROGx_HI    gioPORTB->DSET = (uint32)(1U<<3)+(1U<<4)+(1U<<5)+(1U<<6);
+
+//*********** SPI $ GIO INPUTS ************
+//*********** SPI $ GIO INPUTS ************
+           
+//MUX_A2            (M2) GIOB0 OUTPUT
+#define MUXA2_LO    gioPORTB->DCLR = (uint32)1U ;
+#define MUXA2_HI    gioPORTB->DSET = (uint32)1U ;
+
+//MUX_A3            (K2) GIOB1 OUTPUT
+#define MUXA3_LO    gioPORTB->DCLR = (uint32)1U << 1;
+#define MUXA3_HI    gioPORTB->DSET = (uint32)1U << 1;
+
+//SRC_SEL           (F1) GIOB7 OUTPUT
+#define SRCSEL_LO   gioPORTB->DCLR = (uint32)1U << 7;
+#define SRCSEL_HI   gioPORTB->DSET = (uint32)1U << 7;
+
+//ADCRDY            (F2) GIOB2 INPUT
+#define GIO_ADC_RDY ((gioPORTB->DIN >> 2) & 1U)
+
+//DONE0             (C2) GIOA1 INPUT
+#define DONE0       ((gioPORTA->DIN >> 1) & 1U)
+
+//DONE3             (A5) GIOA0 INPUT
+#define DONE3       ((gioPORTA->DIN >> 0) & 1U)
+
+//DONE1             (H3) GIOA6 INPUT
+#define DONE1       ((gioPORTA->DIN >> 6) & 1U)
+
+//PII STAT          (M1) GIOA7 INPUT
+#define PII_STAT    ((gioPORTA->DIN >> 7) & 1U)
+
+#define ADC_CS      0xFEU  //(N3) SPI2CS0, 'spi.h'==SPI_CS_0
+#define PGA_CS      0xFDU  //(D3) SPI2CS1, 'spi.h'==SPI_CS_1
+
+//COLLISION DETECT: In 10Base/100Base-TX half-duplex modes, this pin is 
+//asserted HIGH only when both transmit and receive media are non-idle. (F3)
+           
+// Toggle HET pin0
+//gioSetPort(hetPORT1, gioGetPort(hetPORT1) ^ 0x00000001);
+
+
+
+
+//NOTE: CAN PORTS will be used on FEB Version 4 and up...
+//CAN PORTS 1,2,3 AS INPUTS, SEE CANINIT() setup 
+//
+//CAN1tx 'WixLink'  (A10) 1 bit input  (setup up as input in CANINIT)
+#define CAN1txRD    (canREG1->TIOC & 1U) //CAN1tx GIO Port read only
+
+//CAN1rx            (B10) 1 bit input (setup up as input in CANINIT, not used)
+//not used #define CAN1rxRD    (canREG1->RIOC & 1U) //CAN1rx GIO Port read
+//
+//CAN2tx            (H2) 1 bit input (setup up as output in CANINIT, not used)
+// not used #define CAN2txRD    (canREG2->TIOC & 1U) //CAN2tx GIO Port read
+//CAN2rx            (H1) 1 bit input (setup up as input in CANINIT, not used)
+// not used #define CAN2rxRD    (canREG2->RIOC & 1U) //CAN2rx GIO Port read
+//
+//CAN3tx 'OVCRst'   (M18) 1 bit output (setup up as output in CANINIT)
+#define CAN3txRD    (canREG3->TIOC & 1U) //CAN3tx GIO Port read
+//CAN3rx 'OVCTrip'  (M19) 1 bit input (setup up as input in CANINIT)
+#define CAN3rxRD    (canREG3->RIOC & 1U) //CAN3rx GIO Port read
+
+
+// CAN PORTS 1,2,3, if output mode min pulse width ~350nS, SEE CANINIT() setup
+//
+//not used CANtx2     (H2) 1 bit 
+//not used CANrx2     (H1) 1 bit
+//
+//CANtx3            (M18) 1 bit output CANtx3 high,low
+#define CAN3txHI    canREG3->TIOC = ((canREG3->TIOC & 0xFFFFFFFDU) | 2U) //CAN3tx GIO Port write 1
+#define CAN3txLO    canREG3->TIOC = ((canREG3->TIOC & 0xFFFFFFFDU) | 0U) //CAN3tx GIO Port write 0
+//CANrx3            (M19) 1 bit setup as an input
+
+
+//CAN names used in coding 'BIAS over current circuit control and status'
+#define canOVCstat  CAN3rxRD   //read status, trip== 80mSec high pulse
+#define canOVCRstLO CAN3txLO   //set OVCRst port low
+#define canOVCRstHI CAN3txHI   //set OVCRst port high
+
+
+//CAN name used in coding  '' 
+#define WIZLink CAN1txRD   //reads Wiznet Link Cable Connected Status
+//COLLISION DETECT: In 10Base/100Base-TX half-duplex modes, this pin is 
+//asserted HIGH only when both transmit and receive media are non-idle. (A10)           
+
+
+
 
 
 #define InBufSiz_512  512
@@ -353,96 +674,107 @@ struct vB {
             volatile int RdPtr;                          
             volatile int WrPtr;
             volatile int Cnt;
-            char prompt[20];
-            char Buf[InBufSiz_512];
+            unsigned char Buf[InBufSiz_512];
         };
 
 
-
-#pragma pack(4)                                 //force 32bit boundary on all types
-struct uBuns {
-            u_32Bit uDly;                          
-            u_16Bit Port;
-            u_16Bit Mode;
-            u_16Bit SmPacMode;
-            u_16Bit Flag;
-            u_16Bit errFLAG;                //ephy bcast link bsy error
-            u_16Bit errRESYNC;
-        };
-
-#pragma pack(2)                             //force 16bit boundary on all types
+#pragma pack(2)                                 //force 16bit boundary on all types
 struct netinfo_s {
-            unsigned char ipAddr[4];        //ip
-            unsigned char gateWay[4];       //gate   (network)
-            unsigned char netMask[4];       //mask
-            u_16Bit sTelnet0;               //sock0 port number
-            u_16Bit sTelnet1;               //sock1 port number
-            u_16Bit sTelnet2;               //sock2 port number
-            u_16Bit sTelnet3;               //sock3
-            u_16Bit Spare1;                 //Spare
-            u_16Bit Spare2;                 //Spare
-            u_16Bit Spare3;                 //Spare
-            u_16Bit UpDate;                 //UpDate flag to Update Orange Tree IP
-            u_16Bit Valid;                  //data saved flag
-            u_16Bit unused;                 //required
+            unsigned char ipAddr[4];            //ip
+            unsigned char gateWay[4];           //gate   (network)
+            unsigned char netMask[4];           //mask
+            unsigned char macAddr[6];           //mac
+            u_16Bit sTelnet0;                   //sock0 port number
+            u_16Bit sTelnet1;                   //sock1 port number
+            u_16Bit sTelnet2;                   //sock2 port number
+            u_16Bit sTelnet3;                   //sock3
+            u_16Bit sTcpTimeOut;                //TCP timeout,(100uS/bit)
+            u_16Bit sTcpRetry;                  //TCP retry count
+            u_16Bit Spare1;                     //Spare1
+            u_16Bit Spare2;                     //Spare2
+            u_16Bit Valid;                      //data saved flag
+            u_16Bit reserved;                   //required, quick fix, save routine comes up short by one
            };
 
 
-//Ethernet/Wiznet power up defaults 
-//will be overwritten if user FLASH has valid data for these settings
+
+//Ethernet/Wiznet power up defaults (will be overwritten if user FLASH has valid data for these settings)
+static const struct netinfo_s defNetInfo0 = {
+    {131, 225, 53, 84},                     //local IP  default null setup
+    {131, 225, 55, 200 },                   //Gateway Wilson Hall
+    {255, 255, 255, 00 },                   //Mask for all
+    {0x00,0x80,0x55,0xBD,0x00,0x15},        //Mac number 'HLSWH5'
+
+    5000,                                   //telnet0 port char based
+    5001,                                   //telnet1 port char based
+    5002,                                   //telnet2 port char based
+    5003,                                   //telnet3 port char based
+    100,                                    //TCP timeout,(100uS/bit), 100=10mS, 50=5mS //use min of 100 to prevent re-transmits
+    6,                                      //sets up the TCP retry count.
+    1,                                      //spare1
+    2,                                      //spare2
+    0,                                      //valid download flag
+    0                                       //required, quick fix, save routine comes up short by one
+};
+
 static const struct netinfo_s defNetInfo = {
-            {131, 225, 53, 82},             //local IP  default null setup 'HLSWH4'
-            {131, 225, 56, 200 },           //Gateway Wilson Hall
-            {255, 255, 255, 00 },           //Mask for all
-            5000,                           //telnet0 port char based
-            5001,                           //telnet1 port char based
-            5002,                           //telnet2 port char based
-            5003,                           //telnet3 port char based
-            1,                              //spare1
-            2,                              //spare1
-            3,                              //spare2
-            0,                              //UdDate Flag
-            0,                              //Valid Download Flag
-            0                               //required, quick fix
-        };
+    {131, 225, 52, 177},                    //local IP  default null setup
+    {131, 225, 52, 200 },                   //Gateway Wilson Hall
+    {255, 255, 255, 00 },                   //Mask for all
+    {0x00,0x80,0x55,0xEE,0x00,0x05},        //Mac number 'dcrc6'
+
+    5000,                                   //telnet0 port char based
+    5001,                                   //telnet1 port char based
+    5002,                                   //telnet2 port char based
+    5003,                                   //telnet3 port char based
+    100,                                    //TCP timeout,(100uS/bit), 100=10mS, 50=5mS //use min of 100 to prevent re-transmits
+    6,                                      //sets up the TCP retry count.
+    1,                                      //spare1
+    2,                                      //spare2
+    0,                                      //valid download flag
+    0                                       //required, quick fix, save routine comes up short by one
+};
+
+static const struct netinfo_s defNetInfo192 = {
+    {192, 169, 0, 19 },                     //local IP
+    {192, 169, 0,  1  },                    //Gateway Wilson Hall
+    {255, 255, 255, 00 },                   //Mask for all
+    {02,01,02,03,04,05},                    //Mac number
+    5000,                                   //daq port 0 line based
+    5001,                                   //daq port 1 line based
+    5002,                                   //telnet port char based
+    5003,                                   //UDP socket port, default
+    50,                                     //TCP timeout,(100uS/bit), 100=10mS, 50=5mS
+    6,                                      //sets up the TCP retry count.
+    0,                                      //valid setup flag
+    0                                       //socket 3 status
+};
 
 
-
-#define numbMsg 60
-#define MsgBytMax 32
-
-//PHY definitions
-struct phyHeader
-            {
-            unsigned int  enable;
-            unsigned int  msgCnt;
-            unsigned int  msgBytes[numbMsg];
-            unsigned char msgStr[numbMsg][MsgBytMax];
-            };
-
+//#define HET25OFF    hetREG1->DCLR=  BIT25;
+//#define HET25ON     hetREG1->DSET=  BIT25;
 
 //CONFIGURING THE Si5338 WITHOUT DEFAULT ADDR= 0x70
 #define own_add_w 0x10
 #define own_add_r 0x11
+#define slv_add_w (0x20)
+#define slv_add_r (0x21)
+#define bsize    16
+#define Dev5338  0x70
 
-
-#define pool_POE_VLT    33                  //array location to hold 16bit poe volts
-#define pool_POE_CUR    34                  //array location to hold 16bit poe current
-#define ltc_RSTPB       0x1A                //LTC4266 port reset register
-#define ltc_OnOffPB     0x19                //LTC4266 port power on/off 
 
 //TDC Spill Header Words
-#define cCntlHdrSizWrd (8)                  //main controller header size in words
-#define cCntlHdrSizByt (8*2)                //main controller header size in bytes
+#define cCntlHdrSizWrd (8)                      //main controller header size in words
+#define cCntlHdrSizByt (8*2)                    //main controller header size in bytes
 
-#pragma pack(4)                             //force 16bit boundary on all types
+#pragma pack(4)                                 //force 16bit boundary on all types
 //warning on pack(4),dont mix 32 and 16 words if you dont want unused memory words
 struct Controller_tdcHdr
             {
-            u_16Bit tSpilWrdCntL;           //(all FPGAs plus hdr size of 8 words)
-            u_16Bit tSpilWrdCntH;           //32 bit value tSpilWrdCntX is endian swapped
-            u_16Bit tSpilTrgCntL;           //32bit as low/high words
-            u_16Bit tSpilTrgCntH;           //32bit value tSpilTrgCntX is endian swapped
+            u_16Bit tSpilWrdCntL;               //(all FPGAs plus hdr size of 8 words)
+            u_16Bit tSpilWrdCntH;               //32 bit value tSpilWrdCntX is endian swapped
+            u_16Bit tSpilTrgCntL;               //32bit as low/high words
+            u_16Bit tSpilTrgCntH;               //32bit value tSpilTrgCntX is endian swapped
             u_16Bit tSpilCyc;
             u_16Bit tMask,
                     tID,
@@ -451,150 +783,214 @@ struct Controller_tdcHdr
             };
 
 
+//status block buffers
+#define     sBLKSIZ38   38
+#define     sBLKSIZ22   22
+
+struct  stBlock {
+                //uint16 hdr[3];
+                uint16 uC[sBLKSIZ22];
+                uint16 afe[4][sBLKSIZ38];
+};
+
+
+struct structFPGA_Trig_Cnts
+            {
+            u_32Bit WrdCnt[5];                  //CNTs per fgpa words (4 fpga plus 5th out_of_range_reg counter)
+            u_32Bit TotWrdCnt;                  //CNTs total
+            u_32Bit RDBreqSiz;                  //CNTs requested to read
+            u_32Bit BytToSnd;                   //bytes to send per fpga (use this counter word counter)
+            u_32Bit WrdToSnd;                   //word to send per fpga (use this counter byte counter)
+            u_32Bit OverRun;                    //counter, req size larger than stored data size
+            u_16Bit Mask[5];                    //TRIG MASK ALL
+            u_16Bit Fpga1of4;                   //selected fpga 1of4
+            u_16Bit OverMax;                    //fpga 1of4 data count to high
+            u_16Bit OverMaxCounter;             //fpga OverMax total counter
+            };
+
 //system timer in this structure and incremented in file notification.c, function rtiNotification()
 struct msTimers{
-           u_32Bit volatile  g_timeMs,
-                    g_SockMs,
-                    g_SockIntrSec,
-                    gBusy_mSec,
+           u_32Bit  volatile g_timeMs,
+                    WatchDog,
+                    g_pCntPerSec,
+                    g_pCnt,
                     g_wTicks,
-                    tdcSpillGateCnt,
-                    SpillGateTimeout;
-                    //FEB_Ld_toutSec;
+                    g_wARP,
+                    g_wSTAR,
+                    g_ADCms,
+                    //g_SockmSec,
+                    g_OneWireTime,
+                    g_OneWireNewScanDelay;
             };
-
-
-//system timer in this structure and incremented in file notification.c, function rtiNotification()
-struct sLVDS {
-           u_32Bit volatile  IDChkSec, 
-                    IDPrt,
-                    PoolChkmSec,
-                    PoolMode,
-                    PoolReqType;
-            };
-
-
-
                     
-//FRAM FPGA stored register count
-#define FPGAregCount   0x72                 //fpga reg count to store in FRAM
-
-//Misc data to store in FRAM
-#define Ser_Cntrl_ByteSz     4              //size of SetUp, 2 16bit words
-struct SetUpInfo_s {
-            u_16Bit serNumb;                //board serial number
-            u_16Bit CntrlNumb;              //DAQ controller board number
-           };
-
-
-#define SpillInfo_sByteSz    2             //size of SetUp 'fram_Spill_REGs=FRAM addr'
-struct SpillInfo_s {
-            u_16Bit SpillGateTimeout;       //tdc SpillGateTimeout in mSec
-           };
-
 
 //sendbin() control structure
 struct blocksnd {
-            uLNG gSndWordCnt;
+            uLNG gSndBytCnt;
             lPTR gSndSrc;
-            int  gSndPrt;                   //port number
+            sPTR gSndSrcSptr;
+            int  gSndPrt;                       //port number
+            int  gSndMode;                      //reg or daq data mode
+            int  gSndLen;
+            int  gDMA_Fpga2Mem;
+   volatile int  gDMA_Mem2Wiz; 
+            int  gDMA_TimDlys[5];
+            int  gASC_TimDlys[5];
+            };
+
+
+//sendRDX() control structure
+struct blocksndWrd {
+            uLNG gSndWrdCnt;                    //word count 
+            lPTR gSndSrc;
+            sPTR gSndSrcSptr;
+            int  gSndPrt;                       //port number
+            int  gSndMode;                      //reg or daq data mode
+            int  gSndLen;
+            int  gActBuf;
             int  gDMA_Fpga2Mem;
             int  gDMA_Mem2Wiz;
             int  gDMA_TimDlys[5];
-            int  volatile gBusy;
-            int  gTestMode;
+            int  gASC_TimDlys[5];
             };
 
 
 //UDP definitions
-#pragma pack(4)                             //force 16bit boundary on all types
-struct ePHY_STRUCT
+#pragma pack(4)                                 //force 16bit boundary on all types
+struct udpHeader
             {
-            unsigned int volatile mode;
-            unsigned int volatile xSize;
-            unsigned int spare;
+            unsigned int destip;
+            unsigned int destport;
+            unsigned int sndErr;
             };
 
 #define RST280  0x11
 
-//local sram, Stored to FRAM
-struct uC_Store_FRAM  
-            {
-            u_16Bit nErrorCnt;              //ErrLatch nError counter
-            };
 
-//local sram
+//FRAM FPGA stored register count
+#define FPGAregCount   0x72                     //fpga reg count to store in FRAM
+
+//Misc data to store in FRAM page 0x400
+#define idx_serNumb     0
+#define idx_pgaMuxCh    2
+#define idx_pga280Gain  4
+#define idx_TrgSrcCh    6
+
+#define idx_LinkDir     8
+#define idx_nErrCnt     10
+#define idx_Valid       12
+#define idx_wDogTOCnt   14
+
+#define idx_FpgaEccCnt  16                      //16 bit
+#define idx_NewLinPrmpt 18                      //16 bit
+#define idx_Fake_sSUM   20                      //16 bit
+#define idx_Baud        22                      //32 bit
+
+#define idx_Fake_sCNT   26                      //32 bit
+#define idx_Fake_SrcAdr 30                      //32 bit
+#define idx_End        (30+4)                   //end
+
+
+
+
+#define ad_Fake_sSUM    0x416                   //16 bit
+#define ad_Fake_sCNT    0x418                   //32 bit
+#define ad_Fake_SrcAddr 0x41C                   //32 bit (41C,41D,41E,41F)
+
+//totol bytes use her
+#define FRAM_400wsz    idx_End                  //size of SetUp in 'Bytes'
+
+//uC data storage
 struct uC_Store
             {
-            u_32Bit DwnLd_sCNT;             //4 bytes
-            u_16Bit DwnLd_sSUM;             //2 bytes
-            };
+            u_16Bit serNumb;                    //board serial number
+            u_16Bit pgaMuxCh;                   //HDMI Trim Volt MuxChip(s) ADG1609 1of4
+            u_16Bit pga280Gain;                 //Prg Gain Amp for Trim Volt input
+            u_16Bit TrgSrcCh;                   //trig input src, rg45 or lemo
+            
+            u_16Bit LinkDir;                    //LINK lvds direction
+            u_16Bit nErrCnt;                    //ErrLatch nError counter
+            u_16Bit Valid;                      //old xmitPHY DAQ xmit on PHY (on/off), now flags FRAM data good
+            u_16Bit wDogTimOutCnt;              //watch dog timer timeout counter
+            
+            u_16Bit FpgaEccCnt;                 //ECC error counter for FPGAs                       
+            u_16Bit NewLinPrmpt;                //2 new line prompt control
+            u_16Bit Fake_sSUM;                  //2 bytes chksum fake test data option
+            u_32Bit TTYbaud;                    //32bit usb/tty baud rate
 
-//local storage of SOCKET download programming of FLASH
+            u_32Bit Fake_sCNT;                  //4 bytes count fake test data option
+            u_32Bit Fake_SrcAddr;               //4 bytes flash source addr, fake test data option
+            };
+  
+//ePHY download struc
 struct uSums {
               u_32Bit DwnLd_sCNT;               //4 bytes count
               u_16Bit DwnLd_sSUM;               //2 bytes chksum
+              u_16Bit LdStatus_Tick;            //2 bytes last load status
+              u_16Bit FL_XFER;                  //2 bytes TRANSFER status
+              u_16Bit FL_ERASE;                 //2 bytes ERASE status
+              u_16Bit FL_PGM;                   //2 bytes PGM status
+              u_16Bit FL_BOOT;                  //2 bytes FPGA BOOTUP status
+              u_16Bit FL_SDram;                 //2 bytes FPGA BOOTUP status
+              u_32Bit LdTime;                   //4 bytes last load time fpga upTime
               u_16Bit FL_SOCK_CHKSUM;           //2 bytes FLASH load using socket checked sum
               u_32Bit FL_SOCK_CHKSIZE;          //4 bytes FLASH load using socket checked filesize
 };
 
 
 
-  
-//fpga reg setup structure (defaults, flash and restore)
-typedef struct FPGA_Registers{
+#pragma pack(2)                                 //force 16bit boundary on all types
+struct udpMessage
+            {
+            u_16Bit  *Ptr;
+            u_16Bit  type,
+                     msgId,
+                     initial,
+                     reqSiz,
+                     rData[0x410],              //size max (BYTES PLUS ROOM FOR UNPACKED TO PACK OVERRUN) as 1472-8=1464, (header=8)
+                     overRun,
+                     SockErr,                   //sock
+                     udpReqs,                   //udp command counter
+                     udpSendDly;                //delay over 1mS on upd xmit
+            };
+
+
+#define FP_REGS_MAX     23      //nn regs groups(ROWs), plus one Later Code Counts from 1
+#define FP_REGS_VALID0 0xAFE0   //mask off lowest nibble
+#define FP_REGS_VALID1 0xAFE1
+#define FP_REGS_VALID2 0xAFE2
+#define FP_REGS_VALID3 0xAFE3
+#define rLOADED         00      //Number of actual register loaded, Filled in by code
+#define fMux            0
+#define fGain           3       //3==gain of 1 on pgm280 chip
+
+
+//fpga reg setup structure for Constants(defaults, flash and restore)
+typedef struct FPGA_Regs{
    unsigned short Addr;
    unsigned short RegCnt;
    unsigned short Value[8];
 } FPGA_RegS;
 
 
+//fpga reg setup structure for Save/Recall
+typedef struct FPGA_Regs1{
+   unsigned short Value[8];
+} FPGA_RegS1;
 
 
-//ePHY LINK Board numbering for 'Happy Bus
+
 typedef struct HappyBusReg{
-   int volatile CmdLenB,
-   PoeBrdCh,
-   CmdType,
-   CntRecd,   
-   //Active,                      //flags the command type
-   Socket,
-   SavePrt,  
-   FMRecvErr,
-   Stat,                        //bit 2 download BIN file to FEB option active
-   SlowReply;                   //slow reply flag
-   
-   volatile unsigned int WaitCnt, //uses LVDS_TIMEOUT value
-   FM_DAT,
-   FM_STA,
-   FM_PAR,
-   ePHY_DATAVAIL_BIT;       //ethernet phy status 1of8 BIT0-BIT7
-   sPTR ePHY_SndFIFO;       //ethernet phy broadcast pointer
-   sPTR ePHY_CH_ENA;        //ethernet phy 1of8 chan enable
-   sPTR ePHY_SndPAC;        //ethernet phy send ptr
-   sPTR ePHY_RecFIFO;       //ethernet phy rec data reg ptr, 1of8
-   sPTR ePHY_STAT;          //ethernet phy status reg ptr, 1of8
+   unsigned short CmdSizW;
+   unsigned short BrdNumb;
+   unsigned short CmdType;
+   unsigned short SndWrds;
+   //unsigned short myLinkNumber;     //filled in by init from controller
+   //unsigned short myLnkCntrlTmp;    //filled in by init from controller
+   unsigned short CntrlNumb;            //controller number from controller 
+   unsigned short PHYrecvErr;
+   unsigned short *Src;
 } sHappyBusReg;
-
-
-
-
-#pragma pack(4)             //force 16bit boundary on all types
-
-//ePHY LINK Board numbering for 'Happy Bus
-typedef struct sLVDS_ePHY_REG{
-   unsigned int FM40_STAp;          //lvds FM link status
-   unsigned int FM41_PARp;          //lvds FM link parity
-   unsigned short* FM30_DATp;       //lvds FM link rx data port
-   unsigned int ePHY_BIT;           //ethernet phy status 1of8 BIT0-BIT7
-   
-   unsigned short* ePHY18_RECCNTp;  //ethernet phy rec word cnt, 1of8
-   unsigned short* ePHY20_RECBUFp;  //ethernet phy rec data reg ptr, 1of8
-   unsigned short* ePHY11_BCAST_FILLFIFOp; //ethernet phy broadcast pointer
-   unsigned short* ePHY0E_XMSKp;    //ethernet phy broadcast pointer
-   unsigned short* ePHY12_XMITp;    //ethernet phy broadcast pointer
-   unsigned short* ePHY16_STAp;     //ethernet phy status reg ptr
-} sLVDS_ePHY;
 
 
 //time of day struct
@@ -608,259 +1004,28 @@ struct time  {                                  //24 hour time
 
 
 
-//testing internal fpga logic uBunch xmits
-struct ky {
-    int     mode;
-    uSHT    k28y2[40];
-    };
-
-
-
-//ePHY LINK Board numbering for 'Happy Bus
-//ePHY packet format
-
-#define uCmdBufSz44  44
-struct ePHYregS{
-   unsigned short e_SRC[3];     //phy dest      6 bytes
-   unsigned short e_DST[3];     //phy src       6 bytes
-   unsigned short e_PAYLDLEN;   //phy payload   2 bytes
-   unsigned short u_CMDLEN;     //uHdr cmdlen   2 bytes
-   unsigned short u_BRDNUM;     //uHdr brdNum   2 bytes
-   unsigned short u_CMDTYP;     //uHdr cmdType  2 bytes
-   char     u_CmdBuf[uCmdBufSz44];//command string buffer
+//New for Diaqnostic Buffers 03-11-20 tek
+struct ubdiaq {
+        u_16Bit ReqH;
+        u_16Bit ReqL;
+        u_16Bit MemH;
+        u_16Bit MemL;  
+        u_16Bit ubstat;
 };
 
 
-#define uBunSz256     256
+/* 
+//from "types.h"
+typedef uint8			u_char;		//8-bit value 
+typedef uint8 			SOCKET;
+typedef uint16			u_short;	// 16-bit value 
+typedef uint16			u_int;		// 16-bit value 
+typedef uint32			u_long;		// 32-bit value 
 
-struct ePHYdaqS{
-   unsigned short e_SRC[3];      //phy dest      6 bytes
-   unsigned short e_DST[3];      //phy src       6 bytes
-   unsigned short e_PAYLDLEN;    //phy payload   2 bytes
-   unsigned short u_CMDLEN;     //uHdr cmdlen   2 bytes
-   unsigned short u_BRDNUM;     //uHdr brdNum   2 bytes
-   unsigned short u_CMDTYP;     //uHdr cmdType  2 bytes
-   unsigned short u_uBunchBuf[uBunSz256];  //int data size
-};
-
-            
-//*********** HET1 OUTPUTS *************
-//*********** HET1 OUTPUTS *************
-            
-//FLASH RESET       (E3) HET1_11 
-#define FlashRst_LO    hetREG1->DCLR=  BIT11;   //500nS low pulse, wait 50-nS to read
-#define FlashRst_HI    hetREG1->DSET=  BIT11;
- 
-//TP48              (T1) HET1_7 
-#define h_TP48_LO     hetREG1->DCLR=  BIT7;
-#define h_TP48_HI     hetREG1->DSET=  BIT7;
-
-//SUSPEND           (V7) HET1_9
-#define Suspend_LO    hetREG1->DCLR=  BIT9;
-#define Suspend_HI    hetREG1->DSET=  BIT9;
-          
-//LED1of3 ..........LED3of3  
-//LED Drive to get white
-//  Current forward=08ma  Red
-//  Current forward=14ma  Grn
-//  Current forward=18ma  Blu
-
-//LED_BLUE          (V2) HET1_1
-#define     BLU     1    
-#define LED_BLU1      hetREG1->DCLR=  BIT1; //ON
-#define LED_BLU0      hetREG1->DSET=  BIT1; //OFF
-
-//LED_GRN           (P2) HET1_20
-#define     GRN     20    
-#define LED_GRN1      hetREG1->DCLR=  BIT20; //ON
-#define LED_GRN0      hetREG1->DSET=  BIT20; //OFF
-
-//LED_RED           (P1) HET1_24
-#define     RED     24    
-#define LED_RED1      hetREG1->DCLR=  BIT24; //ON
-#define LED_RED0      hetREG1->DSET=  BIT24; //OFF
-//LED_OFF           (Px) HET1_13,20,24
-#define LEDs_OFF      hetREG1->DSET= (BIT1|BIT20|BIT24);
-
-//HET1_6 normally unused, is now an output to control oTree Daughter board power
-//Orange Tree board can locked up by aggressive network port scanning
-//oTreePwr          (W3) HET1_6
-#define oTreeOn       hetREG1->DCLR=  BIT6;    //new, on SBND REV A 2020 boards
-#define oTreeOff      hetREG1->DSET=  BIT6;    //new, on SBND REV A 2020 boards
-
-//FAN1              (D19) HET1_10
-#define FAN1_LO        hetREG1->DCLR=  BIT10;
-#define FAN1_HI        hetREG1->DSET=  BIT10;
-//FAN2              (A11) HET1_14
-#define FAN2_LO        hetREG1->DCLR=  BIT14;
-#define FAN2_HI        hetREG1->DSET=  BIT14;
-
-//TEST PNT 47         (N1) HET1_15    
-#define h_TP47_LO       hetREG1->DCLR=  BIT15;
-#define h_TP47_HI       hetREG1->DSET=  BIT15;
-
-//CLR_ERR           (A14) HET1_26  nError reset
-#define CLR_ERR_LO     hetREG1->DCLR=  BIT26;
-#define CLR_ERR_HI     hetREG1->DSET=  BIT26;
-
-//DSR               (B11) HET1_30
-#define DSR_LO         hetREG1->DCLR=  BIT30;
-#define DSR_HI         hetREG1->DSET=  BIT30;
-//DTR               (A13) HET1_17
-#define DTR_LO         hetREG1->DCLR=  BIT17;
-#define DTR_HI         hetREG1->DSET=  BIT17;
-
-//ucLED             (B3) HET1_22
-#define ucLED_LO       hetREG1->DCLR=  BIT22;
-#define ucLED_HI       hetREG1->DSET=  BIT22;
-
-//RDWR_B            (J4) HET1_23
-#define RDWR_B_LO      hetREG1->DCLR=  BIT23;
-#define RDWR_B_HI      hetREG1->DSET=  BIT23;
-
-
-//InitB0 ..........InitB3  
-//#define INIT_Bx[] = {29,16,27,6}; //Init array list of 'init' het port#
-
-//Read InitB1 pin   (A4)  HET1_16
-#define InitB1_Read    ((hetREG1->DIN>>16) & 1U)
-
-//Read InitB2 pin   (K19) HET1_28
-#define InitB2_Read    ((hetREG1->DIN>>28) & 1U)   //for ver1 board was 27
-
-//Read InitB3 pin   (W5)  HET1_2
-#define InitB3_Read    ((hetREG1->DIN>>02) & 1U)
-
-
-//Read InitB0 pin   (H4)  HET1_21
-#define InitB0_Read     ((hetREG1->DIN>>21) & 1U)
-//Read InitB0 pin   (G19) SPI1_ENABLE PIN
-//#define InitB0_Read    ((spiPORT1->DIN >> 8U) & 1U)   //spiPORT2->DOUT=(uint32)0U<< SPI_PIN_ENA; //= 8U,
-//#define InitB0_Read spiREG2->PC3 = (uint32)((uint32)0U << 10U);  //spiPORT2->DOUT=(uint32)0U<< SPI_PIN_SIMO_2; 
-
-
-
-    
-//*********** HET1 INPUTS ************
-//*********** HET1 INPUTS ************
-
-//TMP05A            (E18) HET1_8
-//TMP05A Temperature Input used by 'HET APP CODE'
-
-//ERROR LATCH       (B12) HET1_4 INPUT  nError Monitor
-#define hERR_Latch  ((hetREG1->DIN >> 4) & 1U) 
-
-//FLASH RDY         (J1) HET1_18 INPUT
-#define FLASH_RDY   ((hetREG1->DIN >> 18) & 1U)
-            
-//DTR USB BRIDGE    (A13) HET1_17
-#define hDTR        ((hetREG1->DIN >> 17) & 1U))
-
-
-//*********** GIO OUTPUTS ************
-//*********** GIO OUTPUTS ************
-
-//CSI_B0 ..........CSI_B3  
-//CSI_B0            (G1) GIOB4 OUTPUT
-#define CSI_B0_LO   gioPORTB->DCLR = (uint32)1U << 4;
-#define CSI_B0_HI   gioPORTB->DSET = (uint32)1U << 4;
-//CSI_B1            (G2) GIOB5 OUTPUT
-#define CSI_B1_LO   gioPORTB->DCLR = (uint32)1U << 5;
-#define CSI_B1_HI   gioPORTB->DSET = (uint32)1U << 5;
-//CSI_B2            (F2) GIOB2 OUTPUT
-#define CSI_B2_LO   gioPORTB->DCLR = (uint32)1U << 6;
-#define CSI_B2_HI   gioPORTB->DSET = (uint32)1U << 6;
-//CSI_B3            (F1) GIOB7 OUTPUT
-#define CSI_B3_LO   gioPORTB->DCLR = (uint32)1U << 7;
-#define CSI_B3_HI   gioPORTB->DSET = (uint32)1U << 7;
-
-
-
-//PROG_B0 ..........PROG_B3  
-//PROG_B0           (M2) GIOB0 OUTPUT
-#define PROG0_LO    gioPORTB->DCLR = (uint32)1U << 0;
-#define PROG0_HI    gioPORTB->DSET = (uint32)1U << 0;
-//PROG_B1           (K12) GIOB1 OUTPUT
-#define PROG1_LO    gioPORTB->DCLR = (uint32)1U << 1;
-#define PROG1_HI    gioPORTB->DSET = (uint32)1U << 1;
-//PROG_B2           (F2) GIOB2 OUTPUT
-#define PROG2_LO    gioPORTB->DCLR = (uint32)1U << 2;
-#define PROG2_HI    gioPORTB->DSET = (uint32)1U << 2;
-//PROG_B3           (W10) GIOB3 OUTPUT
-#define PROG3_LO    gioPORTB->DCLR = (uint32)1U << 3;
-#define PROG3_HI    gioPORTB->DSET = (uint32)1U << 3;
-//PROG_ALL          BITS 3,4,5,6 GIOBx OUTPUT
-#define PROGx_LO    gioPORTB->DCLR = (uint32)(1U<<0)+(1U<<1)+(1U<<2)+(1U<<3);
-#define PROGx_HI    gioPORTB->DSET = (uint32)(1U<<0)+(1U<<1)+(1U<<2)+(1U<<3);
-
-
-//DONE0 ..........DONE3  
-//DONE0             (A5) GIOA0 INPUT
-#define DONE0       ((gioPORTA->DIN >> 0) & 1U)
-//DONE1             (C1) GIOA2 INPUT
-#define DONE1       ((gioPORTA->DIN >> 2) & 1U)
-//DONE2             (C2) GIOA1 INPUT
-#define DONE2       ((gioPORTA->DIN >> 1) & 1U)
-//DONE3             (E1) GIOA3 INPUT
-#define DONE3       ((gioPORTA->DIN >> 3) & 1U)
-
-//ETHER IRQ         (B5) GIOA5 INPUT
-#define ETH_IRQ     ((gioPORTA->DIN >> 5) & 1U)
-
-//FPGA IRQ          (A6) GIOA6 INPUT
-#define FPGA_IRQ    ((gioPORTA->DIN >> 4) & 1U)
-
-
-
-//*********** SPI INPUTS / OUTPUTS (#include "spi.h")************
-//*********** SPI INPUTS / OUTPUTS ************
-//ADC_RESET         (D1, SPI2_SIMO2) OUTPUT
-    /** - SPI2 Port output values */
-//  spiREG2->PC3 =    (uint32)((uint32)1U << 0U)  /* SCS[0] */
-//                    | (uint32)((uint32)1U << 1U)  /* SCS[1] */
-//                    | (uint32)((uint32)0U << 8U)  /* ENA */
-//                    | (uint32)((uint32)0U << 9U)  /* CLK */
-//                    | (uint32)((uint32)1U << 10U)  /* SIMO */
-//                    | (uint32)((uint32)0U << 11U); /* SOMI */
-#define FLASH_WP_LO   spiREG2->PC3 = (uint32)((uint32)0U << 10U);  //spiPORT2->DOUT=(uint32)0U<< SPI_PIN_SIMO_2; 
-#define FLASH_WP_HI   spiREG2->PC3 = (uint32)((uint32)1U << 10U);  //spiPORT2->DOUT=(uint32)1U<< SPI_PIN_SIMO_2;
-
-// Toggle HET pin0
-//gioSetPort(hetPORT1, gioGetPort(hetPORT1) ^ 0x00000001);
-
-
-//two ways of setting pointers, via assignLinkPort() or direct
-/*
-    HappyBus.FM_DAT = fbase+ (oFMData30[brdNum]*2);       	//lvds data
-        IOPs[rg].FM_DATp= (uSHT*)FP+ ((oFMDATA30+(bit))); 	//lvds data 0x30-37 pointer
-
-	HappyBus.FM_STA = fbase+ (oFMStat40*2);             	//lvds status
-        IOPs[rg].FM_STAp= FP+ (oFMStat40*2);    			//lvds status
-
-	HappyBus.FM_PAR = fbase+ (oFMPerr41*2);             	//lvds parity error
-        IOPs[rg].FM_PARp= FP+ (oFMPerr41*2);       			//lvds parity error
-   
-    HappyBus.ePHY_DATAVAIL_BIT= (1<<(brdNum-1));             //ePHY data avail status bit
-        IOPs[rg].ePHYFF_RECp= (uSHT*)FP+(oPHY_RDFF20+(bit)); //ePHY rec data fifo pointer 0x20
-
-	HappyBus.ePHY_RecFIFO= (uSHT*)fbase+(oPHY_RDFF20*brdNum); //ePHY rec data fifo
-    
-    HappyBus.ePHY_CH_ENA= (uSHT*)fbase+(oPHY_XMT_ENA);      //Broadcast chans 0-7 enables
-        IOPs[rg].ePHYXMT_ENAp= (uSHT*)FP+ (oPHY_XMT_ENA);   //Broadcast chans 0-7 enables
-
-	HappyBus.ePHY_SndFIFO= (uSHT*)fbase+(oPHY_WRFF11);      //ePHY xmit data fifo
-        IOPs[rg].ePHYFF_XMTp=  (uSHT*)FP+ (oPHY_WRFF11);    //ePHY xmit data fifo
-
-	HappyBus.ePHY_STAT= (uSHT*)fbase+(oPHY_rxSTA16);        //PHY 8-Port Rec data Status (bit7-0, 1=empty)
-        IOPs[rg].ePHY_STAp=    (uSHT*)FP+ (oPHY_rxSTA16);   //PHY 8-Port Rec data Status (bit7-0, 1=empty)
-
-	HappyBus.ePHY_SndPAC= (uSHT*)fbase+(oPHY_XMIT12);       //ePHY XMIT R/W (RD 1=empty), (WR 1 to xmit)
-        IOPs[rg].ePHYXMT_PACp= (uSHT*)FP+ (oPHY_XMIT12);    //ePHY XMIT R/W (RD 1=empty), (WR 1 to xmit)
-
-	
-    REG16(HappyBus.FM_PAR)= FMRstBit8;                  	//BIT8, clear buffers                    
-        IOPs[rg].ePHY_BIT= (1<<bit);                        //ePHY data avail status bit
-	
+typedef union _un_adcData {
+	uint32	iVal;
+	uint8  cVal[3];
+}un_adcData;
 */
 
 #endif

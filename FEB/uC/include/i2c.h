@@ -1,7 +1,7 @@
 /** @file I2C.h
 *   @brief I2C Driver Definition File
-*   @date 05-Oct-2016
-*   @version 04.06.00
+*   @date 07-July-2017
+*   @version 04.07.00
 *   
 */
 
@@ -167,20 +167,20 @@ typedef struct i2c_config_reg
 #define I2C_OAR_CONFIGVALUE         0x00000000U   
 #define I2C_IMR_CONFIGVALUE       (((uint32)0U << 6U) \
                                  | ((uint32)0U << 5U) \
-                                 | ((uint32)1U << 4U) \
+                                 | ((uint32)0U << 4U) \
                                  | ((uint32)1U << 3U) \
                                  | ((uint32)0U << 2U) \
                                  | ((uint32)0U << 1U) \
                                  | ((uint32)0U))
   
-#define I2C_CLKL_CONFIGVALUE        34U        
-#define I2C_CLKH_CONFIGVALUE        34U        
+#define I2C_CLKL_CONFIGVALUE        15U        
+#define I2C_CLKH_CONFIGVALUE        15U        
 #define I2C_CNT_CONFIGVALUE         8U   
 #define I2C_SAR_CONFIGVALUE         0x000003FFU 
 #define I2C_MDR_CONFIGVALUE       ((uint32)0x00000000U \
                                  | (uint32)((uint32)1U <<11U) \
                                  | (uint32)((uint32)1U <<10U) \
-                                 | (uint32)((uint32)I2C_TRANSMITTER) \
+                                 | (uint32)((uint32)I2C_RECEIVER) \
                                  | (uint32)((uint32)I2C_7BIT_AMODE) \
                                  | (uint32)((uint32)1U << 7U) \
                                  | (uint32)((uint32)0U) \
@@ -197,7 +197,7 @@ typedef struct i2c_config_reg
                                  | (uint32)((uint32)0U))
 #define I2C_PD_CONFIGVALUE        ((uint32)((uint32)0U << 1U) \
                                  | (uint32)((uint32)0U))
-#define I2C_PSL_CONFIGVALUE       ((uint32)((uint32)0U << 1U) \
+#define I2C_PSL_CONFIGVALUE       ((uint32)((uint32)1U << 1U) \
                                  | (uint32)((uint32)1U))         
  
 

@@ -6,13 +6,132 @@
  *   This file contains the device abstraction layer APIs for EMAC.
  */
 
-/* Copyright (C) 2013 Texas Instruments Incorporated - www.ti.com
- * ALL RIGHTS RESERVED
- */
+/* 
+* Copyright (C) 2009-2016 Texas Instruments Incorporated - www.ti.com  
+* 
+* 
+*  Redistribution and use in source and binary forms, with or without 
+*  modification, are permitted provided that the following conditions 
+*  are met:
+*
+*    Redistributions of source code must retain the above copyright 
+*    notice, this list of conditions and the following disclaimer.
+*
+*    Redistributions in binary form must reproduce the above copyright
+*    notice, this list of conditions and the following disclaimer in the 
+*    documentation and/or other materials provided with the   
+*    distribution.
+*
+*    Neither the name of Texas Instruments Incorporated nor the names of
+*    its contributors may be used to endorse or promote products derived
+*    from this software without specific prior written permission.
+*
+*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+*  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+*  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+*  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+*  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+*  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+*  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+*  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+*/
+
+
+
+/* USER CODE BEGIN (0) */
+/* USER CODE END */
 
 #include "emac.h"
 
+/* USER CODE BEGIN (1) */
 
+#include "ver_io.h"
+#include "ver_ePHY.h"
+
+extern rxch_t *mu_rxch_int;
+extern struct phyHeader phyHdr;
+
+
+//16bit moves, cnt is in word count
+extern unsigned short movStr16(unsigned short *src, unsigned short *dst, short int cnt);
+
+//all daq packets, status/counter
+extern struct phyPACSTAT paKet;         
+extern struct phyPAC_ERRORS PaketStats;     //storage for packet errors, counters
+
+//** CODE MODS in 'emac.c' **
+//tek 11-16-14: function 'EMACTxIntISR()', at end add line "g_EMACTxRdy=0; //tek mod
+
+//function 'void EMACReceive(hdkif_t *hdkif)' 
+//after this line --- rxch_int->free_head = curr_bd;
+//add following lines
+//****  This is now done in interrupt handler file notifications.c ****
+//****  See emacRxNotification()   ****
+
+//tek comment out 'EMACLinkSetup()' to speed things up 02-27-15
+//after 'Dp83640LinkStatusGet()' comment out 'EMACLinkSetup()' see below
+  //if(EMACLinkSetup(hdkif) != EMAC_ERR_OK) {
+  //  retVal = EMAC_ERR_CONNECT;
+  //} else {
+  //}
+
+
+//ADD ONE LINE AFTER
+  /*Initialize the EMAC, EMAC Control and MDIO modules. */
+  //EMACInit(hdkif->emac_ctrl_base, hdkif->emac_base);
+  //MDIOInit(hdkif->mdio_base, MDIO_FREQ_INPUT, MDIO_FREQ_OUTPUT);
+//ADD  
+  //EMACRxPromiscuousEnable(hdkif->emac_base, 0); //(base, ch)   'Enable Promiscuous Mode'
+
+//tek addded 'EMACTransmit()' hung up on reset june 2018 
+//ADD ONE LINE AFTER, while((curr_bd->flags_pktlen & EMAC_BUF_DESC_SOP) == EMAC_BUF_DESC_SOP) {
+//  if (RecHung++ > 8000000)
+//    {
+//    RecHung=0;
+//    resetEntry();
+//    }
+
+
+
+/**
+ * \brief   Enables a specific channel to receive Promiscuou frames
+ *
+ * \param   emacBase      Base Address of the EMAC module registers.
+ * \param   channel       Channel Number.
+ *
+ * \return  None
+ *
+ **/
+/* SourceId : ETH_SourceId_021 */
+/* DesignId : ETH_DesignId_021*/
+/* Requirements : HL_ETH_SR28 */
+void EMACRxPromiscuousEnable(uint32 emacBase, uint32 channel)
+{
+    HWREG(emacBase + EMAC_RXMBPENABLE) &= (~(uint32)EMAC_RXMBPENABLE_RXCEFEN);
+    HWREG(emacBase + EMAC_RXMBPENABLE) &= (~(uint32)EMAC_RXMBPENABLE_RXCAFEN);
+
+    //tek aug2019 allow short nonstandard packets
+    //HWREG(emacBase + EMAC_RXMBPENABLE) &= (~(uint32)EMAC_RXMBPENABLE_RXCMFEN);
+    HWREG(emacBase + EMAC_RXMBPENABLE) &= (~(uint32)EMAC_RXMBPENABLE_RXCAFEN);
+    //tek end
+    
+    
+    HWREG(emacBase + EMAC_RXMBPENABLE) |= ((uint32)EMAC_RXMBPENABLE_RXCEFEN | ((uint32)channel << (uint32)EMAC_RXMBPENABLE_RXCEFEN_SHIFT));
+    HWREG(emacBase + EMAC_RXMBPENABLE) |= ((uint32)EMAC_RXMBPENABLE_RXCAFEN | ((uint32)channel << (uint32)EMAC_RXMBPENABLE_RXCAFEN_SHIFT));
+
+    //tek aug2019 allow short nonstandard packets
+    HWREG(emacBase + EMAC_RXMBPENABLE) |= ((uint32)EMAC_RXMBPENABLE_RXCSFEN | ((uint32)channel << (uint32)EMAC_RXMBPENABLE_RXCSFEN_SHIFT));
+    //HWREG(emacBase + EMAC_RXMBPENABLE) |= ((uint32)EMAC_RXMBPENABLE_RXCMFEN | ((uint32)channel << (uint32)EMAC_RXMBPENABLE_RXCMFEN_SHIFT));
+    //tek end
+}
+
+
+
+/* USER CODE END */
 
 /* Defining interface for all the emac instances */
 hdkif_t hdkif_data[MAX_EMAC_INSTANCE];
@@ -67,9 +186,9 @@ void EMACTxIntPulseEnable(uint32 emacBase, uint32 emacCtrlBase, uint32 ctrlCore,
 void EMACTxIntPulseDisable(uint32 emacBase, uint32 emacCtrlBase, uint32 ctrlCore, uint32 channel)
 /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "LDRA Tool issue." */
 {
-    HWREG(emacBase + EMAC_TXINTMASKCLEAR) |= (uint32)((uint32)1U << channel);
+    HWREG(emacBase + EMAC_TXINTMASKCLEAR) |= ((uint32)1U << channel);
 
-    HWREG(emacCtrlBase + EMAC_CTRL_CnTXEN(ctrlCore)) &= (uint32)(~((uint32)1U << channel));
+    HWREG(emacCtrlBase + EMAC_CTRL_CnTXEN(ctrlCore)) &= (~((uint32)1U << channel));
 }
 
 /**
@@ -89,9 +208,9 @@ void EMACTxIntPulseDisable(uint32 emacBase, uint32 emacCtrlBase, uint32 ctrlCore
 void EMACRxIntPulseEnable(uint32 emacBase, uint32 emacCtrlBase, uint32 ctrlCore, uint32 channel)
 /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "LDRA Tool issue." */
 {
-    HWREG(emacBase + EMAC_RXINTMASKSET) |= (uint32)((uint32)1U << channel);
+    HWREG(emacBase + EMAC_RXINTMASKSET) |= ((uint32)1U << channel);
 
-    HWREG(emacCtrlBase + EMAC_CTRL_CnRXEN(ctrlCore)) |= (uint32)((uint32)1U << channel);
+    HWREG(emacCtrlBase + EMAC_CTRL_CnRXEN(ctrlCore)) |= ((uint32)1U << channel);
 }
 
 /**
@@ -110,9 +229,9 @@ void EMACRxIntPulseEnable(uint32 emacBase, uint32 emacCtrlBase, uint32 ctrlCore,
 /* Requirements : HL_ETH_SR15 */
 void EMACRxIntPulseDisable(uint32 emacBase, uint32 emacCtrlBase, uint32 ctrlCore, uint32 channel)
 {
-    HWREG(emacBase + EMAC_RXINTMASKCLEAR) |= (uint32)((uint32)1U << channel);
+    HWREG(emacBase + EMAC_RXINTMASKCLEAR) |= ((uint32)1U << channel);
 
-    HWREG(emacCtrlBase + EMAC_CTRL_CnRXEN(ctrlCore)) &= (uint32)(~((uint32)1U << channel));
+    HWREG(emacCtrlBase + EMAC_CTRL_CnRXEN(ctrlCore)) &= (~((uint32)1U << channel));
 }
 /**
  * \brief   This API sets the RMII speed. The RMII Speed can be 10 Mbps or 
@@ -132,7 +251,7 @@ void EMACRxIntPulseDisable(uint32 emacBase, uint32 emacCtrlBase, uint32 ctrlCore
 /* Requirements : HL_ETH_SR19 */
 void EMACRMIISpeedSet(uint32 emacBase, uint32 speed)
 {
-    HWREG(emacBase + EMAC_MACCONTROL) &= (uint32)(~(uint32)EMAC_MACCONTROL_RMIISPEED);
+    HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)EMAC_MACCONTROL_RMIISPEED);
     
     HWREG(emacBase + EMAC_MACCONTROL) |= speed;
 }
@@ -140,8 +259,8 @@ void EMACRMIISpeedSet(uint32 emacBase, uint32 speed)
 /* DesignId : ETH_DesignId_006*/
 /* Requirements : HL_ETH_SR18 */
 /**
- * \brief   This API enables the MII control block. It also needs to be enabled in the PINMUX module.
- *
+ * \brief   This API set the GMII bit, RX and TX are enabled for receive and transmit.
+ *          Note: This is not the API to enable MII. 
  * \param   emacBase     Base address of the EMAC Module registers.
  *
  * \return  None
@@ -153,8 +272,8 @@ void EMACMIIEnable(uint32 emacBase)
 }
 
 /**
- * \brief   This API disables the MII module and holds MII Rx and Tx in reset.
- *
+ * \brief   This API clears the GMII bit, Rx and Tx are held in reset.
+ *          Note: This is not the API to disable MII. 
  * \param   emacBase     Base address of the EMAC Module registers.
  *
  * \return  None
@@ -166,7 +285,7 @@ void EMACMIIEnable(uint32 emacBase)
 void EMACMIIDisable(uint32 emacBase)
 /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "LDRA Tool issue." */
 {
-    HWREG(emacBase + EMAC_MACCONTROL) &= (uint32)(~(uint32)EMAC_MACCONTROL_GMIIEN);
+    HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)EMAC_MACCONTROL_GMIIEN);
 }
 
 /**
@@ -186,7 +305,7 @@ void EMACMIIDisable(uint32 emacBase)
 /* Requirements : HL_ETH_SR21 */
 void EMACDuplexSet(uint32 emacBase, uint32 duplexMode)
 {
-    HWREG(emacBase + EMAC_MACCONTROL) &= (uint32)(~(uint32)EMAC_MACCONTROL_FULLDUPLEX);
+    HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)EMAC_MACCONTROL_FULLDUPLEX);
     
     HWREG(emacBase + EMAC_MACCONTROL) |= duplexMode;
 }
@@ -330,7 +449,7 @@ void EMACInit(uint32 emacCtrlBase, uint32 emacBase)
     /*SAFETYMCUSW 28 D MR:NA <APPROVED> "Hardware status bit read check" */
     while((HWREG(emacCtrlBase + EMAC_CTRL_SOFTRESET) & EMAC_CONTROL_RESET) == EMAC_CONTROL_RESET)
     { 
-	} /* Wait */
+    } /* Wait */
 
     /* Reset the EMAC Module. This clears the CPPI RAM also */
     HWREG(emacBase + EMAC_SOFTRESET) = EMAC_SOFT_RESET;
@@ -338,7 +457,7 @@ void EMACInit(uint32 emacCtrlBase, uint32 emacBase)
     /*SAFETYMCUSW 28 D MR:NA <APPROVED> "Hardware status bit read check" */
     while((HWREG(emacBase + EMAC_SOFTRESET) & EMAC_SOFT_RESET) == EMAC_SOFT_RESET )
     { 
-	} /* Wait */
+    } /* Wait */
 
     HWREG(emacBase + EMAC_MACCONTROL)= 0U;
     HWREG(emacBase + EMAC_RXCONTROL)= 0U;
@@ -378,9 +497,9 @@ void EMACInit(uint32 emacCtrlBase, uint32 emacBase)
 /* Requirements : HL_ETH_SR7 */
 void  EMACMACSrcAddrSet(uint32 emacBase, uint8 macAddr[6])
 {
-    HWREG(emacBase + EMAC_MACSRCADDRHI) = ((uint32)macAddr[5U] |(uint32)((uint32)macAddr[4U] << 8U)
-                                     |(uint32)((uint32)macAddr[3U] << 16U) |(uint32)((uint32)macAddr[2U] << 24U));
-    HWREG(emacBase + EMAC_MACSRCADDRLO) = ((uint32)macAddr[1U] | (uint32)((uint32)macAddr[0U] << 8U));
+    HWREG(emacBase + EMAC_MACSRCADDRHI) = ((uint32)macAddr[5U] |((uint32)macAddr[4U] << 8U)
+                                     |((uint32)macAddr[3U] << 16U) |((uint32)macAddr[2U] << 24U));
+    HWREG(emacBase + EMAC_MACSRCADDRLO) = ((uint32)macAddr[1U] | ((uint32)macAddr[0U] << 8U));
 }
 
 /**
@@ -509,7 +628,7 @@ void EMACRxBroadCastDisable(uint32 emacBase, uint32 channel)
 /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "LDRA Tool issue." */
 {
     HWREG(emacBase + EMAC_RXMBPENABLE) &= (~(uint32)EMAC_RXMBPENABLE_RXBROADCH);
-	/* Broadcast Frames are filtered. */
+    /* Broadcast Frames are filtered. */
     HWREG(emacBase + EMAC_RXMBPENABLE) &= (~(uint32)EMAC_RXMBPENABLE_RXBROADEN);
 }
 
@@ -639,7 +758,7 @@ void EMACInstConfig(hdkif_t *hdkif)
     hdkif->emac_ctrl_ram = EMAC_CTRL_RAM_0_BASE;
     hdkif->mdio_base = MDIO_BASE;
     hdkif->phy_addr = 1U;
-	/* (MISRA-C:2004 10.1/R) MISRA error reported with Code Composer Studio MISRA checker.  */
+    /* (MISRA-C:2004 10.1/R) MISRA error reported with Code Composer Studio MISRA checker.  */
     hdkif->phy_autoneg = &Dp83640AutoNegotiate;
     hdkif->phy_partnerability = &Dp83640PartnerAbilityGet;
 }
@@ -664,7 +783,7 @@ uint32 EMACLinkSetup(hdkif_t *hdkif) {
                              (uint16)((uint16)DP83640_100BTX | (uint16)DP83640_100BTX_FD
                               | (uint16)DP83640_10BT | (uint16)DP83640_10BT_FD)) == TRUE) {
       linkstat = EMAC_ERR_OK;
-	  /* (MISRA-C:2004 10.1/R) MISRA error reported with Code Composer Studio MISRA checker (due to use of & ?)  */
+      /* (MISRA-C:2004 10.1/R) MISRA error reported with Code Composer Studio MISRA checker (due to use of & ?)  */
       (void)Dp83640PartnerAbilityGet(hdkif->mdio_base, hdkif->phy_addr,
                                 &partnr_ablty);
 
@@ -688,7 +807,7 @@ uint32 EMACLinkSetup(hdkif_t *hdkif) {
   /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
   while(delay != 0U)
   {
-	delay--;
+    delay--;
   }
 
   return linkstat;
@@ -708,7 +827,7 @@ uint32 EMACLinkSetup(hdkif_t *hdkif) {
 /* Requirements : HL_ETH_SR22 */
 void EMACTxTeardown(uint32 emacBase, uint32 channel)
 {
-	HWREG(emacBase + EMAC_TXTEARDOWN) &= (channel);
+    HWREG(emacBase + EMAC_TXTEARDOWN) &= (channel);
 }
 
 /**
@@ -725,7 +844,7 @@ void EMACTxTeardown(uint32 emacBase, uint32 channel)
 /* Requirements : HL_ETH_SR22 */
 void EMACRxTeardown(uint32 emacBase, uint32 channel)
 {
-	HWREG(emacBase + EMAC_RXTEARDOWN) &= (channel);
+    HWREG(emacBase + EMAC_RXTEARDOWN) &= (channel);
 }
 
 
@@ -743,8 +862,8 @@ void EMACRxTeardown(uint32 emacBase, uint32 channel)
 /* Requirements : HL_ETH_SR24 */
 void EMACFrameSelect(uint32 emacBase, uint64 hashTable)
 {
-	HWREG(emacBase + EMAC_MACHASH1) =  (uint32)(hashTable & 0xFFFFFFFFU);
-	HWREG(emacBase + EMAC_MACHASH2) = (uint32)((uint64)hashTable >> 32U);
+    HWREG(emacBase + EMAC_MACHASH1) = (uint32)(hashTable & 0xFFFFFFFFU);
+    HWREG(emacBase + EMAC_MACHASH2) = (uint32)(hashTable >> 32U);
 }
 
 
@@ -753,8 +872,8 @@ void EMACFrameSelect(uint32 emacBase, uint64 hashTable)
  *
  * \param   emacBase      Base Address of the EMAC module registers.
  * \param   txPType       The Transmit Queue Priority Type.
- * 						  0 results in a round-robin scheme being used to select the next channel, while 1 results
- * 						  in a fixed-priority scheme( channel 7 highest priority).
+ *                        0 results in a round-robin scheme being used to select the next channel, while 1 results
+ *                        in a fixed-priority scheme( channel 7 highest priority).
  *
  * \return  None
  *
@@ -765,16 +884,16 @@ void EMACFrameSelect(uint32 emacBase, uint64 hashTable)
 void EMACTxPrioritySelect(uint32 emacBase, uint32 txPType)
 {
 
-	/* 1- The queue uses a fixed-priority (channel 7 highest priority) scheme */
-	if(txPType == 1U)
-	{
-		HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)(EMAC_MACCONTROL_TXPTYPE));
-		HWREG(emacBase + EMAC_MACCONTROL) |= EMAC_MACCONTROL_TXPTYPE;
-	}
-	else
-	{
-		HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)(EMAC_MACCONTROL_TXPTYPE));
-	}
+    /* 1- The queue uses a fixed-priority (channel 7 highest priority) scheme */
+    if(txPType == 1U)
+    {
+        HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)(EMAC_MACCONTROL_TXPTYPE));
+        HWREG(emacBase + EMAC_MACCONTROL) |= EMAC_MACCONTROL_TXPTYPE;
+    }
+    else
+    {
+        HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)(EMAC_MACCONTROL_TXPTYPE));
+    }
 }
 
 
@@ -797,8 +916,8 @@ void EMACSoftReset(uint32 emacCtrlBase, uint32 emacBase)
     /*SAFETYMCUSW 28 D MR:NA <APPROVED> "Hardware status bit read check" */
     while((HWREG(emacCtrlBase + EMAC_CTRL_SOFTRESET) & EMAC_CONTROL_RESET) == EMAC_CONTROL_RESET)
     {
-		/* Wait for the reset to complete */
-	} 
+        /* Wait for the reset to complete */
+    } 
 
     /* Reset the EMAC Module. */
     HWREG(emacBase + EMAC_SOFTRESET) = EMAC_SOFT_RESET;
@@ -806,8 +925,8 @@ void EMACSoftReset(uint32 emacCtrlBase, uint32 emacBase)
     /*SAFETYMCUSW 28 D MR:NA <APPROVED> "Hardware status bit read check" */
     while((HWREG(emacBase + EMAC_SOFTRESET) & EMAC_SOFT_RESET) == EMAC_SOFT_RESET )
     {
-		/* Wait for the Reset to complete */
-	} 
+        /* Wait for the Reset to complete */
+    } 
 
 }
 
@@ -823,7 +942,7 @@ void EMACSoftReset(uint32 emacCtrlBase, uint32 emacBase)
 /* Requirements : HL_ETH_SR32 */
 void EMACEnableIdleState(uint32 emacBase)
 {
-		HWREG(emacBase + EMAC_MACCONTROL) |= EMAC_MACCONTROL_CMDIDLE;
+        HWREG(emacBase + EMAC_MACCONTROL) |= EMAC_MACCONTROL_CMDIDLE;
 }
 
 /**
@@ -838,7 +957,7 @@ void EMACEnableIdleState(uint32 emacBase)
 /* Requirements : HL_ETH_SR32 */
 void EMACDisableIdleState(uint32 emacBase)
 {
-		HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)(EMAC_MACCONTROL_CMDIDLE));
+        HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)(EMAC_MACCONTROL_CMDIDLE));
 }
 
 /**
@@ -854,16 +973,16 @@ void EMACDisableIdleState(uint32 emacBase)
 void EMACEnableLoopback(uint32 emacBase)
 /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "LDRA Tool issue." */
 {
-	uint32 GMIIENval=0U;
-	/*Store the value of GMIIEN bit before deasserting it */
-	GMIIENval = HWREG(emacBase + EMAC_MACCONTROL) & EMAC_MACCONTROL_GMIIEN;
-	HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)EMAC_MACCONTROL_GMIIEN);
+    uint32 GMIIENval=0U;
+    /*Store the value of GMIIEN bit before deasserting it */
+    GMIIENval = HWREG(emacBase + EMAC_MACCONTROL) & EMAC_MACCONTROL_GMIIEN;
+    HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)EMAC_MACCONTROL_GMIIEN);
 
-	/*Enable Loopback */
-	HWREG(emacBase + EMAC_MACCONTROL) |= EMAC_MACCONTROL_LOOPBACK;
+    /*Enable Loopback */
+    HWREG(emacBase + EMAC_MACCONTROL) |= EMAC_MACCONTROL_LOOPBACK;
 
-	/*Restore the value of GMIIEN bit */
-	HWREG(emacBase + EMAC_MACCONTROL) |= GMIIENval;
+    /*Restore the value of GMIIEN bit */
+    HWREG(emacBase + EMAC_MACCONTROL) |= GMIIENval;
 }
 
 /**
@@ -878,17 +997,17 @@ void EMACEnableLoopback(uint32 emacBase)
 /* Requirements : HL_ETH_SR50 */
 void EMACDisableLoopback(uint32 emacBase)
 {
-	uint32 GMIIENval=0U;
+    uint32 GMIIENval=0U;
 
-	/*Store the value of GMIIEN bit before deasserting it */
-	GMIIENval = HWREG(emacBase + EMAC_MACCONTROL) & EMAC_MACCONTROL_GMIIEN;
-	HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)EMAC_MACCONTROL_GMIIEN);
+    /*Store the value of GMIIEN bit before deasserting it */
+    GMIIENval = HWREG(emacBase + EMAC_MACCONTROL) & EMAC_MACCONTROL_GMIIEN;
+    HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)EMAC_MACCONTROL_GMIIEN);
 
-	/*Disable Loopback */
-	HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)EMAC_MACCONTROL_LOOPBACK);
+    /*Disable Loopback */
+    HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)EMAC_MACCONTROL_LOOPBACK);
 
-	/*Restore the value of GMIIEN bit */
-	HWREG(emacBase + EMAC_MACCONTROL) |= GMIIENval;
+    /*Restore the value of GMIIEN bit */
+    HWREG(emacBase + EMAC_MACCONTROL) |= GMIIENval;
 }
 
 /**
@@ -903,7 +1022,7 @@ void EMACDisableLoopback(uint32 emacBase)
 /* Requirements : HL_ETH_SR20 */
 void EMACTxFlowControlEnable(uint32 emacBase)
 {
-	HWREG(emacBase + EMAC_MACCONTROL) |= EMAC_MACCONTROL_TXFLOWEN;
+    HWREG(emacBase + EMAC_MACCONTROL) |= EMAC_MACCONTROL_TXFLOWEN;
 }
 
 /**
@@ -918,7 +1037,7 @@ void EMACTxFlowControlEnable(uint32 emacBase)
 /* Requirements : HL_ETH_SR20 */
 void EMACTxFlowControlDisable(uint32 emacBase)
 {
-	HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)EMAC_MACCONTROL_TXFLOWEN);
+    HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)EMAC_MACCONTROL_TXFLOWEN);
 }
 
 /**
@@ -933,7 +1052,7 @@ void EMACTxFlowControlDisable(uint32 emacBase)
 /* Requirements : HL_ETH_SR20 */
 void EMACRxFlowControlEnable(uint32 emacBase)
 {
-	HWREG(emacBase + EMAC_MACCONTROL) |= EMAC_MACCONTROL_RXBUFFERFLOWEN;
+    HWREG(emacBase + EMAC_MACCONTROL) |= EMAC_MACCONTROL_RXBUFFERFLOWEN;
 }
 
 /**
@@ -948,15 +1067,15 @@ void EMACRxFlowControlEnable(uint32 emacBase)
 /* Requirements : HL_ETH_SR20 */
 void EMACRxFlowControlDisable(uint32 emacBase)
 {
-	HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)EMAC_MACCONTROL_RXBUFFERFLOWEN);
+    HWREG(emacBase + EMAC_MACCONTROL) &= (~(uint32)EMAC_MACCONTROL_RXBUFFERFLOWEN);
 }
 
 /**
  * \brief   Receive flow threshold. These bits contain the threshold value for issuing flow control on incoming frames for channel n (when enabled).
  *
  * \param   emacBase      Base Address of the EMAC module registers.
- * \param   channel		  Channel Number
- * \param  	threshold	  threshold value for issuing flow control on incoming frames for the given channel
+ * \param   channel       Channel Number
+ * \param   threshold     threshold value for issuing flow control on incoming frames for the given channel
  * \return  None
  *
  **/
@@ -965,12 +1084,12 @@ void EMACRxFlowControlDisable(uint32 emacBase)
 /* Requirements : HL_ETH_SR20 */
 void EMACRxSetFlowThreshold(uint32 emacBase, uint32 channel, uint32 threshold)
 {
-	HWREG(emacBase + EMAC_RXFLOWTHRESH(channel)) &= (0x0U);
-	HWREG(emacBase + EMAC_RXFLOWTHRESH(channel)) |= threshold;
+    HWREG(emacBase + EMAC_RXFLOWTHRESH(channel)) &= (0x0U);
+    HWREG(emacBase + EMAC_RXFLOWTHRESH(channel)) |= threshold;
 }
 
 /**
- * \brief				This function reads the contents of the 36 network statistics registers that are present in the module.
+ * \brief               This function reads the contents of the 36 network statistics registers that are present in the module.
  * \param   emacBase    Base Address of the EMAC module registers.
  * \param   statRegNo   The number of the register with RXGOODFRAMES (Offset= 0x200) being 0. Refer the Technical Reference Manual for the list of registers and their contents.
  * \return  uint32
@@ -980,7 +1099,7 @@ void EMACRxSetFlowThreshold(uint32 emacBase, uint32 channel, uint32 threshold)
 /* Requirements : HL_ETH_SR29 */
 uint32 EMACReadNetStatRegisters(uint32 emacBase, uint32 statRegNo)
 {
-	return HWREG(emacBase + EMAC_NETSTATREGS(statRegNo));
+    return HWREG(emacBase + EMAC_NETSTATREGS(statRegNo));
 }
 
 
@@ -988,8 +1107,8 @@ uint32 EMACReadNetStatRegisters(uint32 emacBase, uint32 statRegNo)
  * \brief   Function to read values of Transmit Interrupt Status registers (TXINTSTATMASKED and TXINTSTATRAW)
  *
  * \param   emacBase      Base Address of the EMAC module registers.
- * \param   channel		  Channel Number
- * \param   txintstat	  pointer to the emac_tx_int_status Structure that will store the register values that have been read
+ * \param   channel       Channel Number
+ * \param   txintstat     pointer to the emac_tx_int_status Structure that will store the register values that have been read
  * \return  None
  *
  **/
@@ -998,8 +1117,8 @@ uint32 EMACReadNetStatRegisters(uint32 emacBase, uint32 statRegNo)
 /* Requirements : HL_ETH_SR23 */
 void EMACTxIntStat(uint32 emacBase, uint32 channel, emac_tx_int_status_t *txintstat)
 {
-	txintstat->intstatmasked = (HWREG(emacBase + EMAC_TXINTSTATMASKED) & (uint32)((uint32)1U << channel));
-	txintstat->intstatraw = (HWREG(emacBase + EMAC_TXINTSTATRAW) & (uint32)((uint32)1U << channel));
+    txintstat->intstatmasked = (HWREG(emacBase + EMAC_TXINTSTATMASKED) & ((uint32)1U << channel));
+    txintstat->intstatraw = (HWREG(emacBase + EMAC_TXINTSTATRAW) & ((uint32)1U << channel));
 }
 
 
@@ -1007,8 +1126,8 @@ void EMACTxIntStat(uint32 emacBase, uint32 channel, emac_tx_int_status_t *txints
  * \brief   Function to read values of Receive Interrupt Status registers (RXINTSTATMASKED, RXINTSTATRAW)
  *
  * \param   emacBase      Base Address of the EMAC module registers.
- * \param   channel		  Channel Number
- * \param  rxintstat	  pointer to the emac_rx_int_status Structure that will store the register values that have been read.
+ * \param   channel       Channel Number
+ * \param  rxintstat      pointer to the emac_rx_int_status Structure that will store the register values that have been read.
  * \return  None
  **/
 /* SourceId : ETH_SourceId_047 */
@@ -1016,18 +1135,18 @@ void EMACTxIntStat(uint32 emacBase, uint32 channel, emac_tx_int_status_t *txints
 /* Requirements : HL_ETH_SR23 */
 void EMACRxIntStat(uint32 emacBase, uint32 channel, emac_rx_int_status_t *rxintstat)
 {
-	rxintstat->intstatmasked_pend = (HWREG(emacBase + EMAC_RXINTSTATMASKED) & ((uint32)0x1U << (uint32)(channel)));
-	rxintstat->intstatmasked_threshpend = (HWREG(emacBase + EMAC_RXINTSTATMASKED) & ((uint32)0x1U << ((uint32)0x8U + (uint32)(channel))));
+    rxintstat->intstatmasked_pend = (HWREG(emacBase + EMAC_RXINTSTATMASKED) & ((uint32)0x1U << (uint32)(channel)));
+    rxintstat->intstatmasked_threshpend = (HWREG(emacBase + EMAC_RXINTSTATMASKED) & ((uint32)0x1U << ((uint32)0x8U + (uint32)(channel))));
 
-	rxintstat->intstatraw_pend = (HWREG(emacBase + EMAC_RXINTSTATRAW) & (uint32)((uint32)0x1U << (uint32)(channel)));
-	rxintstat->intstatraw_threshpend = (HWREG(emacBase + EMAC_RXINTSTATRAW) & (uint32)((uint32)0x1U << ((uint32)0x8U + (uint32)(channel))));
+    rxintstat->intstatraw_pend = (HWREG(emacBase + EMAC_RXINTSTATRAW) & ((uint32)0x1U << (uint32)(channel)));
+    rxintstat->intstatraw_threshpend = (HWREG(emacBase + EMAC_RXINTSTATRAW) & ((uint32)0x1U << ((uint32)0x8U + (uint32)(channel))));
 }
 
 
 /**
  * \brief   Tx and Rx Buffer Descriptors are initialized. Buffer pointers are allocated to the Rx Descriptors.
  *
- * \param   hdkif	network interface structure
+ * \param   hdkif   network interface structure
  * \return  None
  *
  **/
@@ -1037,110 +1156,110 @@ void EMACRxIntStat(uint32 emacBase, uint32 channel, emac_rx_int_status_t *rxints
 void EMACDMAInit(hdkif_t *hdkif)
 {
 
-	  uint32 num_bd, pbuf_cnt = 0U;
-	  volatile emac_tx_bd_t *curr_txbd, *last_txbd;
-	  volatile emac_rx_bd_t *curr_bd, *last_bd;
-	  txch_t *txch_dma;
-	  rxch_t *rxch_dma;
-	  uint8_t *p;
+      uint32 num_bd, pbuf_cnt = 0U;
+      volatile emac_tx_bd_t *curr_txbd, *last_txbd;
+      volatile emac_rx_bd_t *curr_bd, *last_bd;
+      txch_t *txch_dma;
+      rxch_t *rxch_dma;
+      uint8_t *p;
 
-	  txch_dma = &(hdkif->txchptr);
+      txch_dma = &(hdkif->txchptr);
 
-	  /**
-	  * Initialize the Descriptor Memory For TX and RX
-	  * Only single channel is supported for both TX and RX
-	  */
-	  /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	  txch_dma->free_head = (volatile emac_tx_bd_t*)(hdkif->emac_ctrl_ram);
-	  txch_dma->next_bd_to_process = txch_dma->free_head;
-	  txch_dma->active_tail = NULL;
+      /**
+      * Initialize the Descriptor Memory For TX and RX
+      * Only single channel is supported for both TX and RX
+      */
+      /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
+      txch_dma->free_head = (volatile emac_tx_bd_t*)(hdkif->emac_ctrl_ram);
+      txch_dma->next_bd_to_process = txch_dma->free_head;
+      txch_dma->active_tail = NULL;
 
-	  /* Set the number of descriptors for the channel */
-	  num_bd = (SIZE_EMAC_CTRL_RAM >> 1U) / sizeof(emac_tx_bd_t);
+      /* Set the number of descriptors for the channel */
+      num_bd = (SIZE_EMAC_CTRL_RAM >> 1U) / sizeof(emac_tx_bd_t);
 
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	  curr_txbd = txch_dma->free_head;
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	  
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
+      curr_txbd = txch_dma->free_head;
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */          
       last_txbd = curr_txbd;
 
-	  /* Initialize all the TX buffer Descriptors */
-	  while(num_bd != 0U) {
+      /* Initialize all the TX buffer Descriptors */
+      while(num_bd != 0U) {
         /*SAFETYMCUSW 567 S MR:17.1,17.4 <APPROVED> "Struct pointer used for linked list is incremented." */
-	    curr_txbd->next = curr_txbd + 1U;
-	    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 		
-	    curr_txbd->flags_pktlen = 0U;
-	    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-		last_txbd = curr_txbd;
-	    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-		curr_txbd = curr_txbd->next;
-		num_bd--;
-	  }
-	  /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	  
-	  last_txbd->next = txch_dma->free_head;
+        curr_txbd->next = curr_txbd + 1U;
+        /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */          
+        curr_txbd->flags_pktlen = 0U;
+        /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
+        last_txbd = curr_txbd;
+        /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
+        curr_txbd = curr_txbd->next;
+        num_bd--;
+      }
+      /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */          
+      last_txbd->next = txch_dma->free_head;
 
-	  /* Initialize the descriptors for the RX channel */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	  rxch_dma = &(hdkif->rxchptr);
-      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	  /*SAFETYMCUSW 567 S MR:17.1,17.4 <APPROVED> "Struct pointer used for linked list is incremented." */
-	  curr_txbd++;
-	  /*SAFETYMCUSW 94 S MR:11.1,11.2,11.4 <APPROVED> "Linked List pointer needs to be assigned." */
-	  /*SAFETYMCUSW 95 S MR:11.1,11.4 <APPROVED> "Linked List pointer needs to be assigned." */
-	  /*SAFETYMCUSW 344 S MR:11.5 <APPROVED> "Linked List pointer needs to be assigned to a different structure." */	  
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	  rxch_dma->active_head = (volatile emac_rx_bd_t *)curr_txbd;
+      /* Initialize the descriptors for the RX channel */
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
+      rxch_dma = &(hdkif->rxchptr);
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
+      /*SAFETYMCUSW 567 S MR:17.1,17.4 <APPROVED> "Struct pointer used for linked list is incremented." */
+      curr_txbd++;
+      /*SAFETYMCUSW 94 S MR:11.1,11.2,11.4 <APPROVED> "Linked List pointer needs to be assigned." */
+      /*SAFETYMCUSW 95 S MR:11.1,11.4 <APPROVED> "Linked List pointer needs to be assigned." */
+      /*SAFETYMCUSW 344 S MR:11.5 <APPROVED> "Linked List pointer needs to be assigned to a different structure." */      
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
+      rxch_dma->active_head = (volatile emac_rx_bd_t *)curr_txbd;
 
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	 
-	  rxch_dma->free_head = NULL;
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	  
-	  curr_bd = rxch_dma->active_head;
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	  
-	  last_bd = curr_bd;
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */         
+      rxch_dma->free_head = NULL;
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */          
+      curr_bd = rxch_dma->active_head;
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */          
+      last_bd = curr_bd;
 
 
-	  /*
-	  **  Static allocation of a specific number of packet buffers as specified by MAX_RX_PBUF_ALLOC, whose value is entered by the user in  HALCoGen GUI.
-	  */
+      /*
+      **  Static allocation of a specific number of packet buffers as specified by MAX_RX_PBUF_ALLOC, whose value is entered by the user in  HALCoGen GUI.
+      */
 
-	  /*Commented part of allocation of pbufs need to check whether its true*/
+      /*Commented part of allocation of pbufs need to check whether its true*/
 
-	  for(pbuf_cnt = 0U;pbuf_cnt < MAX_RX_PBUF_ALLOC;pbuf_cnt++)
-		{
-	     /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	     p = pbuf_array[pbuf_cnt];
-		 /*SAFETYMCUSW 439 S MR:11.3 <APPROVED> "RHS is a pointer value required to be stored. - Advisory as per MISRA" */
-	     /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 		 
-	     curr_bd->bufptr = (uint32)p;
-	     /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-		 curr_bd->bufoff_len = MAX_TRANSFER_UNIT;
-	     /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	     
-		 curr_bd->flags_pktlen = EMAC_BUF_DESC_OWNER;
-	     if (pbuf_cnt == (MAX_RX_PBUF_ALLOC - 1U))
-	     {
-	         /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-			 curr_bd->next = NULL;
-			 /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	    	 
-			 last_bd = curr_bd;
+      for(pbuf_cnt = 0U;pbuf_cnt < MAX_RX_PBUF_ALLOC;pbuf_cnt++)
+        {
+         /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */  
+         p = pbuf_array[pbuf_cnt];
+         /*SAFETYMCUSW 439 S MR:11.3 <APPROVED> "RHS is a pointer value required to be stored. - Advisory as per MISRA" */
+         /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */          
+         curr_bd->bufptr = (uint32)p;
+         /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */  
+         curr_bd->bufoff_len = MAX_TRANSFER_UNIT;
+         /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */          
+         curr_bd->flags_pktlen = EMAC_BUF_DESC_OWNER;
+         if (pbuf_cnt == (MAX_RX_PBUF_ALLOC - 1U))
+         {
+             /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */  
+             curr_bd->next = NULL;
+             /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */              
+             last_bd = curr_bd;
 
-	     }
-	     else
-	     {
+         }
+         else
+         {
              /*SAFETYMCUSW 567 S MR:17.1,17.4 <APPROVED> "Struct pointer used for linked list is incremented." */
-	    	 curr_bd->next = (curr_bd + 1U);
-			 /*SAFETYMCUSW 567 S MR:17.1,17.4 <APPROVED> "Struct pointer used for linked list is incremented." */
-	    	 curr_bd++;
-			 /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	    	 last_bd = curr_bd;
-	     }
-	   }
-	  
-	  /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	 
-	  last_bd->next = NULL;
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	  
-	  rxch_dma->active_tail = last_bd;
+             curr_bd->next = (curr_bd + 1U);
+             /*SAFETYMCUSW 567 S MR:17.1,17.4 <APPROVED> "Struct pointer used for linked list is incremented." */
+             curr_bd++;
+             /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */  
+             last_bd = curr_bd;
+         }
+       }
+      
+      /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */         
+      last_bd->next = NULL;
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */          
+      rxch_dma->active_tail = last_bd;
 }
 
 
@@ -1151,7 +1270,7 @@ void EMACDMAInit(hdkif_t *hdkif)
  * \param   channel       Channel Number.
  *
  * \return  EMAC_ERR_OK if everything gets initialized
- * 			EMAC_ERR_CONN in case of an error in connecting.
+ *          EMAC_ERR_CONN in case of an error in connecting.
  *
  **/
 /* SourceId : ETH_SourceId_049 */
@@ -1167,7 +1286,10 @@ uint32 EMACHWInit(uint8_t macaddr[6U])
   hdkif_t *hdkif;
   rxch_t *rxch;
   uint32 retVal = EMAC_ERR_OK;
-  uint32 emac_base = 0U;
+  uint32 emacBase = 0U;
+#if(EMAC_MII_ENABLE == 0U)
+  uint16 partnr_spd;
+#endif
 
   hdkif = &hdkif_data[0U];
   EMACInstConfig(hdkif);
@@ -1178,30 +1300,31 @@ uint32 EMACHWInit(uint8_t macaddr[6U])
   /*Initialize the EMAC, EMAC Control and MDIO modules. */
   EMACInit(hdkif->emac_ctrl_base, hdkif->emac_base);
   MDIOInit(hdkif->mdio_base, MDIO_FREQ_INPUT, MDIO_FREQ_OUTPUT);
+  EMACRxPromiscuousEnable(hdkif->emac_base, 0); //(base, ch)   'Enable Promiscuous Mode'
   
   /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
   while(delay != 0U)
   {
   /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	delay--;
+    delay--;
   }
 
   /* Set the MAC Addresses in EMAC hardware */
-  emac_base = hdkif->emac_base; /* MISRA Code Fix (12.2) */
-  EMACMACSrcAddrSet(emac_base, hdkif->mac_addr);
+  emacBase = hdkif->emac_base; /* MISRA Code Fix (12.2) */
+  EMACMACSrcAddrSet(emacBase, hdkif->mac_addr);
   for(channel = 0U; channel < 8U; channel++) {
-	   emac_base = hdkif->emac_base;
-       EMACMACAddrSet(emac_base, channel, hdkif->mac_addr, EMAC_MACADDR_MATCH);
+       emacBase = hdkif->emac_base;
+       EMACMACAddrSet(emacBase, channel, hdkif->mac_addr, EMAC_MACADDR_MATCH);
   }
 
   /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
   while ((phyID == 0U) && (phyIdReadCount > 0U)) {
-	  phyID = Dp83640IDGet(hdkif->mdio_base,hdkif->phy_addr);
-	  phyIdReadCount--;
+      phyID = Dp83640IDGet(hdkif->mdio_base,hdkif->phy_addr);
+      phyIdReadCount--;
   }
 
   if (0U == phyID) {
-	  retVal = EMAC_ERR_CONNECT;
+      retVal = EMAC_ERR_CONNECT;
   } else {
 
   }
@@ -1213,12 +1336,19 @@ uint32 EMACHWInit(uint8_t macaddr[6U])
 
   }
 
+#if(EMAC_MII_ENABLE == 0U)
+	  
+	Dp83640PartnerSpdGet(hdkif->mdio_base, hdkif->phy_addr, &partnr_spd);
+	if((partnr_spd & 2U)==0U)
+	{
+		EMACRMIISpeedSet(hdkif->emac_base, EMAC_MACCONTROL_RMIISPEED);
+	}
+#endif
 
-  if(!Dp83640LinkStatusGet(hdkif->mdio_base, (uint32)EMAC_PHYADDRESS, (uint32)phyLinkRetries)) {
-      retVal = EMAC_ERR_CONNECT;
-  } else {
-
-  }
+//  if(!Dp83640LinkStatusGet(hdkif->mdio_base, (uint32)EMAC_PHYADDRESS, (uint32)phyLinkRetries)) {
+//      retVal = EMAC_ERR_CONNECT;
+//  } else {
+//  }
 
   if(EMACLinkSetup(hdkif) != EMAC_ERR_OK) {
     retVal = EMAC_ERR_CONNECT;
@@ -1236,80 +1366,74 @@ uint32 EMACHWInit(uint8_t macaddr[6U])
   EMACCoreIntAck(hdkif->emac_base, (uint32)EMAC_INT_CORE0_RX);
   EMACCoreIntAck(hdkif->emac_base, (uint32)EMAC_INT_CORE0_TX);
 
-  /* Enable MII if enabled in the GUI. */
+  /* Enable GMII bit in the MACCONTROL Rgister*/
   /*SAFETYMCUSW 139 S MR:13.7 <APPROVED> "Parameter is taken as input from GUI." */
-#if(EMAC_MII_ENABLE)
-	  EMACMIIEnable(hdkif->emac_base);
-#else
-      /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */  
-      EMACMIIDisable(hdkif->emac_base);
-#endif
-  
+  EMACMIIEnable(hdkif->emac_base);
 
   /* Enable Broadcast if enabled in the GUI. */
   /*SAFETYMCUSW 139 S MR:13.7 <APPROVED> "Parameter is taken as input from GUI." */
 #if(EMAC_BROADCAST_ENABLE)
-	  EMACRxBroadCastEnable(hdkif->emac_base, (uint32)EMAC_CHANNELNUMBER);
+      EMACRxBroadCastEnable(hdkif->emac_base, (uint32)EMAC_CHANNELNUMBER);
 #else
    /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */
    /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */
-	  EMACRxBroadCastDisable(hdkif->emac_base, (uint32)EMAC_CHANNELNUMBER);
+      EMACRxBroadCastDisable(hdkif->emac_base, (uint32)EMAC_CHANNELNUMBER);
 #endif
   
   /* Enable Broadcast if enabled in the GUI. */
   /*SAFETYMCUSW 139 S MR:13.7 <APPROVED> "Parameter is taken as input from GUI." */
 #if(EMAC_UNICAST_ENABLE)
-	  EMACRxUnicastSet(hdkif->emac_base, (uint32)EMAC_CHANNELNUMBER);
+      EMACRxUnicastSet(hdkif->emac_base, (uint32)EMAC_CHANNELNUMBER);
 #else
-	  /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */
-	  EMACRxUnicastClear(hdkif->emac_base, (uint32)EMAC_CHANNELNUMBER);
+      /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */
+      EMACRxUnicastClear(hdkif->emac_base, (uint32)EMAC_CHANNELNUMBER);
 #endif
 
   /*Enable Full Duplex or Half-Duplex mode based on GUI Input. */
   /*SAFETYMCUSW 139 S MR:13.7 <APPROVED> "Parameter is taken as input from GUI." */
 #if (EMAC_FULL_DUPLEX_ENABLE)
-  		EMACDuplexSet(EMAC_0_BASE, (uint32)EMAC_DUPLEX_FULL);
+        EMACDuplexSet(EMAC_0_BASE, (uint32)EMAC_DUPLEX_FULL);
 #else
-	    /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition arameter is taken as input from GUI." */
-  		EMACDuplexSet(EMAC_0_BASE, (uint32)EMAC_DUPLEX_HALF);
+        /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition arameter is taken as input from GUI." */
+        EMACDuplexSet(EMAC_0_BASE, (uint32)EMAC_DUPLEX_HALF);
 #endif
 
   /* Enable Loopback based on GUI Input */ 
   /*SAFETYMCUSW 139 S MR:13.7 <APPROVED> "Parameter is taken as input from GUI." */
 #if(EMAC_LOOPBACK_ENABLE)
-	  EMACEnableLoopback(hdkif->emac_base);
+      EMACEnableLoopback(hdkif->emac_base);
 #else
-	  /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */  
-	  EMACDisableLoopback(hdkif->emac_base);
+      /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */  
+      EMACDisableLoopback(hdkif->emac_base);
 #endif
 
   /* Enable Transmit and Transmit Interrupt */ 
   /*SAFETYMCUSW 139 S MR:13.7 <APPROVED> "Parameter is taken as input from GUI." */
 #if(EMAC_TX_ENABLE)
-	  EMACTxEnable(hdkif->emac_base);
-	  EMACTxIntPulseEnable(hdkif->emac_base, hdkif->emac_ctrl_base, (uint32)EMAC_CHANNELNUMBER, (uint32)EMAC_CHANNELNUMBER);
+      EMACTxEnable(hdkif->emac_base);
+      EMACTxIntPulseEnable(hdkif->emac_base, hdkif->emac_ctrl_base, (uint32)EMAC_CHANNELNUMBER, (uint32)EMAC_CHANNELNUMBER);
 #else
-	  /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */
-	  /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */
-	  EMACTxDisable(hdkif->emac_base);
-	  EMACTxIntPulseDisable(hdkif->emac_base, hdkif->emac_ctrl_base, (uint32)EMAC_CHANNELNUMBER, (uint32)EMAC_CHANNELNUMBER);	  
+      /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */
+      /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */
+      EMACTxDisable(hdkif->emac_base);
+      EMACTxIntPulseDisable(hdkif->emac_base, hdkif->emac_ctrl_base, (uint32)EMAC_CHANNELNUMBER, (uint32)EMAC_CHANNELNUMBER);     
 #endif
 
   /* Enable Receive and Receive Interrupt. Then start receiving by writing to the HDP register. */
   /*SAFETYMCUSW 139 S MR:13.7 <APPROVED> "Parameter is taken as input from GUI." */
 #if(EMAC_RX_ENABLE)
-	  EMACNumFreeBufSet(hdkif->emac_base,(uint32)EMAC_CHANNELNUMBER , (uint32)MAX_RX_PBUF_ALLOC);
-	  EMACRxEnable(hdkif->emac_base);
-	  EMACRxIntPulseEnable(hdkif->emac_base, hdkif->emac_ctrl_base, (uint32)EMAC_CHANNELNUMBER, (uint32)EMAC_CHANNELNUMBER);
-	  rxch = &(hdkif->rxchptr);
-	  /* Write to the RX HDP for channel 0 */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	  EMACRxHdrDescPtrWrite(hdkif->emac_base, (uint32)rxch->active_head, (uint32)EMAC_CHANNELNUMBER);
+      EMACNumFreeBufSet(hdkif->emac_base,(uint32)EMAC_CHANNELNUMBER , (uint32)MAX_RX_PBUF_ALLOC);
+      EMACRxEnable(hdkif->emac_base);
+      EMACRxIntPulseEnable(hdkif->emac_base, hdkif->emac_ctrl_base, (uint32)EMAC_CHANNELNUMBER, (uint32)EMAC_CHANNELNUMBER);
+      rxch = &(hdkif->rxchptr);
+      /* Write to the RX HDP for channel 0 */
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
+      EMACRxHdrDescPtrWrite(hdkif->emac_base, (uint32)rxch->active_head, (uint32)EMAC_CHANNELNUMBER);
 #else
-	  /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */    
-	  /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */  
-	  EMACRxDisable(hdkif->emac_base);
-	  EMACRxIntPulseDisable(hdkif->emac_base, hdkif->emac_ctrl_base, (uint32)EMAC_CHANNELNUMBER, (uint32)EMAC_CHANNELNUMBER);	  
+      /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */    
+      /*SAFETYMCUSW 1 J MR:14.1 <APPROVED> "If condition parameter is taken as input from GUI." */  
+      EMACRxDisable(hdkif->emac_base);
+      EMACRxIntPulseDisable(hdkif->emac_base, hdkif->emac_ctrl_base, (uint32)EMAC_CHANNELNUMBER, (uint32)EMAC_CHANNELNUMBER);     
 #endif
 
   return retVal;
@@ -1324,17 +1448,19 @@ uint32 EMACHWInit(uint8_t macaddr[6U])
  * @param hdkif network interface structure
  * @param pbuf  the pbuf structure which contains the data to be sent using EMAC
  * @return boolean. 
- *		  -Returns FALSE if a Null pointer was passed for transmission
- *		  -Returns TRUE if valid data is sent and is transmitted.
+ *        -Returns FALSE if a Null pointer was passed for transmission
+ *        -Returns TRUE if valid data is sent and is transmitted.
  */
 /* SourceId : ETH_SourceId_050 */
 /* DesignId : ETH_DesignId_050*/
 /* Requirements : HL_ETH_SR31 */
 boolean EMACTransmit(hdkif_t *hdkif, pbuf_t *pbuf)
 {
-	
+    
   txch_t *txch;
   pbuf_t *q;
+  uint16 totLen;
+  uint16 qLen;
   volatile emac_tx_bd_t *curr_bd,*active_head, *bd_end;
   boolean retValue = FALSE;
   if((pbuf != NULL) && (hdkif != NULL))
@@ -1342,47 +1468,47 @@ boolean EMACTransmit(hdkif_t *hdkif, pbuf_t *pbuf)
   txch = &(hdkif->txchptr);
 
   /* Get the buffer descriptor which is free to transmit */
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
   curr_bd = txch->free_head;
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
   bd_end = curr_bd;
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
   active_head = curr_bd;
 
   /* Update the total packet length */
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	   
-  curr_bd->flags_pktlen &= (uint32)(~((uint32)0xFFFFU));
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-  uint16 tot_len = pbuf->tot_len;
-  curr_bd->flags_pktlen |= (uint32)(tot_len);
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */       
+  curr_bd->flags_pktlen &= (~((uint32)0xFFFFU));
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
+  totLen = pbuf->tot_len;
+  curr_bd->flags_pktlen |= (uint32)(totLen);
 
   /* Indicate the start of the packet */
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
   curr_bd->flags_pktlen |= (EMAC_BUF_DESC_SOP | EMAC_BUF_DESC_OWNER);
 
 
   /* Copy pbuf information into TX buffer descriptors */
-	q = pbuf;
-	while(q != NULL)
-	{
-	/* Initialize the buffer pointer and length */
-	/*SAFETYMCUSW 439 S MR:11.3 <APPROVED> "RHS is a pointer value required to be stored. - Advisory as per MISRA" */
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	curr_bd->bufptr = (uint32)(q->payload);
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */
-	uint16 len = q->len;
-	curr_bd->bufoff_len = (uint32)((uint32)(len) & 0xFFFFU);
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	bd_end = curr_bd;
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	curr_bd = curr_bd->next;
-	q = q->next;
-	}
+    q = pbuf;
+    while(q != NULL)
+    {
+    /* Initialize the buffer pointer and length */
+    /*SAFETYMCUSW 439 S MR:11.3 <APPROVED> "RHS is a pointer value required to be stored. - Advisory as per MISRA" */
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
+    curr_bd->bufptr = (uint32)(q->payload);
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */
+    qLen = q->len;
+    curr_bd->bufoff_len = ((uint32)(qLen) & 0xFFFFU);
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    bd_end = curr_bd;
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
+    curr_bd = curr_bd->next;
+    q = q->next;
+    }
 
 
   /* Indicate the start and end of the packet */
   /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	   
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */       
   bd_end->next = NULL;
   /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
   bd_end->flags_pktlen |= EMAC_BUF_DESC_EOP;
@@ -1393,7 +1519,7 @@ boolean EMACTransmit(hdkif_t *hdkif, pbuf_t *pbuf)
   /* For the first time, write the HDP with the filled bd */
   if(txch->active_tail == NULL) {
     /*SAFETYMCUSW 439 S MR:11.3 <APPROVED> "Address stored in pointer is passed as as an int parameter. - Advisory as per MISRA" */
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
     EMACTxHdrDescPtrWrite(hdkif->emac_base, (uint32)(active_head), (uint32)EMAC_CHANNELNUMBER);
   }
 
@@ -1402,40 +1528,40 @@ boolean EMACTransmit(hdkif_t *hdkif, pbuf_t *pbuf)
    * the EOQ will be set. In that case, the HDP shall be written again.
    */
   else {
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
     curr_bd = txch->active_tail;
     /* Wait for the EOQ bit is set */
     /*SAFETYMCUSW 28 D MR:NA <APPROVED> "Hardware status bit read check" */
-	/*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+    /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
     while (EMAC_BUF_DESC_EOQ != (curr_bd->flags_pktlen & EMAC_BUF_DESC_EOQ))
-	{
-	}
+    {
+    }
     /* Don't write to TXHDP0 until it turns to zero */
     /*SAFETYMCUSW 28 D MR:NA <APPROVED> "Hardware status bit read check" */
-	/*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-  	while (((uint32)0U != *((uint32 *)0xFCF78600U)))
-	{
-	}
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+    /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+    while (((uint32)0U != *((uint32 *)0xFCF78600U)))
+    {
+    }
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
     curr_bd->next = active_head;
-	/*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
+    /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
     if (EMAC_BUF_DESC_EOQ == (curr_bd->flags_pktlen & EMAC_BUF_DESC_EOQ)) {
       /* Write the Header Descriptor Pointer and start DMA */
       /*SAFETYMCUSW 439 S MR:11.3 <APPROVED> "Address stored in pointer is passed as as an int parameter. - Advisory as per MISRA" */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	  
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */          
       EMACTxHdrDescPtrWrite(hdkif->emac_base, (uint32)(active_head), (uint32)EMAC_CHANNELNUMBER);
     }
   }
    
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
   txch->active_tail = bd_end;
   retValue = TRUE;
   }
   else
   {
-	retValue = FALSE;
+    retValue = FALSE;
   }
   return retValue;
 }
@@ -1457,61 +1583,61 @@ void EMACTxIntHandler(hdkif_t *hdkif)
 
   txch_int = &(hdkif->txchptr);
 
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */        
   next_bd_to_process = txch_int->next_bd_to_process;
   
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */        
   curr_bd = next_bd_to_process;
 
   /* Check for correct start of packet */
   /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */        
   while(((curr_bd->flags_pktlen) & EMAC_BUF_DESC_SOP) == EMAC_BUF_DESC_SOP) {
 
     /* Make sure that the transmission is over */
     /*SAFETYMCUSW 28 D MR:NA <APPROVED> "Hardware status bit read check" */
-	/*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+    /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
     while(((curr_bd->flags_pktlen) & EMAC_BUF_DESC_OWNER) == EMAC_BUF_DESC_OWNER)
-	{
-	}
+    {
+    }
 
     /* Traverse till the end of packet is reached */
-	/*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+    /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
     while(((curr_bd->flags_pktlen) & EMAC_BUF_DESC_EOP) != EMAC_BUF_DESC_EOP) {
        curr_bd = curr_bd->next;
     }
 
-	/*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+    /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
     next_bd_to_process->flags_pktlen &= ~(EMAC_BUF_DESC_SOP);
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	curr_bd->flags_pktlen &= ~(EMAC_BUF_DESC_EOP);
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
+    curr_bd->flags_pktlen &= ~(EMAC_BUF_DESC_EOP);
 
     /**
      * If there are no more data transmitted, the next interrupt
      * shall happen with the pbuf associated with the free_head
      */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
     if(curr_bd->next == NULL) {
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */        
       txch_int->next_bd_to_process = txch_int->free_head;
     }
 
     else {
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */        
       txch_int->next_bd_to_process = curr_bd->next;
     }
 
     /* Acknowledge the EMAC and free the corresponding pbuf */
     /*SAFETYMCUSW 439 S MR:11.3 <APPROVED> "Address stored in pointer is passed as as an int parameter. - Advisory as per MISRA" */
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
     /*SAFETYMCUSW 344 S MR:11.5 <APPROVED> "Address stored in pointer is passed as as an int parameter." */
     EMACTxCPWrite(hdkif->emac_base, (uint32)EMAC_CHANNELNUMBER, (uint32)curr_bd);
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
     next_bd_to_process = txch_int->next_bd_to_process;
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
     curr_bd = next_bd_to_process;
 
   }
@@ -1519,6 +1645,7 @@ void EMACTxIntHandler(hdkif_t *hdkif)
 }
 
 
+extern int  resetEntry();   //file 'sys_intvecs.asm'
 /**
  * Function for processing received packets.
  *
@@ -1532,14 +1659,15 @@ void EMACReceive(hdkif_t *hdkif)
 {
   rxch_t *rxch_int;
   volatile emac_rx_bd_t *curr_bd, *curr_tail, *last_bd;
+  unsigned int RecHung=0; //resetEntry();
 
   /* The receive structure that holds data about a particular receive channel */
   rxch_int = &(hdkif->rxchptr);
 
   /* Get the buffer descriptors which contain the earliest filled data */
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
   curr_bd = rxch_int->active_head;
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
   last_bd = rxch_int->active_tail;
 
   /**
@@ -1548,21 +1676,28 @@ void EMACReceive(hdkif_t *hdkif)
   */
   /*SAFETYMCUSW 28 D MR:NA <APPROVED> "Hardware status bit read check" */
   /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
   while((curr_bd->flags_pktlen & EMAC_BUF_DESC_SOP) == EMAC_BUF_DESC_SOP) {
 
-
+    //tek addded 'EMACTransmit()' hung up on reset breakout june 2018 
+    if (RecHung++ > 8000000)
+        {
+        RecHung=0;
+        PaketStats.eRecHung++;       
+        resetEntry();
+        }
+    
     /* Start processing once the packet is loaded */
-	/*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+    /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
     if((curr_bd->flags_pktlen & EMAC_BUF_DESC_OWNER)
        != EMAC_BUF_DESC_OWNER) {
 
       /* this bd chain will be freed after processing */
       /*SAFETYMCUSW 71 S MR:17.6 <APPROVED> "Assigned pointer value has required scope." */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */
       rxch_int->free_head = curr_bd;
-
+      
       /* Get the total length of the packet. curr_bd points to the start
        * of the packet.
        */
@@ -1570,74 +1705,74 @@ void EMACReceive(hdkif_t *hdkif)
       /* 
        * The loop runs till it reaches the end of the packet.
        */
-	  /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	  
+      /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */          
       while((curr_bd->flags_pktlen & EMAC_BUF_DESC_EOP)!= EMAC_BUF_DESC_EOP)
       {
-    	/*Update the flags for the descriptor again and the length of the buffer*/
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 		
-    	curr_bd->flags_pktlen = (uint32)EMAC_BUF_DESC_OWNER;
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 		
-    	curr_bd->bufoff_len = (uint32)MAX_TRANSFER_UNIT;
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 		
+        /*Update the flags for the descriptor again and the length of the buffer*/
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */            
+        curr_bd->flags_pktlen = (uint32)EMAC_BUF_DESC_OWNER;
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */            
+        curr_bd->bufoff_len = (uint32)MAX_TRANSFER_UNIT;
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */            
         last_bd = curr_bd;
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 		
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */            
         curr_bd = curr_bd->next;
       }
 
       /* Updating the last descriptor (which contained the EOP flag) */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	  
-		curr_bd->flags_pktlen = (uint32)EMAC_BUF_DESC_OWNER;
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 		
-		curr_bd->bufoff_len = (uint32)MAX_TRANSFER_UNIT;
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 		
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */          
+        curr_bd->flags_pktlen = (uint32)EMAC_BUF_DESC_OWNER;
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */            
+        curr_bd->bufoff_len = (uint32)MAX_TRANSFER_UNIT;
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */            
         last_bd = curr_bd;
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 		
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */            
         curr_bd = curr_bd->next;
 
       /* Acknowledge that this packet is processed */
       /*SAFETYMCUSW 439 S MR:11.3 <APPROVED> "Address stored in pointer is passed as as an int parameter. - Advisory as per MISRA" */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
       EMACRxCPWrite(hdkif->emac_base, (uint32)EMAC_CHANNELNUMBER, (uint32)last_bd);
 
       /* The next buffer descriptor is the new head of the linked list. */
-	  /*SAFETYMCUSW 71 S MR:17.6 <APPROVED> "Assigned pointer value has required scope." */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
+      /*SAFETYMCUSW 71 S MR:17.6 <APPROVED> "Assigned pointer value has required scope." */
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
       rxch_int->active_head = curr_bd;
 
       /* The processed descriptor is now the tail of the linked list. */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	  curr_tail = rxch_int->active_tail;
-	/*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	  curr_tail->next = rxch_int->free_head;
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
+      curr_tail = rxch_int->active_tail;
+    /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
+      curr_tail->next = rxch_int->free_head;
 
-	  /* The last element in the already processed Rx descriptor chain is now the end of list. */
-	  /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	  last_bd->next = NULL;
+      /* The last element in the already processed Rx descriptor chain is now the end of list. */
+      /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */     
+      last_bd->next = NULL;
 
 
-		/**
-		 * Check if the reception has ended. If the EOQ flag is set, the NULL
-		 * Pointer is taken by the DMA engine. So we need to write the RX HDP
-		 * with the next descriptor.
-		 */
-	    /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */ 
-		/*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
-	  /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 		
-		if((curr_tail->flags_pktlen & EMAC_BUF_DESC_EOQ) == EMAC_BUF_DESC_EOQ) {
+        /**
+         * Check if the reception has ended. If the EOQ flag is set, the NULL
+         * Pointer is taken by the DMA engine. So we need to write the RX HDP
+         * with the next descriptor.
+         */
+        /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */ 
+        /*SAFETYMCUSW 134 S MR:12.2 <APPROVED> "LDRA Tool issue" */
+      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */            
+        if((curr_tail->flags_pktlen & EMAC_BUF_DESC_EOQ) == EMAC_BUF_DESC_EOQ) {
           /*SAFETYMCUSW 439 S MR:11.3 <APPROVED> "Address stored in pointer is passed as as an int parameter. - Advisory as per MISRA" */
-	      /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 		 
-		  EMACRxHdrDescPtrWrite(hdkif->emac_base, (uint32)(rxch_int->free_head), (uint32)EMAC_CHANNELNUMBER);
-		}
+          /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */             
+          EMACRxHdrDescPtrWrite(hdkif->emac_base, (uint32)(rxch_int->free_head), (uint32)EMAC_CHANNELNUMBER);
+        }
 
-	    /*SAFETYMCUSW 71 S MR:17.6 <APPROVED> "Assigned pointer value has required scope." */
-		/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-		rxch_int->free_head  = curr_bd;
-		rxch_int->active_tail = last_bd;
-	  }
+        /*SAFETYMCUSW 71 S MR:17.6 <APPROVED> "Assigned pointer value has required scope." */
+        /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
+        /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
+        rxch_int->free_head  = curr_bd;
+        rxch_int->active_tail = last_bd;
+      }
     }
 }
 
@@ -1645,12 +1780,12 @@ void EMACReceive(hdkif_t *hdkif)
 /** @fn void EMACGetConfigValue(emac_config_reg_t *config_reg, config_value_type_t type)
 *   @brief Get the initial or current values of the configuration registers
 *
-*	@param[in] *config_reg: pointer to the struct to which the initial or current 
+*   @param[in] *config_reg: pointer to the struct to which the initial or current 
 *                           value of the configuration registers need to be stored
-*	@param[in] type: 	whether initial or current value of the configuration registers need to be stored
-*						- InitialValue: initial value of the configuration registers will be stored 
+*   @param[in] type:    whether initial or current value of the configuration registers need to be stored
+*                       - InitialValue: initial value of the configuration registers will be stored 
 *                                       in the struct pointed by config_reg
-*						- CurrentValue: initial value of the configuration registers will be stored 
+*                       - CurrentValue: initial value of the configuration registers will be stored 
 *                                       in the struct pointed by config_reg
 *
 *   This function will copy the initial or current value (depending on the parameter 'type') 
@@ -1662,35 +1797,35 @@ void EMACReceive(hdkif_t *hdkif)
 /* Requirements : HL_ETH_SR52 */
 void EMACGetConfigValue(emac_config_reg_t *config_reg, config_value_type_t type)
 {
-	if (type == InitialValue)
-	{
-		config_reg->TXCONTROL = EMAC_TXCONTROL_CONFIGVALUE;
-		config_reg->RXCONTROL = EMAC_RXCONTROL_CONFIGVALUE;
-		config_reg->TXINTMASKSET = EMAC_TXINTMASKSET_CONFIGVALUE;
-		config_reg->TXINTMASKCLEAR = EMAC_TXINTMASKCLEAR_CONFIGVALUE;
-		config_reg->RXINTMASKSET = EMAC_RXINTMASKSET_CONFIGVALUE;
-		config_reg->RXINTMASKCLEAR = EMAC_RXINTMASKCLEAR_CONFIGVALUE;
-		config_reg->MACSRCADDRHI = EMAC_MACSRCADDRHI_CONFIGVALUE;
-		config_reg->MACSRCADDRLO = EMAC_MACSRCADDRLO_CONFIGVALUE;	
-		config_reg->MDIOCONTROL = EMAC_MDIOCONTROL_CONFIGVALUE;
-		config_reg->C0RXEN = EMAC_C0RXEN_CONFIGVALUE;
-		config_reg->C0TXEN = EMAC_C0TXEN_CONFIGVALUE;
-	}
-	else
-	{
-		config_reg->TXCONTROL = HWREG(EMAC_0_BASE + EMAC_TXCONTROL);
-		config_reg->RXCONTROL = HWREG(EMAC_0_BASE + EMAC_RXCONTROL);
-		config_reg->TXINTMASKSET = HWREG(EMAC_0_BASE + EMAC_TXINTMASKSET);
-		config_reg->TXINTMASKCLEAR = HWREG(EMAC_0_BASE + EMAC_TXINTMASKCLEAR);
-		config_reg->RXINTMASKSET = HWREG(EMAC_0_BASE + EMAC_RXINTMASKSET);
-		config_reg->RXINTMASKCLEAR = HWREG(EMAC_0_BASE + EMAC_RXINTMASKCLEAR);
-		config_reg->MACSRCADDRHI = HWREG(EMAC_0_BASE + EMAC_MACSRCADDRHI);
-		config_reg->MACSRCADDRLO = HWREG(EMAC_0_BASE + EMAC_MACSRCADDRLO);		
-		config_reg->MDIOCONTROL = HWREG(MDIO_0_BASE + MDIO_CONTROL);
-		config_reg->C0RXEN = HWREG(EMAC_CTRL_0_BASE + EMAC_CTRL_CnRXEN(0U));
-		config_reg->C0TXEN = HWREG(EMAC_CTRL_0_BASE + EMAC_CTRL_CnTXEN(0U));
-	}
-	
+    if (type == InitialValue)
+    {
+        config_reg->TXCONTROL = EMAC_TXCONTROL_CONFIGVALUE;
+        config_reg->RXCONTROL = EMAC_RXCONTROL_CONFIGVALUE;
+        config_reg->TXINTMASKSET = EMAC_TXINTMASKSET_CONFIGVALUE;
+        config_reg->TXINTMASKCLEAR = EMAC_TXINTMASKCLEAR_CONFIGVALUE;
+        config_reg->RXINTMASKSET = EMAC_RXINTMASKSET_CONFIGVALUE;
+        config_reg->RXINTMASKCLEAR = EMAC_RXINTMASKCLEAR_CONFIGVALUE;
+        config_reg->MACSRCADDRHI = EMAC_MACSRCADDRHI_CONFIGVALUE;
+        config_reg->MACSRCADDRLO = EMAC_MACSRCADDRLO_CONFIGVALUE;   
+        config_reg->MDIOCONTROL = EMAC_MDIOCONTROL_CONFIGVALUE;
+        config_reg->C0RXEN = EMAC_C0RXEN_CONFIGVALUE;
+        config_reg->C0TXEN = EMAC_C0TXEN_CONFIGVALUE;
+    }
+    else
+    {
+        config_reg->TXCONTROL = HWREG(EMAC_0_BASE + EMAC_TXCONTROL);
+        config_reg->RXCONTROL = HWREG(EMAC_0_BASE + EMAC_RXCONTROL);
+        config_reg->TXINTMASKSET = HWREG(EMAC_0_BASE + EMAC_TXINTMASKSET);
+        config_reg->TXINTMASKCLEAR = HWREG(EMAC_0_BASE + EMAC_TXINTMASKCLEAR);
+        config_reg->RXINTMASKSET = HWREG(EMAC_0_BASE + EMAC_RXINTMASKSET);
+        config_reg->RXINTMASKCLEAR = HWREG(EMAC_0_BASE + EMAC_RXINTMASKCLEAR);
+        config_reg->MACSRCADDRHI = HWREG(EMAC_0_BASE + EMAC_MACSRCADDRHI);
+        config_reg->MACSRCADDRLO = HWREG(EMAC_0_BASE + EMAC_MACSRCADDRLO);      
+        config_reg->MDIOCONTROL = HWREG(MDIO_0_BASE + MDIO_CONTROL);
+        config_reg->C0RXEN = HWREG(EMAC_CTRL_0_BASE + EMAC_CTRL_CnRXEN(0U));
+        config_reg->C0TXEN = HWREG(EMAC_CTRL_0_BASE + EMAC_CTRL_CnTXEN(0U));
+    }
+    
 }
 
 /* ISR for EMAC Transmit Interrupt. Calls another handler function for processing the descriptors.
@@ -1700,24 +1835,26 @@ void EMACGetConfigValue(emac_config_reg_t *config_reg, config_value_type_t type)
 IRQ
 /* SourceId : ETH_SourceId_054 */
 /* DesignId : ETH_DesignId_054*/
-/* Requirements : HL_ETH_SR15 */
+/* Requirements : HL_ETH_SR15,HL_ETH_SR33 */
 void EMACTxIntISR(void)
 {
-	hdkif_t *hdkif;
-	hdkif= &hdkif_data[0U];
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */		
-	emacTxNotification(hdkif);
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	EMACTxIntHandler(hdkif);
-	EMACCoreIntAck(hdkif->emac_base, (uint32)EMAC_INT_CORE0_TX);
-	
+    hdkif_t *hdkif;
+    hdkif= &hdkif_data[0U];
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    emacTxNotification(hdkif);
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    EMACTxIntHandler(hdkif);
+    EMACCoreIntAck(hdkif->emac_base, (uint32)EMAC_INT_CORE0_TX);
+    paKet.EMACTxBsy=0;   //tek added in status
+    hLO_TP45;
+    hHI_TP45;
 }
 
 /**
@@ -1728,28 +1865,32 @@ void EMACTxIntISR(void)
 IRQ
 /* SourceId : ETH_SourceId_055 */
 /* DesignId : ETH_DesignId_055*/
-/* Requirements : HL_ETH_SR15 */
+/* Requirements : HL_ETH_SR15,HL_ETH_SR33 */
 void EMACRxIntISR(void)
 {
-	hdkif_t *hdkif;
-	hdkif= &hdkif_data[0U];
-	/* The data is received in the allocated receive descriptors starting from (&(hdkif->rxchptr))->active_head */
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */		
-	emacRxNotification(hdkif);
-	/* In this function, the filled receive buffer descriptors are freed for further usage and the receive interrupt is acknowledged. */
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 
-	/*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */	 	
-	EMACReceive(hdkif);
+    hdkif_t *hdkif;
+    hdkif= &hdkif_data[0U];
+    /* The data is received in the allocated receive descriptors starting from (&(hdkif->rxchptr))->active_head */
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    emacRxNotification(hdkif);
+    /* In this function, the filled receive buffer descriptors are freed for further usage and the receive interrupt is acknowledged. */
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */   
+    /*SAFETYMCUSW 45 D MR:21.1 <APPROVED> "Valid non NULL input parameters are assigned in this driver" */      
+    EMACReceive(hdkif);
 
 
-	/* Acknowledge the EMAC Core Rx Interrupts */
-	EMACCoreIntAck(hdkif->emac_base, (uint32)EMAC_INT_CORE0_RX);
+    /* Acknowledge the EMAC Core Rx Interrupts */
+    EMACCoreIntAck(hdkif->emac_base, (uint32)EMAC_INT_CORE0_RX);
 }
+
+
+/* USER CODE BEGIN (2) */
+/* USER CODE END */
 
 /***************************** End Of File ***********************************/
