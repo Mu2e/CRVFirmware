@@ -115,6 +115,10 @@ constant SpillStatAddr : AddrPtr := "00" & X"76";
 constant MarkerBitsAd : AddrPtr  := "00" & X"77";
 constant MarkerDelayAd : AddrPtr := "00" & X"78";
 
+constant LinkErrAd : AddrPtr     := "00" & X"80";
+
+constant DebugVersionAd : AddrPtr := "00" & X"99";
+
 ---------------------- Broadcast addresses ------------------------------
 
 -- Phy transmit broadcast for all three front FPGAs

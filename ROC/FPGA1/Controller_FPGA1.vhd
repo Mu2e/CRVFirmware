@@ -307,6 +307,9 @@ signal RxSeqNoErr : std_logic_vector (1 downto 0);
 
 signal PunchBits : std_logic_vector (3 downto 0);
 
+-- Link counters
+signal LosCounter : std_logic_vector (3 downto 0);
+
 begin
 
 Sys_Pll : SysPll
@@ -834,6 +837,12 @@ end if;
 		if Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and HrtBtWrtCnt > 0
 	then HrtBtBuff_wr_en <= '1'; GPO(1) <= '1'; Debug(7) <= '1';
 	else HrtBtBuff_wr_en <= '0'; GPO(1) <= '0'; Debug(7) <= '0';
+	end if;
+
+-- Update Loss Of Sync Counters
+   if GTPRxRst = '1' then LosCounter <= (others =>'0');
+	elsif RxLOS(0)(1) = '1' then LosCounter <= LosCounter + 1;
+	else LosCounter <= LosCounter;
 	end if;
 
 -- Store the empty flag values when they make a transition, 
@@ -2400,6 +2409,8 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 HrtBtBuff_Emtpy & "0000" & HrtBtBuffRdCnt when HrtBtBuffStatAd,
 		 HrtBtBuff_Out when HrtBtFIFORdAd,
 		 X"00" & MarkerDelay when MarkerDelayAd,
+		 X"0001" when DebugVersionAd,
+		 X"000" & LosCounter when LinkErrAd,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers
