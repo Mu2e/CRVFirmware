@@ -309,6 +309,7 @@ signal PunchBits : std_logic_vector (3 downto 0);
 
 -- Link counters
 signal LosCounter : std_logic_vector (3 downto 0);
+signal CRCErrCnt  : std_logic_vector (7 downto 0);
 
 begin
 
@@ -660,6 +661,7 @@ begin
 	ActiveReg <= X"000000"; LinkFIFOStatReg <= "000";
 	Stat_DReq <= '0'; AddrReg <= (others =>'0');
 	WdCountBuff_WrtEn <= '0'; WdCountBuff_RdEn <= '0';
+	CRCErrCnt <= X"00"; 
 
 elsif rising_edge (UsrClk2(0)) then
 
@@ -837,6 +839,14 @@ end if;
 		if Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and HrtBtWrtCnt > 0
 	then HrtBtBuff_wr_en <= '1'; GPO(1) <= '1'; Debug(7) <= '1';
 	else HrtBtBuff_wr_en <= '0'; GPO(1) <= '0'; Debug(7) <= '0';
+	end if;
+
+-- Check CRC
+   if (((HrtBtWrtCnt = X"1") or (TrigReqWdCnt = X"1")) and 
+	     GTPRxReg(0) /= GTPRxReg(0)) then
+		 CRCErrCnt <= CRCErrCnt + 1; 
+	else
+	    CRCErrCnt <= CRCErrCnt;
 	end if;
 
 -- Update Loss Of Sync Counters
@@ -2410,7 +2420,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 HrtBtBuff_Out when HrtBtFIFORdAd,
 		 X"00" & MarkerDelay when MarkerDelayAd,
 		 X"0001" when DebugVersionAd,
-		 X"000" & LosCounter when LinkErrAd,
+		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers
