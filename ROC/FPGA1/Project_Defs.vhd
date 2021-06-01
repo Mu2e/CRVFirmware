@@ -95,6 +95,9 @@ constant HrtBtFIFORdAd : AddrPtr := "00" & X"3E";
 -- Data request prescale during beam on
 constant PreScaleRegAd : AddrPtr := "00" & X"40";
 
+constant DCSPktBuffAd  : AddrPtr := "00" & X"50";
+constant DCSPktWdUsedAd  : AddrPtr := "00" & X"51";
+
 constant SpillTrigCntAdHi : AddrPtr := "00" & X"66";
 constant SpillTrigCntAdLo : AddrPtr := "00" & X"67";
 

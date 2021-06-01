@@ -245,7 +245,7 @@ signal TrigFMDat : std_logic_vector (15 downto 0);
 
 -- Trigger request packet buffer, FIFO status bits
 signal DReqBuff_Out : std_logic_vector (15 downto 0);
-signal DReqBuff_wr_en,DReqBuff_rd_en,DReqBuff_uCRd,
+signal DReqBuff_wr_en,DReqBuff_rd_en,DReqBuff_uCRd, DCSPktBuff_uCRd,
 		 DReqBuff_Full,TrigTx_Sel,DReqBuff_Emtpy,
 		 Dreq_Tx_Req,Dreq_Tx_ReqD,DReq_Tx_Ack,BmOnTrigReq,Stat_DReq : std_logic;
 signal LinkFIFOStatReg,Lower_FM_Bits : std_logic_vector (2 downto 0);  
@@ -269,10 +269,10 @@ signal TStmpBuff_wr_en,TStmpBuff_rd_en,TStmpBuff_Full,TStmpBuff_Emtpy : std_logi
 signal TStmpWds : std_logic_vector (8 downto 0);
 
 -- DCS request FIFO
-signal DCSTxBuff_wr_en,DCSTxBuff_rd_en,DCSTxBuff_Full,DCSTxBuff_Emtpy : std_logic;
+signal DCSPktBuff_wr_en,DCSPktBuff_rd_en,DCSPktBuff_Full,DCSPktBuff_Emtpy : std_logic;
 signal DCSPktRdCnt : std_logic_vector (12 downto 0);
-signal DCSTxBuff_Out : std_logic_vector (15 downto 0);
-signal DCSTxBuffWds : std_logic_vector (8 downto 0);
+signal DCSPktBuff_Out : std_logic_vector (15 downto 0);
+--signal DCSTxBuffWds : std_logic_vector (8 downto 0);
 
 -- FEB active register
 signal ActiveReg : std_logic_vector (23 downto 0);
@@ -419,12 +419,14 @@ DCSPktBuff : LinkFIFO
 	 wr_clk => UsrClk2(0),
     rd_clk => SysClk,
     din => GTPRxReg(0),
-    wr_en => DCSTxBuff_wr_en,
-    rd_en => DCSTxBuff_rd_en,
-    dout => DCSTxBuff_Out,
-    full => DCSTxBuff_Full,
-    empty => DCSTxBuff_Emtpy,
+    wr_en => DCSPktBuff_wr_en,
+    rd_en => DCSPktBuff_rd_en,
+    dout => DCSPktBuff_Out,
+    full => DCSPktBuff_Full,
+    empty => DCSPktBuff_Emtpy,
 	 rd_data_count => DCSPktRdCnt);
+	 
+	 DCSPktBuff_rd_en <= DCSPktBuff_uCRd;
 
 -- Queue up time stamps for later checking
 TimeStampBuff : TrigPktBuff
@@ -647,7 +649,8 @@ begin
    TxCRCEn(0) <= '0'; RdCRCEn(0) <= '0'; HrtBtBuff_wr_en <= '0';
  	RxCRCRst(0) <= '0';  RxCRCRstD(0) <= '0'; HrtBtWrtCnt <= X"0";
 	TrigReqWdCnt <= X"0"; PRBSCntRst(0) <= '0'; DReqBuff_wr_en <= '0'; 
-	DCSTxBuff_wr_en <= '0'; DReq_Count <= (others =>'0');
+	DCSReqWdCnt  <= X"0"; DCSPktBuff_wr_en <= '0'; 
+	DReq_Count <= (others =>'0');
 	LinkRDDL <= "00"; Packet_Parser <= Idle; Event_Builder <= Idle;
 	RxSeqNoErr(0) <= '0'; Packet_Former <= Idle; FormRst <= '0';
 	LinkFIFORdReq <= (others =>'0'); StatOr <= X"00"; 
@@ -839,6 +842,20 @@ end if;
 		if Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and HrtBtWrtCnt > 0
 	then HrtBtBuff_wr_en <= '1'; GPO(1) <= '1'; Debug(7) <= '1';
 	else HrtBtBuff_wr_en <= '0'; GPO(1) <= '0'; Debug(7) <= '0';
+	end if;
+
+-- Count down the nine words of the DCS packet being received
+	if GTPRxRst = '1' or RxLOS(0)(1) = '1' then DCSReqWdCnt <= X"0";
+	elsif Rx_IsComma(0) = "00" and ReFrame(0) = '0' and Rx_IsCtrl(0) = "10" and GTPRx(0)(4 downto 0) = 0
+	then DCSReqWdCnt <= X"9";
+	elsif Rx_IsComma(0) = "00" and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and DCSReqWdCnt /= 0  
+	then DCSReqWdCnt <= DCSReqWdCnt - 1;
+	else DCSReqWdCnt <= DCSReqWdCnt;
+	end if;
+
+	if Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and DCSReqWdCnt > 0
+	then DCSPktBuff_wr_en <= '1';
+	else DCSPktBuff_wr_en <= '0';
 	end if;
 
 -- Check CRC
@@ -1784,7 +1801,7 @@ main : process(SysClk, CpldRst)
 	TmgCntEn <= '0'; ClkDiv <= "000"; CMDBitCount <= (others => '0'); 
 	LEDShiftReg <= (others => '0');	LED_Shift <= Idle;
 	DReqBuff_uCRd <= '0'; LinkBusy <= '0'; HrtBtTxInh <= '0';
-	MarkerDelay <= (others => '0'); 
+	DCSPktBuff_uCRd <= '0'; MarkerDelay <= (others => '0'); 
 	
 -- Pll Chip Shifter signals
 	PLLBuffwr_en <= '0'; PLLBuffrd_en <= '0'; PllPDn <= '1';
@@ -1959,6 +1976,12 @@ end if;
 	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = TRigReqBuffAd 
 	then DReqBuff_uCRd <= '1';
 	else DReqBuff_uCRd <= '0';
+	end if;
+
+--	Read of the trigger request FIFO
+	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DCSPktBuffAd 
+	then DCSPktBuff_uCRd <= '1';
+	else DCSPktBuff_uCRd <= '0';
 	end if;
 
 -- 1us time base
@@ -2421,6 +2444,8 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 X"00" & MarkerDelay when MarkerDelayAd,
 		 X"0001" when DebugVersionAd,
 		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
+		 "000" & DCSPktRdCnt when DCSPktWdUsedAd,
+		 DCSPktBuff_Out(15 downto 0) when DCSPktBuffAd,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers
