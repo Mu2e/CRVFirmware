@@ -137,6 +137,7 @@ signal SpillWidth,InterSpill,InterSpillCount : std_logic_vector (7 downto 0);
 signal SpillWidthCount : std_logic_vector (8 downto 0);
 signal SuperCycleCount : std_logic_vector (13 downto 0);
 signal IntuBunchCount,ExtuBunchCount : std_logic_vector (47 downto 0);
+signal ExtuBunchOffset : std_logic_vector (15 downto 0);
 -- Counter for counting down heartbeat bursts
 signal HrtBtBrstCntReg,HrtBtBrstCounter  : std_logic_vector (23 downto 0);
 signal uBunchLEDCnt : std_logic_vector (4 downto 0);
@@ -1795,6 +1796,7 @@ main : process(SysClk, CpldRst)
 	LEDRst <= '1'; LEDSDat <= "000"; LEDSClk <= "000"; LEDLd <= "000000";
 	uBunchLED <= '0'; uBunchLEDCnt <= (others => '0'); IntTmgEn <= '0';
    HrtBtBrstCntReg <= (X"001000"); HrtBtBrstCounter <= (others => '0');
+	ExtuBunchOffset <= (others => '0');
 	ExtuBunchCount <= (others => '0'); IntuBunchCount <= (others => '0'); 
 	HrtBtBuff_rd_en <= '0'; HrtBtRdCnt <= X"0"; HrtBtTxReq <= '0';
 	HrtBtFMReq <= '0'; CMDwr_en <= '0'; CMDrd_en <= '0'; 
@@ -2074,6 +2076,7 @@ Debug(5 downto 2) <= HrtBtBuffRdCnt(3 downto 0);
 		when X"6" => ExtuBunchCount(15 downto 0) <= HrtBtBuff_Out;
 		when X"5" => ExtuBunchCount(31 downto 16) <= HrtBtBuff_Out;
 		when X"4" => ExtuBunchCount(47 downto 32) <= HrtBtBuff_Out;
+		When X"3" => ExtuBunchCount <= (ExtuBunchCount + (X"0000" & ExtuBunchOffset));
 	   when others => ExtuBunchCount <= ExtuBunchCount;
 	 end case;
 
@@ -2093,6 +2096,12 @@ if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = DReqBrstCntAd
  then DReqBrstCntReg <= uCD;
 else DReqBrstCntReg <= DReqBrstCntReg;
 end if;
+
+-- uB offset 
+ if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtOffsetAd
+ then ExtuBunchOffset <= uCD(15 downto 0);
+ else ExtuBunchOffset <= ExtuBunchOffset;
+ end if;
 
 -- Counter used to send a burst of mirobunches.
  if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtBrstCntAdHi
@@ -2442,10 +2451,11 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 HrtBtBuff_Emtpy & "0000" & HrtBtBuffRdCnt when HrtBtBuffStatAd,
 		 HrtBtBuff_Out when HrtBtFIFORdAd,
 		 X"00" & MarkerDelay when MarkerDelayAd,
-		 X"0001" when DebugVersionAd,
+		 X"0003" when DebugVersionAd,
 		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
 		 "000" & DCSPktRdCnt when DCSPktWdUsedAd,
 		 DCSPktBuff_Out(15 downto 0) when DCSPktBuffAd,
+		 ExtuBunchOffset when HrtBtOffsetAd,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers

@@ -119,6 +119,7 @@ constant MarkerBitsAd : AddrPtr  := "00" & X"77";
 constant MarkerDelayAd : AddrPtr := "00" & X"78";
 
 constant LinkErrAd : AddrPtr     := "00" & X"80";
+constant HrtBtOffsetAd : AddrPtr := "00" & X"81";
 
 constant DebugVersionAd : AddrPtr := "00" & X"99";
 
