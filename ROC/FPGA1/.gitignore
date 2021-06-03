@@ -29,6 +29,7 @@
 *.ptwx
 *.stx
 *.ut
+*.mcs
 *.map
 *.mrp
 *.ngm

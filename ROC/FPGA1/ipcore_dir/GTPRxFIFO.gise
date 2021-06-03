@@ -19,7 +19,7 @@
 
   <version xmlns="http://www.xilinx.com/XMLSchema">11.1</version>
 
-  <sourceproject xmlns="http://www.xilinx.com/XMLSchema" xil_pn:fileType="FILE_XISE" xil_pn:name="../../../ipcore_dir/GTPRxFIFO.xise"/>
+  <sourceproject xmlns="http://www.xilinx.com/XMLSchema" xil_pn:fileType="FILE_XISE" xil_pn:name="GTPRxFIFO.xise"/>
 
   <files xmlns="http://www.xilinx.com/XMLSchema">
     <file xil_pn:fileType="FILE_ASY" xil_pn:name="GTPRxFIFO.asy" xil_pn:origination="imported"/>

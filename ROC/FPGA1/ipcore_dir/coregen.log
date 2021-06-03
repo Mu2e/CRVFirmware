@@ -1,5 +1,136 @@
 INFO:sim:172 - Generating IP...
 Applying current project options...
 Finished applying current project options.
-Cancelled executing Tcl generator.
+WARNING:sim - A core named 'GTP_Xcvr' already exists in the project. Output
+   products for this core may be overwritten.
+Resolving generics for 'GTP_Xcvr'...
+WARNING:sim - A core named 'GTP_Xcvr' already exists in the project. Output
+   products for this core may be overwritten.
+Applying external generics to 'GTP_Xcvr'...
+Delivering associated files for 'GTP_Xcvr'...
+WARNING:sim - Component s6_gtpwizard_v1_11 does not have a valid model name for
+   VHDL synthesis
+Delivering EJava files for 'GTP_Xcvr'...
+WARNING:sim - Overwriting existing file
+   /home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_
+   Xcvr/doc/ug546_s6_gtpwizard.pdf with file from view xilinx_documentation
+Delivered 2 files into directory
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xcv
+r
+Generating ASY schematic symbol...
+INFO:sim:993 - The selected IP does not support an ASY schematic symbol.
+INFO:sim:949 - Finished generation of ASY schematic symbol.
+WARNING:sim - The chosen IP does not support an SYM schematic symbol.
+Generating metadata file...
+Generating ISE project...
+XCO file found: GTP_Xcvr.xco
+XMDF file found: GTP_Xcvr_xmdf.tcl
+WARNING: GTP_Xcvr.vho does not exist, will not be added to ISE project.
+Adding
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xcv
+r/example_design/mgt_usrclk_source_pll.vhd -view all -origin_type created
+INFO:HDLCompiler:1061 - Parsing VHDL file
+   "/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP
+   _Xcvr/example_design/mgt_usrclk_source_pll.vhd" into library work
+INFO:ProjectMgmt - Parsing design hierarchy completed successfully.
+Adding
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xcv
+r/example_design/frame_gen.vhd -view all -origin_type created
+INFO:HDLCompiler:1061 - Parsing VHDL file
+   "/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP
+   _Xcvr/example_design/frame_gen.vhd" into library work
+INFO:ProjectMgmt - Parsing design hierarchy completed successfully.
+Adding
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xcv
+r/example_design/frame_check.vhd -view all -origin_type created
+INFO:HDLCompiler:1061 - Parsing VHDL file
+   "/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP
+   _Xcvr/example_design/frame_check.vhd" into library work
+INFO:ProjectMgmt - Parsing design hierarchy completed successfully.
+Adding
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xcv
+r/example_design/gtp_xcvr_top.vhd -view all -origin_type created
+INFO:HDLCompiler:1061 - Parsing VHDL file
+   "/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP
+   _Xcvr/example_design/gtp_xcvr_top.vhd" into library work
+INFO:ProjectMgmt - Parsing design hierarchy completed successfully.
+Adding
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/gtp_xcv
+r_tile.vhd -view all -origin_type created
+INFO:HDLCompiler:1061 - Parsing VHDL file
+   "/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/gtp
+   _xcvr_tile.vhd" into library work
+INFO:ProjectMgmt - Parsing design hierarchy completed successfully.
+Adding
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/gtp_xcv
+r.vhd -view all -origin_type created
+INFO:HDLCompiler:1061 - Parsing VHDL file
+   "/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/gtp
+   _xcvr.vhd" into library work
+INFO:ProjectMgmt - Parsing design hierarchy completed successfully.
+Adding
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xcv
+r/example_design/gtp_attributes.ucf -view all -origin_type created
+Adding
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xcv
+r/example_design/GTP_Xcvr_top.ucf -view all -origin_type created
+Adding
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xcv
+r/implement/data_vio.ngc -view all -origin_type created
+Checking file
+"/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xc
+vr/implement/data_vio.ngc" for project device match ...
+WARNING:ProjectMgmt - The file
+   "/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP
+   _Xcvr/implement/data_vio.ngc" device information, xc6slx45t-fgg484-2, does
+   not match the current project device, xc6slx25tfgg484-3.
+Adding
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xcv
+r/implement/icon.ngc -view all -origin_type created
+Checking file
+"/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xc
+vr/implement/icon.ngc" for project device match ...
+WARNING:ProjectMgmt - The file
+   "/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP
+   _Xcvr/implement/icon.ngc" device information, 6slx45tfgg484-2, does not match
+   the current project device, xc6slx25tfgg484-3.
+Adding
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xcv
+r/implement/ila.ngc -view all -origin_type created
+Checking file
+"/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xc
+vr/implement/ila.ngc" for project device match ...
+WARNING:ProjectMgmt - The file
+   "/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP
+   _Xcvr/implement/ila.ngc" device information, 6slx45tfgg484-2, does not match
+   the current project device, xc6slx25tfgg484-3.
+Adding
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xcv
+r/implement/null_vio.ngc -view all -origin_type created
+Checking file
+"/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xc
+vr/implement/null_vio.ngc" for project device match ...
+WARNING:ProjectMgmt - The file
+   "/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP
+   _Xcvr/implement/null_vio.ngc" device information, xc6slx45t-fgg484-2, does
+   not match the current project device, xc6slx25tfgg484-3.
+Adding
+/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xcv
+r/implement/shared_vio.ngc -view all -origin_type created
+Checking file
+"/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP_Xc
+vr/implement/shared_vio.ngc" for project device match ...
+WARNING:ProjectMgmt - The file
+   "/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/tmp/_cg/GTP
+   _Xcvr/implement/shared_vio.ngc" device information, xc6slx45t-fgg484-2, does
+   not match the current project device, xc6slx25tfgg484-3.
+WARNING:coreutil - WARNING: This core does not have a top level called
+   "/GTP_Xcvr"
+   WARNING: Top level has been set to "/GTP_Xcvr_top"
+Generating README file...
+Generating FLIST file...
+INFO:sim:948 - Finished FLIST file generation.
+Launching README viewer...
+Moving files to output directory...
+Finished moving files to output directory
 Wrote CGP file for project 'GTP_Xcvr'.

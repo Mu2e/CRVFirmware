@@ -1,6 +1,6 @@
 #ChipScope Pro Analyzer Project File, Version 3.0
 #Thu Jul 27 15:56:09 IST 2006
-device.1.configFileDir=C:/Experiments/mu2e/Readout_Controller/Controller_FPGA1/ipcore_dir/GTP_Xcvr/implement/
+device.1.configFileDir=/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/ipcore_dir/GTP_Xcvr/implement/
 device.1.configFilename=gtp_xcvr_top.bit
 deviceChain.deviceName0=System_ACE
 deviceChain.deviceName1=XC6SLX25T
