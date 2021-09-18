@@ -97,6 +97,14 @@ constant SlipCtrlAd 	 : AddrPtr := "00" & X"61";
 constant SlipCntRegAd : AddrPtr := "00" & X"62";
 constant AlignEnAd    : AddrPtr := "00" & X"63";
 
+--uBunch debugging
+constant uBHiAd       : AddrPtr := "00" & X"64";
+constant uBLoAd       : AddrPtr := "00" & X"65";
+constant uBBuffHiAd   : AddrPtr := "00" & X"66";
+constant uBBuffLoAd   : AddrPtr := "00" & X"67";
+constant uBBuffAdHiAd : AddrPtr := "00" & X"68";
+constant uBBuffAdLoAd : AddrPtr := "00" & X"69";
+
 -- Spill word count
 -- One second timer reset at FPGA config
 constant UpTimeRegAddrHi : AddrPtr := "00" & X"6C";
@@ -108,6 +116,8 @@ constant TimeStampAdLo : AddrPtr := "00" & X"73";
 -- Simon Debug
 constant FRDat0RegAd : AddrPtr := "00" & X"74";
 constant FRDat1RegAd : AddrPtr := "00" & X"75";
+constant DebugVersionAd : AddrPtr := "00" & X"76";
+constant PageRstAddr : AddrPtr := "00" & X"77";
 -- Spill indicator
 
 Type AddrArrayType is Array(0 to 7) of AddrPtr;

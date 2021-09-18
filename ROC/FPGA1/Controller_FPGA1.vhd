@@ -108,7 +108,7 @@ signal GPOCount : std_logic_vector(2 downto 0);
 signal DDRBits : std_logic_vector(1 downto 0);
 signal MarkerBits : std_logic_vector(15 downto 0);
 signal MarkerDelay, MarkerDelayCounter : std_logic_vector(7 downto 0);
-signal Even_Odd,Marker,MarkerDelayed,MarkerReq,MarkerSyncEn : std_logic;
+signal Even_Odd,Marker,MarkerDelayed,MarkerReq,MarkerSyncEn, MarkerDelayArm : std_logic;
 
 -- Orange tree signals
 signal iDQ : std_logic_vector (15 downto 0);
@@ -286,7 +286,7 @@ signal FEBID_addra,FEBID_addrb : std_logic_vector (4 downto 0);
 signal FEBID_doutb : std_logic_vector (15 downto 0); 
 signal FEBID_wea : std_logic_vector (0 downto 0); 
 -- Register that is the "OR" of all the status words from the FEBs
-signal StatOr : std_logic_vector (7 downto 0); 
+signal StatOr, Stat0 : std_logic_vector (7 downto 0); 
 -- CRC generator signals
 Signal RdCRCEn,TxCRCEn,RxCRCRst,RxCRCRstD,TxCRCRst : std_logic_vector (1 downto 0);
 signal TxCRC,RxCRC,TxCRCDat : Array_2x16;
@@ -369,6 +369,10 @@ HeartBeatTx : FM_Tx
 					 Tx_Out => HrtBtTxOuts);
 HeartBeatFM <= HrtBtTxOuts.FM when ExtTmg = '0' else GPI;
 Debug(1) <= HrtBtTxOuts.FM;
+Debug(2) <= HrtBtFMTxEn;
+Debug(3) <= MarkerDelayed;
+Debug(4) <= HrtBtDone;
+Debug(5) <= HrtBtFMReq;
 
 -- FM transmitter for data requests, used only when sending fake controller data to the GTP link
 DReqTx : FM_Tx
@@ -654,7 +658,7 @@ begin
 	DReq_Count <= (others =>'0');
 	LinkRDDL <= "00"; Packet_Parser <= Idle; Event_Builder <= Idle;
 	RxSeqNoErr(0) <= '0'; Packet_Former <= Idle; FormRst <= '0';
-	LinkFIFORdReq <= (others =>'0'); StatOr <= X"00"; 
+	LinkFIFORdReq <= (others =>'0'); StatOr <= X"00";  Stat0 <= X"00";
 	EvTxWdCnt <= (others => '0'); EvTxWdCntTC <= '0'; EventBuff_RdEn <= '0';
 	FIFOCount <= (others => (others => '0')); EventBuff_WrtEn <= '0';
 	TStmpBuff_wr_en <= '0'; TStmpBuff_rd_en <= '0'; EvBuffWrtGate <= '0';
@@ -1034,7 +1038,7 @@ Case Event_Builder is
 
 -- Select the data source for the event buffer FIFO
 	   if Event_Builder = WrtWdCnt then EventBuff_Dat <= EventSum;
-	elsif Event_Builder = WrtStat	then EventBuff_Dat <= X"00" & StatOR;
+	elsif Event_Builder = WrtStat	then EventBuff_Dat <= Stat0 & StatOR;
 	elsif LinkFIFORdReq(0) = '1' then EventBuff_Dat <= LinkFIFOOut(0);
 	elsif LinkFIFORdReq(1) = '1' then EventBuff_Dat <= LinkFIFOOut(1);
 	elsif LinkFIFORdReq(2) = '1' then EventBuff_Dat <= LinkFIFOOut(2);
@@ -1044,11 +1048,14 @@ Case Event_Builder is
 -- Do an "or" of the FEB error words for the cotroller error word
    if Event_Builder = RdStat0 then 
 				StatOr <= StatOr or LinkFIFOOut(0)(7 downto 0);
+				Stat0  <=           LinkFIFOOut(0)(7 downto 0);
 elsif Event_Builder = RdStat1 then 
 				StatOr <= StatOr or LinkFIFOOut(1)(7 downto 0);
+				Stat0 <= Stat0;
 elsif Event_Builder = RdStat2 then 
 				StatOr <= StatOr or LinkFIFOOut(2)(7 downto 0);
-else StatOr <= StatOr;
+				Stat0 <= Stat0;
+else StatOr <= StatOr; Stat0 <= Stat0;
 end if;
 
 --Copy port activity bits from the other FPGAs to this register
@@ -1738,13 +1745,20 @@ FMTxReq : process(Clk80MHz, CpldRst)
  
 -- Counter to manage delay of marker receipt
   if Marker = '1'
-		then MarkerDelayCounter <= MarkerDelay;
+		then 
+		    MarkerDelayCounter <= MarkerDelay; 
+			 MarkerDelayArm     <= '1';
 	elsif MarkerDelayCounter > 0
-		then MarkerDelayCounter <= MarkerDelayCounter - 1;
-	elsif MarkerDelayCounter = 0 and MarkerDelayed = '0'
-		then MarkerDelayed <= '1';
+		then 
+		    MarkerDelayCounter <= MarkerDelayCounter - 1; 
+		    MarkerDelayArm     <= MarkerDelayArm;
+	elsif MarkerDelayCounter = 0 and MarkerDelayed = '0' and MarkerDelayArm = '1'
+		then 
+		    MarkerDelayed  <= '1'; 
+			 MarkerDelayArm <= '0';
 	else
-		MarkerDelayed <= '0';
+		MarkerDelayed  <= '0'; 
+		MarkerDelayArm <= MarkerDelayArm;
   end if;
 
 -- Send a heart beat without pause if there is no marker input expected
@@ -2061,7 +2075,7 @@ end if;
 	else HrtBtRdCnt <= HrtBtRdCnt;
 	end if;
 	
-Debug(5 downto 2) <= HrtBtBuffRdCnt(3 downto 0);
+--Debug(5 downto 3) <= HrtBtBuffRdCnt(3 downto 1);
 
 	if (HrtBtRdCnt /= 0 and HrtBtTxInh = '0') 
 	or (HrtBtTxInh = '1' and RDDL = 2 and AddrReg(11 downto 10) = GA 

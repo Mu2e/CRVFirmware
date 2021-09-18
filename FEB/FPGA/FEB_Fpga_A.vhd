@@ -206,6 +206,7 @@ signal Avg_Req : std_logic_vector(1 downto 0);
 signal SlfTrgEdge : Array_2x8x2;
 signal uBunchBuffOut,DDRAddrOut : std_logic_vector(31 downto 0);
 signal uBunch : std_logic_vector(31 downto 0);
+signal uBunchGuard : std_logic;
 signal uBunchWrt,uBunchRd,uBunchBuffEmpty,uBunchBuffFull,
 		 DDRAddrRd,DDRAddrFull,DDRAddrEmpty : std_logic;
 
@@ -287,7 +288,7 @@ Type Write_Seq_FSM is (Idle,ChkWrtBuff,SndCmd,WtCmdMtpy,AddrRd,
 signal DDR_Write_Seq : Write_Seq_FSM;
 signal DDRWrtSeqStat : std_logic_vector(2 downto 0);
 signal EvBuffWrt,EvBuffRd,EvBuffEmpty,EvBuffFull,DRAMRdBuffWrt,PageRdStat,
-		 PageRdReq,DRAMRdBuffRd,DRAMRdBuffFull,DRAMRdBuffEmpty : std_logic;
+		 PageRdReq,DRAMRdBuffRd,DRAMRdBuffFull,DRAMRdBuffEmpty, rstDRAMBuffHi : std_logic;
 signal EvBuffDat,EvBufffOut,DRAMRdBuffDat,DRAMRdBuffOut : std_logic_vector(15 downto 0);
 signal DRAMRdBuffWdsUsed,EvBuffWdsUsed,PageWdCount : std_logic_vector(10 downto 0);
 signal DDRWrtCount : std_logic_vector(10 downto 0);
@@ -517,7 +518,7 @@ EventBuff : SCFIFO_1Kx16
 
 DRAMRdBuff : SCFIFO_1Kx16
 -- Fifo for buffering one event
-  port map (rst => ResetHi,
+  port map (rst => ResetHi or rstDRAMBuffHi,
 				clk => SysClk,
 				wr_en => DRAMRdBuffWrt,
 				rd_en => DRAMRdBuffRd,
@@ -1220,6 +1221,7 @@ main : process(SysClk, CpldRst)
 	SDRdAD <= (others => '0'); SDRdPtr <= (others => '0'); 
 	SDRdCmd <= "000"; SDRdCmdEn <= '0'; RdHi_LoSel <= '0'; Even_Odd <= '0';
    SDWrtDat <= (others => '0'); SDwr_en <= '0'; WrtHi_LoSel <= '0'; 
+	rstDRAMBuffHi <= '0';
 
 	Event_Builder <= Idle; NoHIts <= (others => X"00"); Read_Seq_Stat <= X"0";
 	DDR_Write_Seq <= Idle;
@@ -1232,7 +1234,7 @@ main : process(SysClk, CpldRst)
 	uBunchWrt <= '0'; uBunchRd <= '0'; 	GateCounter <= '0' & X"00"; 
 	BeamOn <= '0'; EvOvf <=(others => X"FF"); 	Rx1DatReg <= (others => '0');
 	FlashGate <= '0'; FifoRdD <= '0'; 
-	IdleDL <= "00"; GPIDL(1) <= "00"; uBunch <= (others => '0');
+	IdleDL <= "00"; GPIDL(1) <= "00"; uBunch <= (others => '0'); uBunchGuard <= '0';
 	EvBuffWrt <= '0'; EvBuffRd <= '0'; EvBuffDat <= (others => '0'); PageRdReq <= '0';
 	DRAMRdBuffDat <= (others => '0'); DDRWrtCount <= (others => '0'); PageRdStat <= '0';
 	PageWdCount <= (others => '0'); DRAMRdBuffWrt <= '0'; DRAMRdBuffRd <= '0';
@@ -1268,6 +1270,13 @@ then FlashEn <= uCD(0);
 else FlashEn <= FlashEn;
 	  PulseSel <= PulseSel;
 	  LEDSrc <= LEDSrc;
+end if;
+
+-- Reset DRAM Read FIFO
+if (WRDL = 1 and uCA(9 downto 0) = PageStatAddr and uCD(8) = '1') or
+   (WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = PageRstAddr and uCD(8) = '1')
+then rstDRAMBuffHi <= '1';
+else rstDRAMBuffHi <= '0';
 end if;
 
 -- Register for determining the turn on time 
@@ -1388,15 +1397,21 @@ if RxOut.Done = '1' then TrigType <=  X"00" & Rx1Dat(23 downto 20);
 else TrigType <= TrigType;
 end if;
 
-if RxOut.Done = '1' and Rx1Dat(21) = '1' and Rx1Dat(19 downto 0) = X"00000"
+if RxOut.Done = '1' and Rx1Dat(21) = '1' and Rx1Dat(19 downto 0) = X"00000" and uBunchGuard = '0'
 	then uBunch(31 downto 20) <= uBunch(31 downto 20) + 1;
 		  uBunch(19 downto 0) <= (others => '0');
+		  uBunchGuard <= '1';
  elsif RxOut.Done = '1' and Rx1Dat(21) = '1' and Rx1Dat(19 downto 0) /= 0 
-	then uBunch <= uBunch(31 downto 20) & Rx1Dat(19 downto 0);
+	then uBunch <= uBunch(31 downto 20) & Rx1Dat(19 downto 0); uBunchGuard <= '0';
  elsif RxOut.Done = '1' and Rx1Dat(21) = '0'
-	then uBunch <= X"000" & Rx1Dat(19 downto 0);
-else uBunch <= uBunch;
+	then uBunch <= X"000" & Rx1Dat(19 downto 0); uBunchGuard <= '0';
+else uBunch <= uBunch; uBunchGuard <= uBunchGuard;
 end if;
+
+Debug(1) <= RxOut.Done;
+Debug(2) <= Rx1Dat(21);
+Debug(3) <= uBunchWrt;
+Debug(4) <= uBunchGuard;
 
 -- Write uBunch number at the uBunch beginning
 if RxOut.Done = '1' and SlfTrgEn = '1' then uBunchWrt <= '1';
@@ -2194,38 +2209,38 @@ end if;
 
 -- Use this to cross clock domains
 FR_OK <= FRStat;
-Debug(4) <= FRStat(0);
+--Debug(4) <= FRStat(0);
 Debug(7) <= FRStat(1);
 
 -- (Idle,SendPDn,SendPEn,SendRst,WaitFR,CheckFR,ChkSlipCnt,SendSlipReq);
 case AlignSeq is
-	when Idle => Debug(3 downto 1) <= "000";
+	when Idle => --Debug(3 downto 1) <= "000";
 	 if AlignReq /= 0 and Counter1us = Count1us
 		then AlignSeq <= SendPDn;
 	 else AlignSeq <= Idle;
 	 end if;
-	when SendPDn => Debug(3 downto 1) <= "001";
+	when SendPDn => --Debug(3 downto 1) <= "001";
 	  if Counter1us = Count1us and uSecCounter = 335
 		 then AlignSeq <= SendPEn;
 	  elsif AlignReq = 0 then
 	    AlignSeq <= Idle;
 	   else AlignSeq <= SendPDn;
 	  end if;
-	when SendPEn => Debug(3 downto 1) <= "010";
+	when SendPEn => --Debug(3 downto 1) <= "010";
 	  if Counter1us = Count1us and uSecCounter = 335
 		 then AlignSeq <= SendRst;
 	  elsif AlignReq = 0 then
 	    AlignSeq <= Idle;
 	   else AlignSeq <= SendPEn;
 	  end if;
-	when SendRst => Debug(3 downto 1) <= "011";
+	when SendRst => --Debug(3 downto 1) <= "011";
 		if Counter1us = Count1us and uSecCounter = 335
 		  then AlignSeq <= WaitFR;
 	  elsif AlignReq = 0 then
 	    AlignSeq <= Idle;
 		else AlignSeq <= SendRst;
 		end if;
-	when WaitFR => Debug(3 downto 1) <= "100";
+	when WaitFR => --Debug(3 downto 1) <= "100";
 	  --if Counter1us = Count1us and uSecCounter(3 downto 0) = X"F" then
      if Counter1us = Count1us and uSecCounter = 300 then	  
 	    AlignSeq <= CheckFR;       
@@ -2233,7 +2248,7 @@ case AlignSeq is
 	    AlignSeq <= Idle;
 	  else AlignSeq <= WaitFR;
 	 end if;
-	when CheckFR => Debug(3 downto 1) <= "101";
+	when CheckFR => --Debug(3 downto 1) <= "101";
 	   if Counter1us = Count1us and uSecCounter = 300
 	   --if Counter1us = Count1us and uSecCounter(3 downto 0) = X"F"
 		  then
@@ -2245,13 +2260,13 @@ case AlignSeq is
 			   AlignSeq <= RstCntr;
 			 end if;
 		 end if;
-	 when RstCntr => Debug(3 downto 1) <= "110";
+	 when RstCntr => --Debug(3 downto 1) <= "110";
 			 if Counter1us = Count1us then
 			  AlignSeq <= SendPDn;
 	      else 
 			  AlignSeq <= RstCntr;
 		  end if;
-	when others => Debug(3 downto 1) <= "111"; AlignSeq <= Idle; 
+	when others => --Debug(3 downto 1) <= "111"; AlignSeq <= Idle; 
  end Case;
 
 -- Only 0,2 and 4 are allowed slip count values
@@ -2604,6 +2619,7 @@ iCD <= X"000" & "00" & AFEPDn when CSRRegAddr,
 		 X"0" & '0' & HistAddrb(1) when HistPtrAd1,
 		 Hist_Outb(0) when HistRd0Ad,
 		 Hist_Outb(1) when HistRd1Ad,
+		 GA & "00" & X"001" when DebugVersionAd,
 		 X"0" & std_logic_vector(Ped_Reg(0)(0)) when PedRegAddr(0)(0),
 		 X"0" & std_logic_vector(Ped_Reg(0)(1)) when PedRegAddr(0)(1),
 		 X"0" & std_logic_vector(Ped_Reg(0)(2)) when PedRegAddr(0)(2),
@@ -2642,6 +2658,12 @@ iCD <= X"000" & "00" & AFEPDn when CSRRegAddr,
 		 "000" & ControllerNo & "000" & PortNo when FEBAddresRegAd,
 		 "00" & FRDat(0) & "00" & FRDat2(0) when FRDat0RegAd,
 		 "00" & FRDat(1) & "00" & FRDat2(1) when FRDat1RegAd,
+		 uBunch(15 downto  0)        when uBLoAd,
+		 uBunch(31 downto 16)        when uBHiAd,
+		 uBunchBuffOut(15 downto  0) when uBBuffLoAd,
+		 uBunchBuffOut(31 downto 16) when uBBuffHiAd,
+		 DDRAddrOut(15 downto  0)    when uBBuffAdLoAd,
+		 DDRAddrOut(31 downto 16)    when uBBuffAdHiAd,
 		 X"0000" when others;
 
 -- Select between DAC readback and the rest of the registers
