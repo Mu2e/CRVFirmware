@@ -147,7 +147,7 @@ signal DRCount : std_logic_vector (7 downto 0);
 signal Int_uBunch : std_logic_vector (1 downto 0);
 
 -- Count the number of triggers
-signal DReq_Count : std_logic_vector (15 downto 0);
+signal DReq_Count : std_logic_vector (31 downto 0);
 -- Make a test counter that increments with each read
 signal TestCount : std_logic_vector (31 downto 0);
 -- Uptime counter to check for un-anticipated resets
@@ -311,6 +311,15 @@ signal PunchBits : std_logic_vector (3 downto 0);
 -- Link counters
 signal LosCounter : std_logic_vector (3 downto 0);
 signal CRCErrCnt  : std_logic_vector (7 downto 0);
+
+-- Tx trace buffer
+signal GTPTxBuff_In, GTPTxBuff_Out  : std_logic_vector(15 downto 0);
+signal GTPTxBuff_wr_en, GTPTxBuff_rd_en : std_logic;
+signal GTPTxBuff_DatCnt : std_logic_vector(13 downto 0);
+-- Data request trace buffer
+signal DReqBuffTrace_rd_en : std_logic;
+signal DReqBuffTrace_Out : std_logic_vector (15 downto 0);
+signal DReqBuffTrace_DatCnt : std_logic_vector (10 downto 0);
 
 begin
 
@@ -530,6 +539,34 @@ GTPTxDCMs : GTPClkDCM
 
 end generate;
 
+-- output trace buffer
+-- remove or reduce if more ram is needed
+-- could also use a GTPRxFIFO
+GTPTxBuff : GTPTxFIFO
+  PORT MAP (rst => GTPRxRst,
+    clk => UsrClk2(0),
+    din => GTPTxBuff_In,
+    wr_en => GTPTxBuff_wr_en,           -- whenever GTPTx(0) != X"BC3C"
+    rd_en => GTPTxBuff_rd_en,           -- uC or when almost full, see data_count
+    dout => GTPTxBuff_Out,              -- to uC
+    full => open,                       -- not used
+    empty => open,                      -- not used 
+	 data_count => GTPTxBuff_DatCnt);    -- needed for tace buffer behavior
+	 
+-- REMOVE ME!	 
+-- trace buffer of data requests for debug 	 
+DReqBuffTrace : FIFO_DC_1kx16
+  PORT MAP (rst => GTPRxRst,
+    wr_clk => UsrClk2(0),
+	 rd_clk => SysClk,
+    din => GTPRxReg(0),
+    wr_en => DReqBuff_wr_en,
+    rd_en => DReqBuffTrace_rd_en,
+    dout => DReqBuffTrace_Out,
+    full => open,
+    empty => open,
+	 rd_data_count => DReqBuffTrace_DatCnt);
+
 ----------------------------- The GTP Wrapper -----------------------------
 ---------------------- Dedicated GTP Reference Clock Inputs ---------------
 
@@ -649,7 +686,8 @@ begin
 	CommaDL(0) <= "00"; GTPRxReg(0) <= X"0000";
 	UsrWRDL(0) <= "00"; UsrRDDL(0) <= "00";
 	Reframe(0) <= '1'; GTPTx(0) <= X"BC3C";
-	TxCharIsK(0) <= "11"; GTPTxStage(0) <= X"BC3C"; 
+	TxCharIsK(0) <= "11"; GTPTxStage(0) <= X"BC3C";
+   GTPTxBuff_In <= X"BC3C";
 	TxSeqNo(0) <= "000"; TxCRCRst(0) <= '0'; HrtBtMode <= X"00";
    TxCRCEn(0) <= '0'; RdCRCEn(0) <= '0'; HrtBtBuff_wr_en <= '0';
  	RxCRCRst(0) <= '0';  RxCRCRstD(0) <= '0'; HrtBtWrtCnt <= X"0";
@@ -670,14 +708,15 @@ begin
 	Stat_DReq <= '0'; AddrReg <= (others =>'0');
 	WdCountBuff_WrtEn <= '0'; WdCountBuff_RdEn <= '0';
 	CRCErrCnt <= X"00"; 
+	GTPTxBuff_wr_en <= '0';
 
 elsif rising_edge (UsrClk2(0)) then
 
 	if Pkt_Timer = 0 and 
 		(Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt 
 		  or Packet_Former = WrtDatPkt)
-	then GTPTx(0) <= TxCRC(0); 
-	else GTPTx(0) <= GTPTxStage(0);
+	then GTPTx(0) <= TxCRC(0); GTPTxBuff_In <= TxCRC(0);
+	else GTPTx(0) <= GTPTxStage(0); GTPTxBuff_In <= GTPTxStage(0);
 	end if;
 
 	if Rx_IsComma(0) = "00" and ReFrame(0) = '0' 
@@ -716,7 +755,8 @@ elsif rising_edge (UsrClk2(0)) then
 	else AddrReg <= AddrReg;
 	end if;
 
-if UsrRDDL(0) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPRdAddr0 
+if (UsrRDDL(0) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPRdAddr0) 
+   or (GTPRxBuff_DatCnt(0) >= '0' & X"FFE" and GTPRxBuff_wr_en(0) = '1') -- this line makes the fifo behave like a trace buffer
 then GTPRxBuff_rd_en(0) <= '1';
 else GTPRxBuff_rd_en(0) <= '0'; 
 end if;
@@ -725,13 +765,16 @@ end if;
 -- y is the packet sequence number to five bits of microcontroller data
 	if UsrWRDL(0) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPWrtAddr(0)
 	 then GTPTx(0) <= X"1C" & TxSeqNo(0) & uCD(4 downto 0);
+	      GTPTxBuff_In <= X"1C" & TxSeqNo(0) & uCD(4 downto 0);
 			TxCRCDat(0) <= X"0000";
 -- Use this address to send unmodified microcontroller data
 	elsif UsrWRDL(0) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPWrtAddr(2)
 	 then GTPTx(0) <= uCD; TxCRCDat(0) <= uCD;
+	      GTPTxBuff_In <= uCD;
 	-- Use this address to send the check sum
 	elsif (UsrWRDL(0) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPWrtAddr(4))
 	 then GTPTx(0) <= TxCRC(0); TxCRCDat(0) <= X"0000";
+	      GTPTxBuff_In <= TxCRC(0);
 
 -- Data header packet ID field is 5 bits wide 
 -- The header packet ID is 5 
@@ -739,7 +782,7 @@ end if;
 	 then
 			Case Pkt_Timer is
 			 When X"A" => GTPTxStage(0) <= X"1C" & TxSeqNo(0) & "00101"; TxCRCDat(0) <= X"0000";
-			 When X"8" => GTPTxStage(0) <= X"8050"; TxCRCDat(0) <= X"8050";
+			 When X"8" => GTPTxStage(0) <= X"A050"; TxCRCDat(0) <= X"A050";
 			 When X"7" => GTPTxStage(0) <= "00000" & TxPkCnt; TxCRCDat(0) <= "00000" & TxPkCnt;  
 			 When X"6" => GTPTxStage(0) <= TStmpBuff_Out; TxCRCDat(0) <= TStmpBuff_Out;
 			 When X"5" => GTPTxStage(0) <= TStmpBuff_Out; TxCRCDat(0) <= TStmpBuff_Out;
@@ -760,8 +803,8 @@ end if;
 							  TxCRCDat(0) <= X"00" & ActiveReg(23 downto 16);
 			 When X"6" => GTPTxStage(0) <= ActiveReg(15 downto 0);
 							  TxCRCDat(0) <= ActiveReg(15 downto 0);
-			 When X"5" => GTPTxStage(0) <= DReq_Count;
-							  TxCRCDat(0) <= DReq_Count;
+			 When X"5" => GTPTxStage(0) <= DReq_Count(15 downto 0);
+							  TxCRCDat(0) <= DReq_Count(15 downto 0);
 			 When X"4" => GTPTxStage(0) <= EventBuff_Out; TxCRCDat(0) <= EventBuff_Out;
 			 When X"0" => GTPTxStage(0) <= X"BC3C"; TxCRCDat(0) <= X"0000";
 			 When others => GTPTxStage(0) <= X"0000"; TxCRCDat(0) <= X"0000";
@@ -1140,30 +1183,30 @@ end if;
 Case Packet_Former is 
 	when Idle => FormStatReg <= "000"; 
 		if EventBuff_Empty = '0' then Packet_Former <= WrtPktCnt;
-		else Packet_Former <= Idle;
+		else Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
 		end if;
 -- Divide by eight to get the number of packets
 	when WrtPktCnt => Packet_Former <= WrtHdrPkt;  FormStatReg <= "001";  
 -- Send the packet header, packet type, packet count, time stamp and status
 	when WrtHdrPkt => FormStatReg <= "010"; 
-		if Pkt_Timer = 0 then Packet_Former <= WrtCtrlHdrPkt;
-	    elsif FormRst = '1' then Packet_Former <= Idle; 
-		else Packet_Former <= WrtHdrPkt;
+		if Pkt_Timer = 0 then Packet_Former <= WrtCtrlHdrPkt; --Debug(5 downto 3) <= "011";
+	    elsif FormRst = '1' then Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
+		else Packet_Former <= WrtHdrPkt; --Debug(5 downto 3) <= "101";
 		end if;
 	when WrtCtrlHdrPkt =>  FormStatReg <= "011";  
-		if Pkt_Timer = 0 then Packet_Former <= WrtDatPkt;
-	 elsif FormRst = '1' then Packet_Former <= Idle; 
-	else Packet_Former <= WrtCtrlHdrPkt;
+		if Pkt_Timer = 0 then Packet_Former <= WrtDatPkt; --Debug(5 downto 3) <= "111";
+	 elsif FormRst = '1' then Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
+	else Packet_Former <= WrtCtrlHdrPkt; --Debug(5 downto 3) <= "011";
 		end if;
 -- After Controller header is sent, the packets contain data for this FEB
 -- The FEB header data is embedded in the sream coming from the front FPGAs
 	when WrtDatPkt => FormStatReg <= "100";   
 		if EvTxWdCnt = 0 and Pkt_Timer = 0
-			then Packet_Former <= Idle;
-		 elsif FormRst = '1' then Packet_Former <= Idle; 
-		else Packet_Former <= WrtDatPkt;
+			then Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
+		 elsif FormRst = '1' then Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
+		else Packet_Former <= WrtDatPkt; --Debug(5 downto 3) <= "111";
 		end if;
-	when others => Packet_Former <= Idle;  FormStatReg <= "101";
+	when others => Packet_Former <= Idle; FormStatReg <= "101"; --Debug(5 downto 3) <= "000";
 end Case;
 
 if Packet_Former = WrtPktCnt then WdCountBuff_WrtEn <= '1';
@@ -1226,6 +1269,18 @@ elsif Packet_Former = Idle then Pkt_Timer <= X"0";
 else Pkt_Timer <= Pkt_Timer;
 end if;
 
+-- output trace buffer
+if GTPTxStage(0) /= X"BC3C"
+then GTPTxBuff_wr_en <= '1';
+else GTPTxBuff_wr_en <= '0';
+end if;
+
+if (UsrRDDL(0) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPTxRdAddr) 
+   or (GTPTxBuff_DatCnt >= "0" & X"FFE" and GTPTxBuff_wr_en = '1') -- this line makes the fifo behave like a trace buffer
+then GTPTxBuff_rd_en <= '1';
+else GTPTxBuff_rd_en <= '0'; 
+end if;
+
 end if; -- CpldRst
 
 end process;
@@ -1258,6 +1313,7 @@ if (UsrRDDL(1) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPR
 then GTPRxBuff_rd_en(1) <= '1';
 else GTPRxBuff_rd_en(1) <= '0'; 
 end if;
+
 
 	if Rx_IsComma(1) = "00" and ReFrame(1) = '0' 
 	then GTPRxBuff_wr_en(1) <= '1'; 
@@ -2405,6 +2461,13 @@ if WrDL = 1 and uCA(9 downto 0) = TrigCtrlAddr and uCD(0) = '1' then IntTrig <= 
  else  IntTrig <= IntTrig;
 end if;
 
+--	Read of the trigger request trace buffer
+	if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DReqBuffTraceAd ) or 
+	    (DReqBuffTrace_DatCnt >= "011" & X"F0" ) -- this should make this buffer to a trace buffer.
+	then DReqBuffTrace_rd_en <= '1';
+	else DReqBuffTrace_rd_en <= '0';
+	end if;
+
 end if; --rising edge
 
 end process;
@@ -2465,11 +2528,15 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 HrtBtBuff_Emtpy & "0000" & HrtBtBuffRdCnt when HrtBtBuffStatAd,
 		 HrtBtBuff_Out when HrtBtFIFORdAd,
 		 X"00" & MarkerDelay when MarkerDelayAd,
-		 X"0003" when DebugVersionAd,
+		 X"0921" when DebugVersionAd,
 		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
 		 "000" & DCSPktRdCnt when DCSPktWdUsedAd,
 		 DCSPktBuff_Out(15 downto 0) when DCSPktBuffAd,
 		 ExtuBunchOffset when HrtBtOffsetAd,
+		 DReq_Count(15 downto 0) when DReqCountLowAd,
+		 DReq_Count(31 downto 16) when DReqCountHiAd,
+		 GTPTxBuff_Out when GTPTxRdAddr,
+		 DReqBuffTrace_Out when DReqBuffTraceAd,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers

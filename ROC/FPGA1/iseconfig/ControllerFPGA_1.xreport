@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <report-views version="2.0" >
  <header>
-  <DateModified>2021-05-12T13:35:18</DateModified>
+  <DateModified>2021-09-22T17:05:25</DateModified>
   <ModuleName>ControllerFPGA_1</ModuleName>
-  <SummaryTimeStamp>2020-02-18T16:50:08</SummaryTimeStamp>
+  <SummaryTimeStamp>2021-09-22T17:04:52</SummaryTimeStamp>
   <SavedFilePath>/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/iseconfig/ControllerFPGA_1.xreport</SavedFilePath>
   <ImplementationReportsDirectory>/home/newg2/Documents/mu2e-daq-firmware-crv/ROC/FPGA1/</ImplementationReportsDirectory>
   <DateInitialized>2015-09-27T13:01:13</DateInitialized>

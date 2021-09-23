@@ -118,10 +118,16 @@ constant SpillStatAddr : AddrPtr := "00" & X"76";
 constant MarkerBitsAd : AddrPtr  := "00" & X"77";
 constant MarkerDelayAd : AddrPtr := "00" & X"78";
 
-constant LinkErrAd : AddrPtr     := "00" & X"80";
-constant HrtBtOffsetAd : AddrPtr := "00" & X"81";
 
-constant DebugVersionAd : AddrPtr := "00" & X"99";
+constant LinkErrAd : AddrPtr           := "00" & X"80";
+constant HrtBtOffsetAd : AddrPtr       := "00" & X"81";
+constant DReqCountLowAd : AddrPtr      := "00" & X"82";
+constant DReqCountHiAd : AddrPtr       := "00" & X"83";
+--constant TxRxBufferSettingAd : AddrPtr := "00" & X"84";
+constant GTPTxRdAddr : AddrPtr         := "00" & X"85";
+constant DReqBuffTraceAd : AddrPtr     := "00" & X"86";
+
+constant DebugVersionAd : AddrPtr      := "00" & X"99";
 
 ---------------------- Broadcast addresses ------------------------------
 
@@ -265,6 +271,14 @@ component GTPRxFIFO
     dout : out std_logic_vector(15 downto 0);
     full,empty : out std_logic;
     data_count : out std_logic_vector(12 downto 0));
+end component;
+
+component GTPTxFIFO
+  port ( rst,clk,wr_en,rd_en : in std_logic;
+    din : in std_logic_vector(15 downto 0);
+    dout : out std_logic_vector(15 downto 0);
+    full,empty : out std_logic;
+    data_count : out std_logic_vector(13 downto 0));
 end component;
 
 -- Fifo for queueing data from the front end FPGAs
