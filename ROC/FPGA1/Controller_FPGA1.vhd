@@ -315,11 +315,15 @@ signal CRCErrCnt  : std_logic_vector (7 downto 0);
 -- Tx trace buffer
 signal GTPTxBuff_In, GTPTxBuff_Out  : std_logic_vector(15 downto 0);
 signal GTPTxBuff_wr_en, GTPTxBuff_rd_en : std_logic;
-signal GTPTxBuff_DatCnt : std_logic_vector(13 downto 0);
+signal GTPTxBuff_DatCnt : std_logic_vector(12 downto 0);
 -- Data request trace buffer
 signal DReqBuffTrace_rd_en : std_logic;
 signal DReqBuffTrace_Out : std_logic_vector (15 downto 0);
 signal DReqBuffTrace_DatCnt : std_logic_vector (10 downto 0);
+-- Input Link FIFO trace
+signal LinkFIFOTraceRdReq : std_logic;
+signal LinkFIFOTraceOut : std_logic_vector (15 downto 0);
+signal LinkFIFOTraceRdCnt : std_logic_vector (12 downto 0);
 
 begin
 
@@ -542,7 +546,7 @@ end generate;
 -- output trace buffer
 -- remove or reduce if more ram is needed
 -- could also use a GTPRxFIFO
-GTPTxBuff : GTPTxFIFO
+GTPTxBuff : GTPRxFIFO
   PORT MAP (rst => GTPRxRst,
     clk => UsrClk2(0),
     din => GTPTxBuff_In,
@@ -566,6 +570,20 @@ DReqBuffTrace : FIFO_DC_1kx16
     full => open,
     empty => open,
 	 rd_data_count => DReqBuffTrace_DatCnt);
+	 
+	 
+-- trace buffer for link 0
+LinkBuffTrace : LinkFIFO
+  port map (rst => LinkBuffRst, wr_clk => RxOutClk(0), rd_clk => UsrClk2(0), 
+    wr_en => LinkFIFOWrReq(0),rd_en => LinkFIFOTraceRdReq,
+    din(15 downto 13) => LinkPDat(0)(1)(7 downto 5),
+    din(12 downto 8) => LinkPDat(0)(0)(9 downto 5),
+    din( 7 downto 5) => LinkPDat(0)(1)(2 downto 0),
+    din( 4 downto 0) => LinkPDat(0)(0)(4 downto 0),
+    dout => LinkFIFOTraceOut, empty => open,
+	 full => open,
+	 rd_data_count => LinkFIFOTraceRdCnt);
+
 
 ----------------------------- The GTP Wrapper -----------------------------
 ---------------------- Dedicated GTP Reference Clock Inputs ---------------
@@ -2468,6 +2486,13 @@ end if;
 	else DReqBuffTrace_rd_en <= '0';
 	end if;
 
+-- read link FIFO trace
+	if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = LinkFIFOTraceAd ) or 
+	    (LinkFIFOTraceRdCnt >= '0' & X"FF0" ) -- this should make this buffer to a trace buffer.
+	then LinkFIFOTraceRdReq <= '1';
+	else LinkFIFOTraceRdReq <= '0';
+	end if;
+
 end if; --rising edge
 
 end process;
@@ -2537,6 +2562,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 DReq_Count(31 downto 16) when DReqCountHiAd,
 		 GTPTxBuff_Out when GTPTxRdAddr,
 		 DReqBuffTrace_Out when DReqBuffTraceAd,
+		 LinkFIFOTraceOut when LinkFIFOTraceAd,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers

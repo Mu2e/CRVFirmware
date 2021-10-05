@@ -39,6 +39,8 @@
 *.html
 *.xwbt
 *.log
+*.xreport
+iseconfig/*.xreport
 _ngo/*
 ipcore_dir/*
 _xmsgs

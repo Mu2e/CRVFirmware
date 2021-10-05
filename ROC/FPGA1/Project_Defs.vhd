@@ -126,6 +126,7 @@ constant DReqCountHiAd : AddrPtr       := "00" & X"83";
 --constant TxRxBufferSettingAd : AddrPtr := "00" & X"84";
 constant GTPTxRdAddr : AddrPtr         := "00" & X"85";
 constant DReqBuffTraceAd : AddrPtr     := "00" & X"86";
+constant LinkFIFOTraceAd : AddrPtr     := "00" & X"87";
 
 constant DebugVersionAd : AddrPtr      := "00" & X"99";
 
