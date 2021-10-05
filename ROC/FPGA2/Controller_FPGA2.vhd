@@ -236,7 +236,12 @@ signal FrameReg,ClockReg,LinkRegHi,LinkRegLo : std_logic_vector(4 downto 0);
 signal TxFIFO_Out : std_logic_vector(8 downto 0);
 signal LinkFIFO_Dat : std_logic_vector(17 downto 0);
 signal BitClk,WdClk,PllLock,LockOut,Link_Stat_Req : std_logic;
-signal LinkTxFull,LinkTxEmpty,LinkTxWrReq,LinkTxRDReq,TxValid : std_logic;
+signal LinkTxFull,LinkTxEmpty,LinkTxWrReq,LinkTxRDReq,TxValid,LinkTxTraceWrReq : std_logic;
+
+-- debug trace buffer
+signal LinkTxTraceRDReq : std_logic;
+signal TxFIFOTrace_Out : std_logic_vector(8 downto 0);
+signal LinkTxTrace_Cnt : std_logic_vector(12 downto 0);
 
 begin
 
@@ -364,6 +369,17 @@ LinkBuff : LinkTxFIFO
 	 din => LinkFIFO_Dat,
     dout => TxFIFO_Out,
     full => LinkTxFull, empty => LinkTxEmpty);
+	 
+-- copy of the same buffer as trace buffer for debug purpose
+-- REMOVE ME
+LinkBuffTrace : LinkTxFIFOTrace
+  port map (rst => ResetHi,
+	 wr_clk => SysClk, rd_clk => SysClk,
+    wr_en => LinkTxTraceWrReq, rd_en => LinkTxTraceRDReq, 
+	 din => LinkFIFO_Dat,
+    dout => TxFIFOTrace_Out,
+    full => open, empty => open,
+	 rd_data_count => LinkTxTrace_Cnt);
 
 LinkRegHi(4) <= TxValid and not LinkTxEmpty;
 -- Use this as a Rx_Active data flag
@@ -876,7 +892,7 @@ main : process(SysClk, CpldRst)
 	Seq_Busy <= '0'; EvWdCount <= (others => '0');  TxBlkCount <= "000"; DRegSrc <= '0';
 	ReadCount <= "000"; MaskReg <= X"FF"; FirstActive <= '0';
 	DDRRd_en <= '0'; DDRWrt_En <= '0'; DDRWrt_EnD <= '0'; WaitCount <= (others => '0');
-	LinkTxWrReq <= '0'; DatReqBuff_rdreq <= '0'; Rx_active <= X"00";
+	LinkTxWrReq <= '0'; LinkTxTraceWrReq <= '0'; DatReqBuff_rdreq <= '0'; Rx_active <= X"00";
 	SMI_wreq <= '0'; ChainSel <= "11"; PhyDatSel <= '0'; InitReq <= '0';
 	PhyTxBuff_wreq <= '0'; TrigWdCount <= X"0"; MDIORd <= '0'; PhyPDn <= '1'; PhyRst <= '0';
 	TxEnReq <= '0'; TxEnMask <= X"FF"; LinkTxRDReq <= '0'; TxValid <= '0'; 
@@ -1298,11 +1314,14 @@ end if;
 
 -- At 1Hz SEND A request to update the FM activity bits via the link to FPGA 1
 -- Make this a lower priority than data transmission
+-- DEBUG 
 if Counter1s = Count1s and LinkTxEmpty = '1' and DDR_Read_Seq = Idle
   then Link_Stat_Req <= '1';
  elsif LinkTxWrReq = '1'
   then Link_Stat_Req <= '0';
 end if;
+--Link_Stat_Req <= '0';
+-- DEBUG
 
 -- Serial link write to the top level FPGA
 if (WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = TxFIFOWrtAd)
@@ -1310,6 +1329,13 @@ if (WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = TxFIFOWrtAd)
   or (LinkTxWrReq = '0' and LinkTxEmpty = '1' and DDR_Read_Seq = Idle and Link_Stat_Req = '1')
 then LinkTxWrReq <= '1';  
 else LinkTxWrReq <= '0'; 
+end if;
+
+-- DEBUG, the same for the buffer, don't buffer the status packages though
+if (WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = TxFIFOWrtAd)
+  or (EvWdCount > 1 and (DDR_Read_Seq = RdDataHi or (DDR_Read_Seq = RdDataLo and SDrd_en = '1')))
+then LinkTxTraceWrReq <= '1';  
+else LinkTxTraceWrReq <= '0'; 
 end if;
 
 --if DDR_Write_Seq = Idle then Debug(2) <= '1'; else  Debug(2) <= '0'; end if;
@@ -1443,6 +1469,16 @@ end if;
 			else SDWrtCmd <= "000";
 				  WrtCmdEn <= '0';
 	  end if;
+
+-- out trace buffer
+--	Read of the trigger request trace buffer
+	if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = LinkTxTraceAd ) or 
+	    (LinkTxTrace_Cnt >= "1" & X"F00" ) -- this should make this buffer to a trace buffer.
+	then LinkTxTraceRDReq <= '1';
+	else LinkTxTraceRDReq <= '0';
+	end if;
+
+
 
 -- Sum the word counts from the eight PHY receive FIFOs. The four header 
 -- words from each FEB are stripped off, then the four header words for the 
@@ -1746,7 +1782,8 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 X"0" & "00" & PhyTxBuff_Count when PhyTxCntAddr,
 		 TrigWdCount & DRegSrc & '0' & Debug when DebugAddr,
 		 "00" & SDRdPtr(29 downto 16) when SDRdPtrAddrHi,
-		 SDRdPtr(15 downto 0) when SDRdPtrAddrLo, 
+		 SDRdPtr(15 downto 0) when SDRdPtrAddrLo,
+       "0000000" & TxFIFOTrace_Out when LinkTxTraceAd,		 
 		 X"0000" when others;
 
 uCD <= iCD when uCRd = '0' and CpldCS = '0' and uCA(11 downto 10) = GA 

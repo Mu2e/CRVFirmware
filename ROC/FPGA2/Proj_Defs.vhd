@@ -84,6 +84,9 @@ constant DDR_BuffCountAd : AddrPtr := "00" & X"45";
 constant SDRdPtrAddrHi : AddrPtr := "00" & X"46";
 constant SDRdPtrAddrLo : AddrPtr := "00" & X"47";
 
+-- output trace buffer
+constant LinkTxTraceAd : AddrPtr := "00" & X"48";
+
 -- Array of addresses for reading Phy Rx CRCs 
 Type CRCAdArrayType is Array(0 to 15) of AddrPtr;
 constant RdCRCAddr : CRCAdArrayType := ("00" & X"50","00" & X"51","00" & X"52","00" & X"53",
@@ -243,6 +246,22 @@ COMPONENT LinkTxFIFO
     empty : OUT STD_LOGIC
   );
 END COMPONENT;
+
+  component LinkTxFIFOTrace is
+   PORT (
+           wr_clk                    : IN  std_logic;
+     	   rd_clk                    : IN  std_logic;
+           rd_data_count             : OUT std_logic_vector(13-1 DOWNTO 0);
+           rst                       : IN  std_logic;
+           wr_en 		     : IN  std_logic;
+           rd_en                     : IN  std_logic;
+           din                       : IN  std_logic_vector(18-1 DOWNTO 0);
+           dout                      : OUT std_logic_vector(9-1 DOWNTO 0);
+           full                      : OUT std_logic;
+           empty                     : OUT std_logic);
+
+  end component;
+
 
 -- FIFO for queueing SMI data the PHY chips.
 COMPONENT SMI_FIFO
