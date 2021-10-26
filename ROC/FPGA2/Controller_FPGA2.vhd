@@ -230,6 +230,8 @@ signal FEBRxIn : Array_InRec_x8;
 signal RxDl : Array_8x2;
 signal TransitionCount : Array_8x4;
 signal Rx_active : std_logic_vector(7 downto 0);
+signal LinkStatEn : std_logic;
+signal LinkTxFullCnt : std_logic_vector(7 downto 0);
 
 -- Serializer signals
 signal FrameReg,ClockReg,LinkRegHi,LinkRegLo : std_logic_vector(4 downto 0);
@@ -903,6 +905,8 @@ main : process(SysClk, CpldRst)
 	FrameReg <= "11111"; -- initial framing pattern
 	RxDl <= (others => "00"); TransitionCount <= (others => X"0"); 
 	DReqFMDL <= X"0"; LinkFIFOStat <= '0';
+	LinkStatEn <= '1';
+	LinkTxFullCnt <= X"00";
 --Debug(10 downto 8) <= (others => '0'); 
 
 elsif rising_edge (SysClk) then 
@@ -981,7 +985,7 @@ else
 	ClockReg <= "10101"; 
 	FrameReg <= "11111";
 end if;
-
+	
 --- Channel mask register. One bit corresponds to one FEB
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = InputMaskAddr
 then MaskReg <= uCD(7 downto 0);
@@ -1312,10 +1316,16 @@ then RdHi_LoSel <= '0';
 then RdHi_LoSel <= not RdHi_LoSel; 
 end if;
 
+--- Link FPGA2-FPG1 configuration
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = LinkCtrlAd
+then LinkStatEn <= uCD(0);
+else LinkStatEn <= LinkStatEn;
+end if;
+
 -- At 1Hz SEND A request to update the FM activity bits via the link to FPGA 1
 -- Make this a lower priority than data transmission
 -- DEBUG 
-if Counter1s = Count1s and LinkTxEmpty = '1' and DDR_Read_Seq = Idle
+if Counter1s = Count1s and LinkTxEmpty = '1' and DDR_Read_Seq = Idle and LinkStatEn = '1'
   then Link_Stat_Req <= '1';
  elsif LinkTxWrReq = '1'
   then Link_Stat_Req <= '0';
@@ -1327,8 +1337,15 @@ end if;
 if (WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = TxFIFOWrtAd)
   or (EvWdCount > 1 and (DDR_Read_Seq = RdDataHi or (DDR_Read_Seq = RdDataLo and SDrd_en = '1')))
   or (LinkTxWrReq = '0' and LinkTxEmpty = '1' and DDR_Read_Seq = Idle and Link_Stat_Req = '1')
-then LinkTxWrReq <= '1';  
-else LinkTxWrReq <= '0'; 
+then 
+  LinkTxWrReq <= '1'; 
+  if LinkTxFull = '1'
+  then LinkTxFullCnt <= LinkTxFullCnt + 1;
+  else LinkTxFullCnt <= LinkTxFullCnt;
+  end if;  
+else 
+  LinkTxWrReq <= '0';
+  LinkTxFullCnt <= LinkTxFullCnt;
 end if;
 
 -- DEBUG, the same for the buffer, don't buffer the status packages though
@@ -1783,7 +1800,9 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 TrigWdCount & DRegSrc & '0' & Debug when DebugAddr,
 		 "00" & SDRdPtr(29 downto 16) when SDRdPtrAddrHi,
 		 SDRdPtr(15 downto 0) when SDRdPtrAddrLo,
-       "0000000" & TxFIFOTrace_Out when LinkTxTraceAd,		 
+       "0000000" & TxFIFOTrace_Out when LinkTxTraceAd,	
+		 LinkTxFullCnt & "00" & LinkTxFull & LinkTxEmpty & 
+				           "000" & LinkStatEn when LinkCtrlAd,		 
 		 X"0000" when others;
 
 uCD <= iCD when uCRd = '0' and CpldCS = '0' and uCA(11 downto 10) = GA 

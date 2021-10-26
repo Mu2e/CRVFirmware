@@ -17,6 +17,11 @@ Subtype AddrPtr is std_logic_vector(9 downto 0);
 -- Control and status register
 constant CSRRegAddr : AddrPtr  := "00" & X"00";
 
+-- Control ROC FPGA2-FPGA1 link
+-- bit 0: enable sending active FEBs
+constant LinkCtrlAd : AddrPtr  := "00" & X"01";
+
+
 -- SDRAM related pointers are 30 bit byte address pointers
 -- Given the 32 bit wide data I/O registers of the LPDDR interface
 -- the lower order two bits should be zero.
