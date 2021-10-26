@@ -574,7 +574,7 @@ DReqBuffTrace : FIFO_DC_1kx16
 	 
 -- trace buffer for link 0
 LinkBuffTrace : LinkFIFO
-  port map (rst => LinkBuffRst, wr_clk => RxOutClk(0), rd_clk => UsrClk2(0), 
+  port map (rst => LinkBuffRst, wr_clk => RxOutClk(0), rd_clk => SysClk, 
     wr_en => LinkFIFOWrReq(0),rd_en => LinkFIFOTraceRdReq,
     din(15 downto 13) => LinkPDat(0)(1)(7 downto 5),
     din(12 downto 8) => LinkPDat(0)(0)(9 downto 5),
@@ -2553,7 +2553,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 HrtBtBuff_Emtpy & "0000" & HrtBtBuffRdCnt when HrtBtBuffStatAd,
 		 HrtBtBuff_Out when HrtBtFIFORdAd,
 		 X"00" & MarkerDelay when MarkerDelayAd,
-		 X"0921" when DebugVersionAd,
+		 X"1014" when DebugVersionAd,
 		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
 		 "000" & DCSPktRdCnt when DCSPktWdUsedAd,
 		 DCSPktBuff_Out(15 downto 0) when DCSPktBuffAd,
