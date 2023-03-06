@@ -275,6 +275,20 @@ signal DCSPktRdCnt : std_logic_vector (12 downto 0);
 signal DCSPktBuff_Out : std_logic_vector (15 downto 0);
 --signal DCSTxBuffWds : std_logic_vector (8 downto 0);
 
+
+-- DCS answer FIFO
+signal DCSBuff_In    : std_logic_vector (15 downto 0);
+signal DCSBuff_wr_en : std_logic;
+signal DCSBuff_rd_en : std_logic;
+signal DCSBuff_Out   : std_logic_vector (15 downto 0);
+signal DCSBuff_Full  : std_logic;
+signal DCSBuff_Emtpy : std_logic;
+signal DCSBuffRdCnt  : std_logic_vector (12 downto 0);
+signal DCS_Header : std_logic_vector (15 downto 0);
+signal DCS_Status : std_logic_vector (15 downto 0);
+signal DCS_EvCnt  : std_logic_vector (15 downto 0);
+
+
 -- FEB active register
 signal ActiveReg : std_logic_vector (23 downto 0);
 signal FPGA234_Active : Array_3x8;
@@ -295,7 +309,7 @@ Type Packet_Parser_Seq is (Idle,Read_Type,Check_Seq_No,Wrt_uC_Queue,
 									Wrt_FPGA_Queue,Check_CRC);
 signal Packet_Parser : Packet_Parser_Seq;
 
-Type Packet_Former_Seq is (Idle,WrtPktCnt,WrtHdrPkt,WrtCtrlHdrPkt,WrtDatPkt);
+Type Packet_Former_Seq is (Idle,WrtPktCnt,WrtHdrPkt,WrtCtrlHdrPkt,WrtDatPkt,WrtDCSPkt);
 signal Packet_Former : Packet_Former_Seq;
 signal ChkCntr,FormStatReg,EmptyLatch : std_logic_vector (2 downto 0);
 signal Pkt_Timer : std_logic_vector (3 downto 0);
@@ -324,6 +338,11 @@ signal DReqBuffTrace_DatCnt : std_logic_vector (10 downto 0);
 signal LinkFIFOTraceRdReq : std_logic;
 signal LinkFIFOTraceOut : std_logic_vector (15 downto 0);
 signal LinkFIFOTraceRdCnt : std_logic_vector (12 downto 0);
+
+signal GTPRstCnter : std_logic_vector (11 downto 0);
+signal GTPRstFromCnt : std_logic;
+signal GTPTstFromCntEn : std_logic;
+signal GTPRstArm : std_logic;
 
 begin
 
@@ -362,7 +381,9 @@ TrigLED <= '0';
 
 -- GTP System reset
 GTPRst <= '1' when CpldRst = '0' 
-  	            or (CpldCS = '0' and uCWR = '0' and uCA = CSRRegAddr and uCD(3) = '1') else '0';
+  	            or (CpldCS = '0' and uCWR = '0' and uCA = CSRRegAddr and uCD(3) = '1') 
+					or (GTPRstFromCnt = '1' and GTPTstFromCntEn = '1')
+					else '0';
 
 -- Reset of receive FIFOs, event counters
 GTPRxRst <= '1' when CpldRst = '0' 
@@ -445,6 +466,22 @@ DCSPktBuff : LinkFIFO
 	 rd_data_count => DCSPktRdCnt);
 	 
 	 DCSPktBuff_rd_en <= DCSPktBuff_uCRd;
+
+-- FIFO for DCS answers
+DCSOutBuff : LinkFIFO
+  PORT MAP (rst => GTPRxRst,
+	 wr_clk => SysClk,
+    rd_clk => UsrClk2(0),
+    din => DCSBuff_In,
+    wr_en => DCSBuff_wr_en,
+    rd_en => DCSBuff_rd_en,
+    dout => DCSBuff_Out,
+    full => DCSBuff_Full,
+    empty => DCSBuff_Emtpy,
+	 rd_data_count => DCSBuffRdCnt);
+	 
+	 DCSPktBuff_rd_en <= DCSPktBuff_uCRd;
+
 
 -- Queue up time stamps for later checking
 TimeStampBuff : TrigPktBuff
@@ -715,7 +752,8 @@ begin
 	LinkRDDL <= "00"; Packet_Parser <= Idle; Event_Builder <= Idle;
 	RxSeqNoErr(0) <= '0'; Packet_Former <= Idle; FormRst <= '0';
 	LinkFIFORdReq <= (others =>'0'); StatOr <= X"00";  Stat0 <= X"00";
-	EvTxWdCnt <= (others => '0'); EvTxWdCntTC <= '0'; EventBuff_RdEn <= '0';
+	EvTxWdCnt <= (others => '0'); EvTxWdCntTC <= '0'; EventBuff_RdEn <= '0'; 
+	DCSBuff_rd_en <= '0';
 	FIFOCount <= (others => (others => '0')); EventBuff_WrtEn <= '0';
 	TStmpBuff_wr_en <= '0'; TStmpBuff_rd_en <= '0'; EvBuffWrtGate <= '0';
 	TStmpBuff_Full <= '0'; TStmpBuff_Emtpy <= '0';
@@ -727,12 +765,14 @@ begin
 	WdCountBuff_WrtEn <= '0'; WdCountBuff_RdEn <= '0';
 	CRCErrCnt <= X"00"; 
 	GTPTxBuff_wr_en <= '0';
+	GTPRstCnter <= (others=>'0'); GTPRstFromCnt <= '0'; GTPTstFromCntEn <= '1';
+	GTPRstArm <= '0';
 
 elsif rising_edge (UsrClk2(0)) then
 
 	if Pkt_Timer = 0 and 
 		(Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt 
-		  or Packet_Former = WrtDatPkt)
+		  or Packet_Former = WrtDatPkt or (Packet_Former = WrtDCSPkt and FormStatReg = "111"))
 	then GTPTx(0) <= TxCRC(0); GTPTxBuff_In <= TxCRC(0);
 	else GTPTx(0) <= GTPTxStage(0); GTPTxBuff_In <= GTPTxStage(0);
 	end if;
@@ -834,14 +874,29 @@ end if;
 		 elsif EvTxWdCnt > 0 or EvTxWdCntTC = '1' 
 			then GTPTxStage(0) <= EventBuff_Out; TxCRCDat(0) <= EventBuff_Out;
 		 else GTPTxStage(0) <= X"0000"; TxCRCDat(0) <= X"0000";
-	  end if;
+		 end if;
+	elsif Packet_Former = WrtDCSPkt
+	   then
+			Case Pkt_Timer is
+			 When X"A" => GTPTxStage(0) <= X"1C" & TxSeqNo(0) & "0" & DCS_Header(7 downto 4); TxCRCDat(0) <= X"0000"; 
+			 When X"9" => GTPTxStage(0) <= DCS_EvCnt; TxCRCDat(0) <= DCS_EvCnt; 
+			 When X"8" => GTPTxStage(0) <= DCS_Header; TxCRCDat(0) <= DCS_Header;
+			 When X"7" => GTPTxStage(0) <= DCS_Status; TxCRCDat(0) <= DCS_Status;  
+			 When X"6" => GTPTxStage(0) <= DCSBuff_Out; TxCRCDat(0) <= DCSBuff_Out;
+			 When X"5" => GTPTxStage(0) <= DCSBuff_Out; TxCRCDat(0) <= DCSBuff_Out;
+			 --When X"4" => GTPTxStage(0) <= X"0002"; TxCRCDat(0) <= X"0002";
+			 --When X"3" => GTPTxStage(0) <= X"0003"; TxCRCDat(0) <= X"0003";
+			 --When X"2" => GTPTxStage(0) <= X"0004"; TxCRCDat(0) <= X"0004";
+			 When X"0" => GTPTxStage(0) <= X"BC3C"; TxCRCDat(0) <= X"0000";
+			 When others => GTPTxStage(0) <= X"0000"; TxCRCDat(0) <= X"0000";
+	      end case;
 -- Pad is K28.5 K28.1 pair
 	 else GTPTxStage(0) <= X"BC3C"; TxCRCDat(0) <= X"0000";
 	end if;
 
 	-- Increment the sequence number and clear CRC when sending Packet ID
 	if (UsrWRDL(0) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPWrtAddr(0))
-		or ((Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt 
+		or ((Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt or Packet_Former = WrtDCSPkt
 		or Packet_Former = WrtDatPkt) and Pkt_Timer = 10)
 	 then TxSeqNo(0) <= TxSeqNo(0) + 1;
 			TxCRCRst(0) <= '1';
@@ -852,6 +907,7 @@ end if;
 -- Accumulate CRC while transmitting data
 	if (UsrWRDL(0) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPWrtAddr(2))
 	 or ((Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt
+	 or (	Packet_Former = WrtDCSPkt and FormStatReg = "111")
 	 or Packet_Former = WrtDatPkt) and Pkt_Timer /= 0 and Pkt_Timer /= 10)
 	then TxCRCEn(0) <= '1';
 	else
@@ -860,12 +916,13 @@ end if;
 
 -- One byte is control when sending the packet ID
 	if (UsrWRDL(0) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPWrtAddr(0))
-		or ((Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt 
+		or ((Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt or Packet_Former = WrtDCSPkt
 		or Packet_Former = WrtDatPkt) and Pkt_Timer = 9)
 	 then	TxCharIsK(0) <= "10";
 -- Two bytes are data when sending the packet payload
 	elsif (UsrWRDL(0) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPWrtAddr(2))
-	 or  ((Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt
+	 or  ((Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt 
+	      or (	Packet_Former = WrtDCSPkt and FormStatReg = "111") -- neded because it starts with Pkt_Timer = 0, with BC3C
 	      or Packet_Former = WrtDatPkt) and Pkt_Timer /= 10 and Pkt_Timer /= 9)
 	 then TxCharIsK(0) <= "00";
 -- Both bytes are K characters when sending pads
@@ -1190,17 +1247,23 @@ then EventBuff_RdEn <= '1';  Debug(9) <= '1';
 else EventBuff_RdEn <= '0';  Debug(9) <= '0';
 end if;
 
+if (Packet_Former = WrtDCSPkt and (Pkt_Timer = 7 or Pkt_Timer = 6)) --reads are one cycle ahead
+then DCSBuff_rd_en <= '1';
+else DCSBuff_rd_en <= '0';
+end if;
+
 --Debug(4) <= EventBuff_Empty;
 
 --Debug(3 downto 1) <= LinkFIFOEmpty;
 
 ---------------------------------------------------------------------------
--- Idle,WrtPktCnt,WrtHdrPkt,WrtCtrlHdrPkt,WrtDatPkt
+-- Idle,WrtPktCnt,WrtHdrPkt,WrtCtrlHdrPkt,WrtDatPkt,WrtDCSPkt
 ---------------------------------------------------------------------------
 
 Case Packet_Former is 
 	when Idle => FormStatReg <= "000"; 
 		if EventBuff_Empty = '0' then Packet_Former <= WrtPktCnt;
+		elsif DCSBuffRdCnt > 1 then  Packet_Former <= WrtDCSPkt;
 		else Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
 		end if;
 -- Divide by eight to get the number of packets
@@ -1223,6 +1286,12 @@ Case Packet_Former is
 			then Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
 		 elsif FormRst = '1' then Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
 		else Packet_Former <= WrtDatPkt; --Debug(5 downto 3) <= "111";
+		end if;
+	when WrtDCSPkt => FormStatReg <= "111";
+	   if FormStatReg = "111" and Pkt_Timer = 0
+		   then Packet_Former <= Idle;
+		elsif FormRst = '1' then Packet_Former <= Idle;
+		else Packet_Former <= WrtDCSPkt;
 		end if;
 	when others => Packet_Former <= Idle; FormStatReg <= "101"; --Debug(5 downto 3) <= "000";
 end Case;
@@ -1278,10 +1347,10 @@ end if;
 -- Counter for dividing data into packets
 if Packet_Former = WrtPktCnt then Pkt_Timer <= X"A";
 elsif Pkt_Timer /= 0 and (Packet_Former = WrtHdrPkt 
-or Packet_Former = WrtCtrlHdrPkt or Packet_Former = WrtDatPkt)
+or Packet_Former = WrtCtrlHdrPkt or Packet_Former = WrtDatPkt or Packet_Former = WrtDCSPkt)
 	then Pkt_Timer <= Pkt_Timer - 1;
 elsif Pkt_Timer = 0 and (Packet_Former = WrtHdrPkt 
-or Packet_Former = WrtCtrlHdrPkt or Packet_Former = WrtDatPkt)
+or Packet_Former = WrtCtrlHdrPkt or Packet_Former = WrtDatPkt or Packet_Former = WrtDCSPkt)
 	then Pkt_Timer <= X"A";
 elsif Packet_Former = Idle then Pkt_Timer <= X"0";
 else Pkt_Timer <= Pkt_Timer;
@@ -1298,6 +1367,48 @@ if (UsrRDDL(0) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPT
 then GTPTxBuff_rd_en <= '1';
 else GTPTxBuff_rd_en <= '0'; 
 end if;
+
+    if GTPRstArm = '1' then
+	     GTPRstCnter <= (others=>'0');
+	 else -- if not armed count CCs to arm the reset logic 
+		 if (Rx_IsCtrl(0) & InvalidChar(0) & Rx_IsComma(0) & Reframe(0) & TDisA) = X"CC" 
+		 then
+			  GTPRstCnter <= GTPRstCnter + 1;
+		 else
+			  GTPRstCnter <= GTPRstCnter; -- (others=>'0') to count successes in a row
+		 end if;	 
+	 end if; 
+	
+	 if ((LosCounter > 8) and GTPRstArm = '1') then
+	     GTPRstFromCnt <= '1';
+		  GTPRstArm <= '0';
+	 elsif GTPRstCnter(6) = '1' then -- better, count in a row, use as threshold of ~5?
+	     GTPRstArm <= '1';
+		  GTPRstFromCnt <= '0';
+	 else 
+	     GTPRstArm <= GTPRstArm;
+		  GTPRstFromCnt <= '0';
+	 end if;
+	 --   if GTPRstCnter(10) = '1' then 
+	--	      GTPRstCnter <= (others=>'0');
+	--	      GTPRstFromCnt <= '1';
+		-- else GTPRstCnter <= GTPRstCnter + 1;
+	--	      GTPRstFromCnt <= '0';
+	--	 end if;
+	-- else GTPRstCnter <= (others=>'0');
+	--      GTPRstFromCnt <= '0';
+	-- end if;
+	 
+	--if LosCounter > 8 then
+	--    GTPRstFromCnt <= '1';
+	--else
+	--    GTPRstFromCnt <= '0';
+	--end if;
+	 
+	if UsrWRDL(0) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPRstCntAd 
+	then GTPTstFromCntEn <= uCD(0);
+	else GTPTstFromCntEn <= GTPTstFromCntEn;
+	end if;
 
 end if; -- CpldRst
 
@@ -1892,6 +2003,10 @@ main : process(SysClk, CpldRst)
 	LEDShiftReg <= (others => '0');	LED_Shift <= Idle;
 	DReqBuff_uCRd <= '0'; LinkBusy <= '0'; HrtBtTxInh <= '0';
 	DCSPktBuff_uCRd <= '0'; MarkerDelay <= (others => '0'); 
+	DCSBuff_wr_en <= '0'; DCSBuff_In <= (others => '0');
+	DCS_Header <= X"8040";
+	DCS_Status <= X"0040"; -- cnt [:7], status[6:5], op[4:0] => cnt = 1
+	DCS_EvCnt  <= X"0010"; -- 8 words, 16 bytes
 	
 -- Pll Chip Shifter signals
 	PLLBuffwr_en <= '0'; PLLBuffrd_en <= '0'; PllPDn <= '1';
@@ -2068,10 +2183,42 @@ end if;
 	else DReqBuff_uCRd <= '0';
 	end if;
 
---	Read of the trigger request FIFO
+--	Read of the dcs request FIFO
 	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DCSPktBuffAd 
 	then DCSPktBuff_uCRd <= '1';
 	else DCSPktBuff_uCRd <= '0';
+	end if;
+	
+-- write to the DCS answer FIFO
+	if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DCSBuffAd 
+	then 
+	    DCSBuff_wr_en <= '1';
+		 DCSBuff_In <= uCD(15 downto 0);
+	else 
+	    DCSBuff_wr_en <= '0';
+		 DCSBuff_In <= DCSBuff_In;
+	end if;
+
+-- modify DCS headers (for debugging)
+	if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DCSHeaderAd 
+	then 
+	    DCS_Header <= uCD(15 downto 0);
+	else 
+	    DCS_Header <= DCS_Header;
+	end if;
+	
+	if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DCSEvCntAd 
+	then 
+	    DCS_EvCnt <= uCD(15 downto 0);
+	else 
+	    DCS_EvCnt <= DCS_EvCnt;
+	end if;
+	
+	if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DCSStatusAd 
+	then 
+	    DCS_Status <= uCD(15 downto 0);
+	else 
+	    DCS_Status <= DCS_EvCnt;
 	end if;
 
 -- 1us time base
@@ -2493,6 +2640,7 @@ end if;
 	else LinkFIFOTraceRdReq <= '0';
 	end if;
 
+
 end if; --rising edge
 
 end process;
@@ -2553,7 +2701,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 HrtBtBuff_Emtpy & "0000" & HrtBtBuffRdCnt when HrtBtBuffStatAd,
 		 HrtBtBuff_Out when HrtBtFIFORdAd,
 		 X"00" & MarkerDelay when MarkerDelayAd,
-		 X"1014" when DebugVersionAd,
+		 X"7111" when DebugVersionAd,
 		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
 		 "000" & DCSPktRdCnt when DCSPktWdUsedAd,
 		 DCSPktBuff_Out(15 downto 0) when DCSPktBuffAd,
@@ -2563,6 +2711,12 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 GTPTxBuff_Out when GTPTxRdAddr,
 		 DReqBuffTrace_Out when DReqBuffTraceAd,
 		 LinkFIFOTraceOut when LinkFIFOTraceAd,
+		 DCSBuff_wr_en & DCSBuff_Full & DCSBuff_Emtpy & DCSBuffRdCnt when DCSBuffCntAd,	
+       DCSBuff_In when DCSBuffAd,
+		 DCS_Header when DCSHeaderAd,
+		 DCS_EvCnt when DCSEvCntAd,
+		 DCS_Status when DCSStatusAd,
+		 GTPRstFromCnt & "0" & GTPTstFromCntEn & GTPRstArm & GTPRstCnter when GTPRstCntAd,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers

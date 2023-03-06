@@ -95,8 +95,14 @@ constant HrtBtFIFORdAd : AddrPtr := "00" & X"3E";
 -- Data request prescale during beam on
 constant PreScaleRegAd : AddrPtr := "00" & X"40";
 
-constant DCSPktBuffAd  : AddrPtr := "00" & X"50";
+constant DCSPktBuffAd    : AddrPtr := "00" & X"50";
 constant DCSPktWdUsedAd  : AddrPtr := "00" & X"51";
+constant DCSBuffCntAd    : AddrPtr := "00" & X"52";
+constant DCSBuffAd       : AddrPtr := "00" & X"53";
+--constant DCSBuffRdAd     : AddrPtr := "00" & X"54";
+constant DCSHeaderAd     : AddrPtr := "00" & X"55";
+constant DCSEvCntAd      : AddrPtr := "00" & X"56";
+constant DCSStatusAd     : AddrPtr := "00" & X"57";
 
 constant SpillTrigCntAdHi : AddrPtr := "00" & X"66";
 constant SpillTrigCntAdLo : AddrPtr := "00" & X"67";
@@ -127,6 +133,8 @@ constant DReqCountHiAd : AddrPtr       := "00" & X"83";
 constant GTPTxRdAddr : AddrPtr         := "00" & X"85";
 constant DReqBuffTraceAd : AddrPtr     := "00" & X"86";
 constant LinkFIFOTraceAd : AddrPtr     := "00" & X"87";
+
+constant GTPRstCntAd : AddrPtr      := "00" & X"98";
 
 constant DebugVersionAd : AddrPtr      := "00" & X"99";
 
