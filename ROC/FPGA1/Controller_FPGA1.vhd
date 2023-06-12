@@ -98,7 +98,7 @@ Signal RDDL,WRDL : std_logic_vector (1 downto 0);
 signal EthWRDL,EthRDDL : std_logic_vector (4 downto 0);
 
 -- Clock and reset signals
-signal Buff_Rst,SysClk,Clk80MHz,FMGenClk,ResetHi,Pll_Locked,nEthClk,
+signal SysClk,Clk80MHz,FMGenClk,ResetHi,Pll_Locked,nEthClk,
 		 EthClk,SerdesRst,LinkBuffRst,GTPRst, Seq_Rst : std_logic;
 
 -- Counter that determines the trig out pulse width
@@ -109,6 +109,10 @@ signal DDRBits : std_logic_vector(1 downto 0);
 signal MarkerBits : std_logic_vector(15 downto 0);
 signal MarkerDelay, MarkerDelayCounter : std_logic_vector(7 downto 0);
 signal Even_Odd,Marker,MarkerDelayed,MarkerReq,MarkerSyncEn, MarkerDelayArm : std_logic;
+-- foramt settings
+signal uBinHeader : std_logic; 
+signal uBwrt : std_logic;
+signal uBdebug, uBdebug2 : std_logic;
 
 -- Orange tree signals
 signal iDQ : std_logic_vector (15 downto 0);
@@ -128,7 +132,7 @@ signal Counter1ms : std_logic_vector (17 downto 0);
 signal Counter1s : std_logic_vector (27 downto 0);
 signal GateCounter, TurnOnTime, TurnOffTime : std_logic_vector (8 downto 0);
 
-signal TrigEn,TstTrigEn,TstTrigCE,Spill_Req,Beam_On,Seq_Busy : std_logic; 
+signal TrigEn,TstTrigEn,TstTrigCE,Spill_Req,Beam_On : std_logic; 
 
 signal TstPlsEn,TstPlsEnReq,SS_FR,IntTrig,IntTmgEn,TmgCntEn : std_logic;
 signal SpillWidth,InterSpill,InterSpillCount : std_logic_vector (7 downto 0);
@@ -174,11 +178,13 @@ signal LinkFIFOOut : Array_3x16;
 -- Event buffer signals
 signal EventBuff_WrtEn,EventBuff_RdEn,
 		 EventBuff_Full,EventBuff_Empty,EvBuffWrtGate : std_logic;
-signal EventBuff_Dat,EventBuff_Out,EventSum : std_logic_vector (15 downto 0);
+signal EventBuff_Dat,EventBuff_Out,EventSum, Event0, Event1, Event2 : std_logic_vector (15 downto 0);
 signal FIFOCount : Array_3x16;
 
-Type Event_Builder_Seq is (Idle,RdInWdCnt0,RdInWdCnt1,RdInWdCnt2,SumWdCnt,WrtWdCnt,RdStat0,
-								   RdStat1,RdStat2,WrtStat,WaitEvent,ReadFIFO0,ReadFIFO1,ReadFIFO2);
+Type Event_Builder_Seq is (Idle,RdInWdCnt0,RdInWdCnt1,RdInWdCnt2,SumWdCnt,WrtWdCnt,WrtWdCnt0,WrtWdCnt1,WrtWdCnt2,RdStat0,
+								   RdStat1,RdStat2,WrtStat,WrtUbLow,WrtUbHigh,WaitEvent,ReadFIFO,ReadFIFO0,ReadFIFO1,ReadFIFO2,
+									RdUb0low,RdUb0high,RdUb1low,RdUb1high,RdUb2low,RdUb2high, RduB,
+									VerifyUb0low,VerifyUb0high,VerifyUb1low,VerifyUb1high,VerifyUb2low,VerifyUb2high);
 signal Event_Builder : Event_Builder_Seq;
 
 -- Front panel LED Shifter signals
@@ -301,6 +307,10 @@ signal FEBID_doutb : std_logic_vector (15 downto 0);
 signal FEBID_wea : std_logic_vector (0 downto 0); 
 -- Register that is the "OR" of all the status words from the FEBs
 signal StatOr, Stat0 : std_logic_vector (7 downto 0); 
+-- check uB consistency
+signal uBcheck    : std_logic_vector (31 downto 0);
+signal uBcheckRef : std_logic_vector (31 downto 0);
+signal uBcheckFlag : std_logic;
 -- CRC generator signals
 Signal RdCRCEn,TxCRCEn,RxCRCRst,RxCRCRstD,TxCRCRst : std_logic_vector (1 downto 0);
 signal TxCRC,RxCRC,TxCRCDat : Array_2x16;
@@ -750,8 +760,10 @@ begin
 	DCSReqWdCnt  <= X"0"; DCSPktBuff_wr_en <= '0'; 
 	DReq_Count <= (others =>'0');
 	LinkRDDL <= "00"; Packet_Parser <= Idle; Event_Builder <= Idle;
-	RxSeqNoErr(0) <= '0'; Packet_Former <= Idle; FormRst <= '0';
+	--RxSeqNoErr(0) <= '0'; 
+	Packet_Former <= Idle; FormRst <= '0';
 	LinkFIFORdReq <= (others =>'0'); StatOr <= X"00";  Stat0 <= X"00";
+	uBcheck <= (others =>'0'); uBcheckRef  <= (others =>'0'); uBcheckFlag <= '0';
 	EvTxWdCnt <= (others => '0'); EvTxWdCntTC <= '0'; EventBuff_RdEn <= '0'; 
 	DCSBuff_rd_en <= '0';
 	FIFOCount <= (others => (others => '0')); EventBuff_WrtEn <= '0';
@@ -856,14 +868,19 @@ end if;
 							  TxCRCDat(0) <= X"00" & X"6" & IDReg; 
 -- Add the words in the controller header packet to the total word count
 			 When X"8" => GTPTxStage(0) <= EventBuff_Out + 8;
-							  TxCRCDat(0) <= EventBuff_Out + 8;
+			 				  TxCRCDat(0) <= EventBuff_Out + 8;
 			 When X"7" => GTPTxStage(0) <= X"00" & ActiveReg(23 downto 16);
 							  TxCRCDat(0) <= X"00" & ActiveReg(23 downto 16);
 			 When X"6" => GTPTxStage(0) <= ActiveReg(15 downto 0);
-							  TxCRCDat(0) <= ActiveReg(15 downto 0);
+			 				  TxCRCDat(0) <= ActiveReg(15 downto 0);
 			 When X"5" => GTPTxStage(0) <= DReq_Count(15 downto 0);
-							  TxCRCDat(0) <= DReq_Count(15 downto 0);
-			 When X"4" => GTPTxStage(0) <= EventBuff_Out; TxCRCDat(0) <= EventBuff_Out;
+			 				  TxCRCDat(0) <= DReq_Count(15 downto 0);
+			 When X"4" => GTPTxStage(0) <= EventBuff_Out; TxCRCDat(0) <= EventBuff_Out; -- EventBuff_Out; -- word count 0
+			 --When X"3" => GTPTxStage(0) <= uBcheckRef(31 downto 16); TxCRCDat(0) <= uBcheckRef(31 downto 16); -- EventBuff_Out; -- word count 1
+			 --When X"2" => GTPTxStage(0) <= uBcheckRef(15 downto  0); TxCRCDat(0) <= uBcheckRef(15 downto  0); -- EventBuff_Out; -- word count 2
+			 When X"3" => GTPTxStage(0) <= EventBuff_Out; TxCRCDat(0) <= EventBuff_Out; -- EventBuff_Out; -- word count 1
+			 When X"2" => GTPTxStage(0) <= EventBuff_Out; TxCRCDat(0) <= EventBuff_Out; -- EventBuff_Out; -- word count 2
+
 			 When X"0" => GTPTxStage(0) <= X"BC3C"; TxCRCDat(0) <= X"0000";
 			 When others => GTPTxStage(0) <= X"0000"; TxCRCDat(0) <= X"0000";
 	      end case;
@@ -1089,19 +1106,81 @@ Case Event_Builder is
 	end if;  
 -- Read the status from the link FIFOs
 	when RdStat0 => --Debug(10 downto 7) <= X"7";
-		if ActiveReg(23 downto 8) = 0 then Event_Builder <= WrtStat;
+		if ActiveReg(23 downto 8) = 0 then Event_Builder <= RduB;
 	elsif ActiveReg(15 downto 8) = 0 then Event_Builder <= RdStat2;
 	   else Event_Builder <= RdStat1;
 		end if;
 	when RdStat1 => --Debug(10 downto 7) <= X"8"; 
-			if ActiveReg(23 downto 16) = 0 then Event_Builder <= WrtStat;
+			if ActiveReg(23 downto 16) = 0 then Event_Builder <= RduB;
 			else Event_Builder <= RdStat2;
 			end if;
 	when RdStat2 => --Debug(10 downto 7) <= X"9"; 
-		Event_Builder <= WrtStat;
+		Event_Builder <= RduB;
 -- Write the "OR" of the status as the controller status word
-	when WrtStat => --Debug(10 downto 7) <= X"A";
+
+   when RduB => -- this step could be jumped
+	if uBinHeader = '0' then
+	    Event_Builder <= WrtStat;
+	else
+	   if ActiveReg(15 downto 0) = 0 then Event_Builder <= RduB2low; -- only FPGA2 active 
+	   elsif ActiveReg(7 downto 0) = 0 then Event_Builder <= RduB1low; -- FPGA1 active, FPGA0 not active, FPGA2 maybe active
+	   else Event_Builder <= RduB0low; -- FPGA0 active
+	   end if;  
+   end if;
+
+   when RduB2low =>
+	    Event_Builder <= RduB2high;
+	when RduB2high =>
+	    Event_Builder <= WrtStat;
+		 
+	when RduB1low =>
+		 Event_Builder <= RduB1high;
+	when RduB1high =>
+		 if ActiveReg(23 downto 16) = 0 then Event_Builder <= WrtStat; -- only FPGA1 active
+		 else Event_Builder <= VerifyuB2low; -- verify against FPGA2, FPGA0 is not active
+		 end if;
+		 
+	when VerifyuB2low =>
+	    Event_Builder <= VerifyuB2high;
+	when VerifyuB2high =>
+	    Event_Builder <= WrtStat;
+		 
+	when RduB0low =>
+	    Event_Builder <= RduB0high;
+	when RduB0high =>
+	    if ActiveReg(23 downto 8) = 0 then Event_Builder <= WrtStat; -- only FPGA0
+	    elsif ActiveReg(15 downto 8) = 0 then Event_Builder <= VerifyuB2low; -- only FPGA2, check against it
+	    else Event_Builder <= VerifyuB1low; -- verify against FPGA1 and FPGA2
+		 end if;
+		 
+	when VerifyuB1low =>
+	    Event_Builder <= VerifyuB1high;
+	when VerifyuB1high =>
+	    if ActiveReg(23 downto 16) = 0 then Event_Builder <= WrtStat; -- only FPGA2 not active, done
+		 else Event_Builder <= VerifyuB2low; -- verify against FPGA2, FPGA0 is not active
+		 end if;
+
+	when WrtStat => 
+	   if uBwrt = '1' then
+		    Event_Builder <= WrtUbLow;
+		else
+		    Event_Builder <= ReadFIFO;
+		end if;
+	
+	when WrtUbLow => 
+	    Event_Builder <= WrtUbHigh;
+	when WrtUbHigh =>
+	    Event_Builder <= ReadFIFO;
+		 
+	--Debug(10 downto 7) <= X"A";
+--	    Event_Builder <= WrtWdCnt0;
+--   when WrtWdCnt0 =>
+--	    Event_Builder <= WrtWdCnt1;
+--	when WrtWdCnt1 => -- not really nded
+--	    Event_Builder <= WrtWdCnt2;
+--	when WrtWdCnt2 =>
 -- Skip over any Link that has no data
+    when ReadFIFO => -- this step doesn't do anything, we could jump it to speed up things
 			if FIFOCount(0) /= 0 and ActiveReg(7 downto 0) /= 0 
 				then Event_Builder <= ReadFIFO0;
 	   elsif FIFOCount(0) = 0 and FIFOCount(1) /= 0 
@@ -1148,15 +1227,37 @@ Case Event_Builder is
 -- Sum the word counts from the three Link FIFOs.
 		if Event_Builder = Idle then EventSum <= (others => '0');
 -- Account for removing the word count and status words from the data
-	elsif Event_Builder = RdInWdCnt0 then EventSum <= LinkFIFOOut(0) - 2;
-	elsif Event_Builder = RdInWdCnt1 then EventSum <= EventSum + (LinkFIFOOut(1) - 2);
-	elsif Event_Builder = RdInWdCnt2 then EventSum <= EventSum + (LinkFIFOOut(2) - 2);
+	elsif Event_Builder = RdInWdCnt0 then 
+	    if uBinHeader = '0' then EventSum <= LinkFIFOOut(0) - 2; else EventSum <= LinkFIFOOut(0) - 4; end if;
+	elsif Event_Builder = RdInWdCnt1 then 
+	    if uBinHeader = '0' then EventSum <= LinkFIFOOut(1) - 2; else EventSum <= LinkFIFOOut(1) - 4; end if;
+	elsif Event_Builder = RdInWdCnt2 then 
+	    if uBinHeader = '0' then EventSum <= LinkFIFOOut(2) - 2; else EventSum <= LinkFIFOOut(2) - 4; end if;
 	else EventSum <= EventSum;
+	end if;
+	
+-- storte the number of events from the first two FPGAs
+      if Event_Builder = Idle then Event0 <= (others => '0');
+	elsif Event_Builder = RdInWdCnt0 then Event0 <= LinkFIFOOut(0) - 2;
+	else Event0 <= Event0;
+	end if;
+      if Event_Builder = Idle then Event1 <= (others => '0');
+	elsif Event_Builder = RdInWdCnt1 then Event1 <= LinkFIFOOut(1) - 2;
+	else Event1 <= Event1;
+	end if;
+      if Event_Builder = Idle then Event2 <= (others => '0');
+	elsif Event_Builder = RdInWdCnt2 then Event2 <= LinkFIFOOut(2) - 2;
+	else Event2 <= Event2;
 	end if;
 
 -- Select the data source for the event buffer FIFO
-	   if Event_Builder = WrtWdCnt then EventBuff_Dat <= EventSum;
-	elsif Event_Builder = WrtStat	then EventBuff_Dat <= Stat0 & StatOR;
+	   if Event_Builder = WrtWdCnt  then EventBuff_Dat <= EventSum;
+	elsif Event_Builder = WrtStat	then EventBuff_Dat <= uBcheckFlag & Stat0(6 downto 0) & StatOR;
+   elsif Event_Builder = WrtWdCnt0 then EventBuff_Dat <= Event0;
+	elsif Event_Builder = WrtWdCnt1 then EventBuff_Dat <= Event1;
+	elsif Event_Builder = WrtWdCnt2 then EventBuff_Dat <= Event2;
+	elsif Event_Builder = WrtUbLow  then EventBuff_Dat <= uBcheck(15 downto 0);
+	elsif Event_Builder = WrtUbHigh then EventBuff_Dat <= uBcheck(31 downto 16);
 	elsif LinkFIFORdReq(0) = '1' then EventBuff_Dat <= LinkFIFOOut(0);
 	elsif LinkFIFORdReq(1) = '1' then EventBuff_Dat <= LinkFIFOOut(1);
 	elsif LinkFIFORdReq(2) = '1' then EventBuff_Dat <= LinkFIFOOut(2);
@@ -1176,6 +1277,122 @@ elsif Event_Builder = RdStat2 then
 else StatOr <= StatOr; Stat0 <= Stat0;
 end if;
 
+-- latch uB status for comparison
+if Packet_Former = Idle then
+    uBcheckRef <= X"ffffffff";
+elsif Packet_Former = WrtHdrPkt then
+	 if    Pkt_Timer = X"6" then
+        uBcheckRef(31 downto 16) <= TStmpBuff_Out;
+		  uBcheckRef(15 downto  0) <= uBcheckRef(15 downto 0);
+	 elsif Pkt_Timer = X"5" then
+	     uBcheckRef(31 downto 16) <= uBcheckRef(31 downto 16);
+		  uBcheckRef(15 downto  0) <= TStmpBuff_Out;
+	 else
+	     uBcheckRef <= uBcheckRef;
+	 end if;
+end if;
+
+
+
+-- read uB numbers from inout buffers
+   if Event_Builder = Idle then 
+	    if uBdebug2 = '1' then
+		    uBcheck <= uBcheck;
+		 else
+	        uBcheck <= (others =>'1');
+		 end if;
+	elsif Event_Builder = RdUb0low then 
+	    uBcheck(31 downto 16) <= uBcheck(31 downto 16);
+		 if uBdebug = '1' then
+		     uBcheck(15 downto  0) <= X"aa00";
+		 else
+		     uBcheck(15 downto  0) <= LinkFIFOOut(0);
+		 end if;
+	elsif Event_Builder = RdUb0high then 
+	    --uBcheck(31 downto 16) <= LinkFIFOOut(0);
+		 if uBdebug = '1'  then
+		     uBcheck(31 downto  16) <= X"aa01";
+		 else
+		     uBcheck(31 downto  16) <= LinkFIFOOut(0);
+		 end if;
+		 uBcheck(15 downto  0) <= uBcheck(15 downto 0);
+	elsif Event_Builder = RdUb1low then 
+	    uBcheck(31 downto 16) <= uBcheck(31 downto 16);
+		 --uBcheck(15 downto  0) <= LinkFIFOOut(1);
+		 if uBdebug = '1'  then
+		     uBcheck(15 downto  0) <= X"aa02";
+		 else
+		     uBcheck(15 downto  0) <= LinkFIFOOut(1);
+		 end if;
+	elsif Event_Builder = RdUb1high then 
+	    --uBcheck(31 downto 16) <= LinkFIFOOut(1);
+		 if uBdebug = '1'  then
+		     uBcheck(31 downto  16) <= X"aa03";
+		 else
+		     uBcheck(31 downto  16) <= LinkFIFOOut(1);
+		 end if;
+		 uBcheck(15 downto  0) <= uBcheck(15 downto 0);
+	elsif Event_Builder = RdUb2low then 
+	    uBcheck(31 downto 16) <= uBcheck(31 downto 16);
+		 --uBcheck(15 downto  0) <= LinkFIFOOut(2);
+		 if uBdebug = '1'  then
+		     uBcheck(15 downto  0) <= X"aa04";
+		 else
+		     uBcheck(15 downto  0) <= LinkFIFOOut(2);
+		 end if;
+	elsif Event_Builder = RdUb2high then 
+	    --uBcheck(31 downto 16) <= LinkFIFOOut(2);
+		 if uBdebug = '1'  then
+		     uBcheck(31 downto  16) <= X"aa05";
+		 else
+		     uBcheck(31 downto  16) <= LinkFIFOOut(2);
+		 end if;
+		 uBcheck(15 downto  0) <= uBcheck(15 downto 0);
+	else uBcheck <= uBcheck;
+	end if;
+	
+-- check if uB are consistent
+   if Event_Builder = Idle then 
+	    uBcheckFlag <= '0';
+	elsif Event_Builder = VerifyUb0low then
+	       if (uBcheck(15 downto  0) xor LinkFIFOOut(0)) = X"0000" then
+			     uBcheckFlag <= uBcheckFlag;
+			 else
+				  uBcheckFlag <= '1';
+			 end if;
+	elsif Event_Builder = VerifyUb0high then
+	       if (uBcheck(31 downto  16) xor LinkFIFOOut(0)) = X"0000" then
+			     uBcheckFlag <= uBcheckFlag;
+			 else
+				  uBcheckFlag <= '1';
+			 end if;
+	elsif Event_Builder = VerifyUb1low then
+	       if (uBcheck(15 downto  0) xor LinkFIFOOut(1)) = X"0000" then
+			     uBcheckFlag <= uBcheckFlag;
+			 else
+				  uBcheckFlag <= '1';
+			 end if;
+	elsif Event_Builder = VerifyUb1high then
+	       if (uBcheck(31 downto  16) xor LinkFIFOOut(1)) = X"0000" then
+			     uBcheckFlag <= uBcheckFlag;
+			 else
+				  uBcheckFlag <= '1';
+			 end if;
+	elsif Event_Builder = VerifyUb2low then
+	       if (uBcheck(15 downto  0) xor LinkFIFOOut(2)) = X"0000" then
+			     uBcheckFlag <= uBcheckFlag;
+			 else
+				  uBcheckFlag <= '1';
+			 end if;
+	elsif Event_Builder = VerifyUb2high then
+	       if (uBcheck(31 downto  16) xor LinkFIFOOut(2)) = X"0000" then
+			     uBcheckFlag <= uBcheckFlag;
+			 else
+				  uBcheckFlag <= '1';
+			 end if;
+   else uBcheckFlag <= uBcheckFlag;
+	end if;
+
 --Copy port activity bits from the other FPGAs to this register
 if TrigTx_Sel = '1' 
    then 
@@ -1189,19 +1406,22 @@ if TrigTx_Sel = '1'
 end if;
 
 -- Count down the words read from each of the link FIFOs
-	if Event_Builder = RdInWdCnt0 then FIFOCount(0) <= LinkFIFOOut(0) - 2;
+	if Event_Builder = RdInWdCnt0 then 
+	   if uBinHeader = '0' then FIFOCount(0) <= LinkFIFOOut(0) - 2; else FIFOCount(0) <= LinkFIFOOut(0) - 4; end if;   
 	elsif Event_Builder = ReadFIFO0 and FIFOCount(0) /= 0 
 						then FIFOCount(0) <= FIFOCount(0) - 1;
 	else FIFOCount(0) <= FIFOCount(0);
 	end if;
 
-	if Event_Builder = RdInWdCnt1 then FIFOCount(1) <= LinkFIFOOut(1) - 2;
+	if Event_Builder = RdInWdCnt1 then 
+	    if uBinHeader = '0' then FIFOCount(1) <= LinkFIFOOut(1) - 2; else FIFOCount(1) <= LinkFIFOOut(1) - 4; end if;
 	elsif Event_Builder = ReadFIFO1 and FIFOCount(1) /= 0 
 						then FIFOCount(1) <= FIFOCount(1) - 1;
 	else FIFOCount(1) <= FIFOCount(1);
 	end if;
 
-	if Event_Builder = RdInWdCnt2 then FIFOCount(2) <= LinkFIFOOut(2) - 2;
+	if Event_Builder = RdInWdCnt2 then 
+	    if uBinHeader = '0' then FIFOCount(2) <= LinkFIFOOut(2) - 2; else FIFOCount(2) <= LinkFIFOOut(2) - 4; end if;
 	elsif Event_Builder = ReadFIFO2 and FIFOCount(2) /= 0 
 						then FIFOCount(2) <= FIFOCount(2) - 1;
 	else FIFOCount(2) <= FIFOCount(2);
@@ -1212,6 +1432,8 @@ end if;
    if (LinkRDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = LinkRdAddr(0))
 -- Read of header words, read of data words
    or Event_Builder = RdInWdCnt0 or Event_Builder = RdStat0 or Event_Builder = ReadFIFO0
+	or (Event_Builder = RdUb and uBinHeader = '1') or Event_Builder = RdUb0low --or Event_Builder = RdUb0high
+	or Event_Builder = VerifyUb0low --or Event_Builder = VerifyUb0high
  	then LinkFIFORdReq(0) <= '1'; 
 	else LinkFIFORdReq(0) <= '0'; 
 	end if;
@@ -1219,6 +1441,8 @@ end if;
  if (LinkRDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = LinkRdAddr(1))
 -- Read of header words, read of data words
    or Event_Builder = RdInWdCnt1 or Event_Builder = RdStat1 or Event_Builder = ReadFIFO1
+	or (Event_Builder = RdUb and uBinHeader = '1') or Event_Builder = RdUb1low --or Event_Builder = RdUb1high
+	or Event_Builder = VerifyUb1low --or Event_Builder = VerifyUb1high
 	then LinkFIFORdReq(1) <= '1'; 
 	else LinkFIFORdReq(1) <= '0'; 
 	end if;
@@ -1226,6 +1450,8 @@ end if;
  if (LinkRDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = LinkRdAddr(2))
 -- Read of header words, read of data words
    or Event_Builder = RdInWdCnt2 or Event_Builder = RdStat2 or Event_Builder = ReadFIFO2
+	or (Event_Builder = RdUb and uBinHeader = '1') or Event_Builder = RdUb2low --or Event_Builder = RdUb2high
+	or Event_Builder = VerifyUb2low --or Event_Builder = VerifyUb2high
 	then LinkFIFORdReq(2) <= '1'; 
 	else LinkFIFORdReq(2) <= '0'; 
 	end if;
@@ -1235,13 +1461,17 @@ end if;
  else EvBuffWrtGate <= EvBuffWrtGate;
  end if;
 
- if Event_Builder = WrtWdCnt or Event_Builder = WrtStat 
+ if Event_Builder = WrtWdCnt or Event_Builder = WrtWdCnt0 or Event_Builder = WrtWdCnt1 or Event_Builder = WrtWdCnt2
+   or Event_Builder = WrtStat or Event_Builder = WrtUbLow or Event_Builder = WrtUbHigh
 	or (LinkFIFORdReq /= 0 and EvBuffWrtGate = '1')
    then EventBuff_WrtEn <= '1'; --Debug(6) <= '1';
   else EventBuff_WrtEn <= '0';  --Debug(6) <= '0';
  end if;
 
-if (Packet_Former = WrtCtrlHdrPkt and (Pkt_Timer = 8 or Pkt_Timer = 4))
+if (Packet_Former = WrtCtrlHdrPkt and (Pkt_Timer = 8 or Pkt_Timer = 5 
+    or (uBwrt = '1' and (Pkt_Timer = 4 or Pkt_Timer = 3)) -- iff uB is written, also read it again
+    ---or Pkt_Timer = 7 or Pkt_Timer = 4 or Pkt_Timer = 3 or Pkt_Timer = 2)
+	 ))
  or (Packet_Former = WrtDatPkt and Pkt_Timer > 2 and EvTxWdCnt > 0)
 then EventBuff_RdEn <= '1';  Debug(9) <= '1';
 else EventBuff_RdEn <= '0';  Debug(9) <= '0';
@@ -1976,7 +2206,8 @@ main : process(SysClk, CpldRst)
 
 -- Trigger and spill generator logic
 	FreqReg <= X"00000237"; PhaseAcc <= (others => '0');
-	Buff_Rst <= '0'; Seq_Rst <= '0'; 
+	--Buff_Rst <= '0'; 
+	Seq_Rst <= '0'; 
 	Beam_On <= '0'; TrigEn <= '1'; 
 	TstPlsEn <= '0';  TstPlsEnReq <= '0'; SS_FR <= '0';  TstTrigEn <= '0';
 	IntTrig <= '0'; TrigType <= X"0"; 
@@ -1987,6 +2218,7 @@ main : process(SysClk, CpldRst)
 	Counter1us <= X"00"; Counter1ms <= (others => '0'); MarkerReq <= '0';
 	SuperCycleCount <= (others => '0'); SpillWidthCount <= (others => '0');
 	InterSpillCount <= (others => '0'); MarkerSyncEn <= '0';
+	uBinHeader <= '1'; uBwrt <= '1'; uBdebug <= '0'; uBdebug2 <= '0';
 	TxEnReq <= '0'; DRFreq <= (others => '0'); -- Delivery ring DDS
 	Int_uBunch <= "00"; -- Rising edge of DDS terminal count
 	DRCount <= (others => '0'); -- Delivery ring bunch counter
@@ -2067,6 +2299,18 @@ else FormHold <= FormHold;
 	  TrigTx_Sel <= TrigTx_Sel;
 	  MarkerSyncEn <= MarkerSyncEn;
 	  HrtBtTxInh <= HrtBtTxInh;
+end if;
+
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = FormatRegAddr
+then uBinHeader <= uCD(0);
+     uBwrt      <= uCD(1);
+	  uBdebug    <= uCD(2);
+	  uBdebug2   <= uCD(3);
+     -- more format settings
+else uBinHeader <= uBinHeader;
+     uBwrt      <= uBwrt;
+	  uBdebug    <= uBdebug;
+	  uBdebug2   <= uBdebug2;
 end if;
 
 -- Enable the transmitting of heartbeats
@@ -2663,7 +2907,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 X"000" & IDReg when IDregAddr,
 		 X"0" & "00" & Debug when DebugPinAd,
 		 X"000" & '0' & FormStatReg when GTPSeqStatAd,
-		 X"000" & '0' & Beam_On & '0' & Seq_Busy when SpillStatAddr,
+		 X"000" & '0' & Beam_On & '0' & '0' when SpillStatAddr,
 		 UpTimeStage(31 downto 16) when UpTimeRegAddrHi,
 		 UpTimeStage(15 downto 0) when UpTimeRegAddrLo,
 		 TestCount(31 downto 16) when TestCounterHiAd,
@@ -2701,7 +2945,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 HrtBtBuff_Emtpy & "0000" & HrtBtBuffRdCnt when HrtBtBuffStatAd,
 		 HrtBtBuff_Out when HrtBtFIFORdAd,
 		 X"00" & MarkerDelay when MarkerDelayAd,
-		 X"7111" when DebugVersionAd,
+		 X"0012" when DebugVersionAd,
 		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
 		 "000" & DCSPktRdCnt when DCSPktWdUsedAd,
 		 DCSPktBuff_Out(15 downto 0) when DCSPktBuffAd,
@@ -2717,6 +2961,9 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 DCS_EvCnt when DCSEvCntAd,
 		 DCS_Status when DCSStatusAd,
 		 GTPRstFromCnt & "0" & GTPTstFromCntEn & GTPRstArm & GTPRstCnter when GTPRstCntAd,
+		 X"000" & uBdebug2 & uBdebug & uBwrt & uBinHeader when FormatRegAddr,
+		 uBcheck(31 downto 16) when uBLowRegAddr,
+		 uBcheck(15 downto  0) when uBHighRegAddr,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers
