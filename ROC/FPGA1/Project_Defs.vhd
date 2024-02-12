@@ -124,6 +124,10 @@ constant SpillStatAddr : AddrPtr := "00" & X"76";
 constant MarkerBitsAd : AddrPtr  := "00" & X"77";
 constant MarkerDelayAd : AddrPtr := "00" & X"78";
 
+-- event builder debugging
+constant FormatRegAddr : AddrPtr := "00" & X"79";
+constant uBLowRegAddr : AddrPtr := "00" & X"7A";
+constant uBHighRegAddr : AddrPtr := "00" & X"7B";
 
 constant LinkErrAd : AddrPtr           := "00" & X"80";
 constant HrtBtOffsetAd : AddrPtr       := "00" & X"81";

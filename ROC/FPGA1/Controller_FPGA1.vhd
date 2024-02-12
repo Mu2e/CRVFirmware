@@ -27,7 +27,7 @@ use work.Project_defs.all;
 entity ControllerFPGA_1 is port(
 
 -- 100 MHz VXO clock, 50MHz Phy clock
-	VXO_P,VXO_N,ClkB_P,ClkB_N,Clk50MHz,BnchClk : in std_logic;
+	VXO_P,VXO_N,ClkB_P,ClkB_N,Clk50MHz,BnchClk_P,BnchClk_N : in std_logic;
 -- 156.25 MHz GTP Reference clock, Gigabit data lines
 	GTPClk_P,GTPClk_N,GTPRx_P,GTPRx_N : in std_logic_vector(1 downto 0);
 	GTPTx_P,GTPTx_N : out std_logic_vector(1 downto 0);
@@ -48,7 +48,7 @@ entity ControllerFPGA_1 is port(
 -- Serial inter-chip link Data lines
 	LinkSDat_P,LinkSDat_N : in std_logic_vector(5 downto 0);
 -- FM Transmitters for uBunch and Triggers
-	HeartBeatFM,TrigFM,uBunchLED,TrigLED,
+	HeartBeatFM_P,HeartBeatFM_N,TrigFM,uBunchLED,TrigLED,
 -- Pll control lines
 	PllSClk,PllSDat,PllLd,PllPDn : buffer std_logic;
 	PllStat : in std_logic;
@@ -66,6 +66,9 @@ entity ControllerFPGA_1 is port(
 -- Back panel LEMOs
 	GPO : buffer std_logic_vector(1 downto 0);
 	GPI,NimTrig : in std_logic;
+-- RJ45
+   OGLEDA, OGLEDB, YLED : out std_logic;
+--	TDAQRtn0_P, TDAQRtn0_N, TDAQRtn1_P, TDAQRtn1_N : buffer std_logic;
 -- Debug port
 	Debug : buffer std_logic_vector(10 downto 1)
 );
@@ -92,6 +95,9 @@ Type Array_3x14 is Array (0 to 2) of std_logic_vector (13 downto 0);
 Type Array_3x16 is Array(0 to 2) of std_logic_vector (15 downto 0);
 
 Type Array_3x2x10 is Array (0 to 2) of Array_2x10;
+
+-- these signals used to be single ended I/O
+signal BnchClk,HeartBeatFM : std_logic;
 
 -- Synchronous edge detectors of uC read and write strobes
 Signal RDDL,WRDL : std_logic_vector (1 downto 0);
@@ -370,6 +376,26 @@ Sys_Pll : SysPll
     RESET  => ResetHi,
     LOCKED => Pll_Locked);
 
+HrtBtFMOut : OBUFDS
+generic map (
+IOSTANDARD => "BLVDS_25")
+port map (
+O => HeartBeatFM_P, -- Diff_p output (connect directly to top-level port)
+OB => HeartBeatFM_N, -- Diff_n output (connect directly to top-level port)
+I => HeartBeatFM -- Buffer input
+);
+
+BunchClkDiffIn : IBUFDS
+   generic map (
+      DIFF_TERM => TRUE,
+      IBUF_LOW_PWR => FALSE,
+      IOSTANDARD => "DEFAULT")
+   port map (
+      O  => BnchClk,
+      I  => BnchClk_P,
+      IB => BnchClk_N
+   );
+
 BunchClkIn : IDDR2
    generic map(
       DDR_ALIGNMENT => "C0", -- Sets output alignment to "NONE", "C0", "C1" 
@@ -417,6 +443,10 @@ Debug(2) <= HrtBtFMTxEn;
 Debug(3) <= MarkerDelayed;
 Debug(4) <= HrtBtDone;
 Debug(5) <= HrtBtFMReq;
+
+OGLEDA <= HrtBtFMTxEn; -- TODO, indicate PLL lock 
+OGLEDB <= Marker;
+YLED   <= '0';
 
 -- FM transmitter for data requests, used only when sending fake controller data to the GTP link
 DReqTx : FM_Tx
@@ -2945,7 +2975,6 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 HrtBtBuff_Emtpy & "0000" & HrtBtBuffRdCnt when HrtBtBuffStatAd,
 		 HrtBtBuff_Out when HrtBtFIFORdAd,
 		 X"00" & MarkerDelay when MarkerDelayAd,
-		 X"0012" when DebugVersionAd,
 		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
 		 "000" & DCSPktRdCnt when DCSPktWdUsedAd,
 		 DCSPktBuff_Out(15 downto 0) when DCSPktBuffAd,
@@ -2964,6 +2993,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 X"000" & uBdebug2 & uBdebug & uBwrt & uBinHeader when FormatRegAddr,
 		 uBcheck(31 downto 16) when uBLowRegAddr,
 		 uBcheck(15 downto  0) when uBHighRegAddr,
+		 X"0612" when DebugVersionAd,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers

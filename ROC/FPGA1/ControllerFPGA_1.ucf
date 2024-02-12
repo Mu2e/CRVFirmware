@@ -191,16 +191,21 @@ NET "LEDLd[0]" LOC = Y21;
 NET "GPO[1]" LOC = F9;
 NET "GPO[0]" LOC = G8;
 NET "GPI" LOC = C22;
-NET "NimTrig" LOC = E20;
+#NET "NimTrig" LOC = E20; Prototype version
+NET "NimTrig" LOC = H18; # Production version
 
 # FM tramsmitters for trigger and timing fanout
-NET "HeartBeatFM" LOC = P4;
-NET "HeartBeatFM" SLEW = "FAST";
-NET "HeartBeatFM" DRIVE = "16";
+# OLD: "HeartBeatFM" LOC = P4;
+#NET "HeartBeatFM" SLEW = "FAST";
+#NET "HeartBeatFM" DRIVE = "16";
+NET "HeartBeatFM_P" LOC = P5;
+NET "HeartBeatFM_N" LOC = P4;
 
-NET "TrigFM" LOC = P5;
+# OLD: NET "TrigFM" LOC = P5;
+NET "TrigFM" LOC = P8;
 NET "TrigFM" SLEW = "FAST";
 NET "TrigFM" DRIVE = "16";
+
 
 # Status LEDs
 NET "uBunchLED" LOC = T20;
@@ -232,6 +237,14 @@ NET "GTPTx_P(0)" LOC = B6;
 NET "GTPTx_N(0)" LOC = A6;
 NET "GTPTx_P(1)" LOC = B8;
 NET "GTPTx_N(1)" LOC = A8;
+
+#NET "TDAQRtn0_P" LOC = E20;
+#NET "TDAQRtn0_N" LOC = E22;
+#NET "TDAQRtn1_P" LOC = H12;
+#NET "TDAQRtn1_N" LOC = G11;
+NET "OGLEDA"     LOC = E16;
+NET "OGLEDB"     LOC = C17;
+NET "YLED"       LOC = A17;
 
 
 ##---------- Set placement for tile0_rocketio_wrapper_i/GTPA1_DUAL ------

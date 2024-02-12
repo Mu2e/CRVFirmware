@@ -35,12 +35,14 @@
 *.ngm
 *.csv
 *.txt
+*.xdl
 *.cmd_log
 *.html
 *.xwbt
 *.log
 *.xreport
 iseconfig/*.xreport
+ipcore_dir/*.xmsgs
 _ngo/*
 ipcore_dir/*
 _xmsgs

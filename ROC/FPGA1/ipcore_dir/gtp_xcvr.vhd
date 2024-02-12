@@ -308,9 +308,9 @@ end component;
 
 begin                       
 
-    tied_to_ground_i                    <= '0';
+--    tied_to_ground_i                    <= '0';
     tied_to_ground_vec_i(63 downto 0)   <= (others => '0');
-    tied_to_vcc_i                       <= '1';
+--    tied_to_vcc_i                       <= '1';
 
 simulation : if WRAPPER_SIMULATION = 1 generate
 
