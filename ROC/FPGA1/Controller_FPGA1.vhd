@@ -2898,7 +2898,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		   Rx_IsCtrl(1) & InvalidChar(1) & Rx_IsComma(1) & Reframe(1) & TDisB 
 		 & Rx_IsCtrl(0) & InvalidChar(0) & Rx_IsComma(0) & Reframe(0) & TDisA when GTPCSRAddr,
 		 X"00" & "00" & GTPRxBuff_Full & GTPRxBuff_Emtpy & "00" when GTPFIFOAddr,
-		 X"000" & "000" & PllPDn when PLLPDnAddr,
+		 X"00" & "000" & PLLStat & "000" & PllPDn when PLLPDnAddr,
 		 DReqBuff_Out(15 downto 0) when TRigReqBuffAd,
 		 X"0" & '0' & TrgPktRdCnt when TRigReqWdUsedAd,
 		 X"000" & "00" & TrgSrc & TstPlsEn when TrigCtrlAddr,
@@ -2963,7 +2963,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 X"000" & uBdebug2 & uBdebug & uBwrt & uBinHeader when FormatRegAddr,
 		 uBcheck(31 downto 16) when uBLowRegAddr,
 		 uBcheck(15 downto  0) when uBHighRegAddr,
-		 X"0012" when DebugVersionAd,
+		 X"0013" when DebugVersionAd,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers
