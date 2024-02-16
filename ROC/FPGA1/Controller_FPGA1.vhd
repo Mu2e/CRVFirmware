@@ -109,6 +109,13 @@ signal DDRBits : std_logic_vector(1 downto 0);
 signal MarkerBits : std_logic_vector(15 downto 0);
 signal MarkerDelay, MarkerDelayCounter : std_logic_vector(7 downto 0);
 signal Even_Odd,Marker,MarkerDelayed,MarkerReq,MarkerSyncEn, MarkerDelayArm : std_logic;
+signal MarkerCnt : std_logic_vector(7 downto 0); -- counts decoded markers
+signal HeartBeatCnt : std_logic_vector(7 downto 0); -- counts heartbeats sent out
+signal HeartBtCnt : std_logic_vector(7 downto 0); -- counts heart beat packages from fibers
+-- event window timers
+signal WindowTimer : std_logic_vector(15 downto 0);
+signal LastWindow : std_logic_vector(15 downto 0);
+
 -- foramt settings
 signal uBinHeader : std_logic; 
 signal uBwrt : std_logic;
@@ -2045,17 +2052,19 @@ EthProc : process(EthClk, CpldRst)
 	ZEthCS <= '1'; ZEthWE <= '1'; 
 	ZEthBE <= "11"; EthRDDL <= (others => '0');
 	MarkerBits <= X"0000"; Even_Odd <= '0'; 
-	GPO(0) <= '0'; Marker <= '0';
+	GPO(0) <= '0'; Marker <= '0'; MarkerCnt <= (others => '0');
 
  elsif rising_edge (EthClk) then 
 
 	MarkerBits <= MarkerBits(13 downto 0) & DDRBits;
 
 	if Marker = '0' and (MarkerBits = X"F0C0" or MarkerBits = X"F0FC") then  
-		GPO(0) <= '1'; Marker <= '1';
+		GPO(0) <= '1'; Marker <= '1'; 
+		MarkerCnt <= MarkerCnt + 1;
 	elsif Marker = '1' and (MarkerBits = X"FCF0" or MarkerBits = X"C0F0") then 
 	   GPO(0) <= '0'; Marker <= '0';
-	else Marker <= Marker; GPO(0) <= GPO(0);
+		MarkerCnt <= MarkerCnt;
+	else Marker <= Marker; GPO(0) <= GPO(0); MarkerCnt <= MarkerCnt;
 	end if;
 
 --	if GPO(1) = '0' and MarkerBits = X"F0C0"
@@ -2155,6 +2164,9 @@ FMTxReq : process(Clk80MHz, CpldRst)
 
 	HrtBtFMTxEn <= '0'; FMTxBsy <= '0';
 	MarkerDelayCounter <= (others => '0');
+	HeartBeatCnt <= (others => '0');
+	WindowTimer <= (others => '0');
+	LastWindow <= (others => '0');
 
  elsif rising_edge(Clk80MHz) then
  
@@ -2178,8 +2190,16 @@ FMTxReq : process(Clk80MHz, CpldRst)
 
 -- Send a heart beat without pause if there is no marker input expected
   if HrtBtFMReq = '1' or (MarkerSyncEn = '1' and MarkerDelayed = '1')
-	  then HrtBtFMTxEn <= '1';
-	else HrtBtFMTxEn <= '0';
+	  then 
+	      HrtBtFMTxEn <= '1'; 
+			HeartBeatCnt <= HeartBeatCnt + 1;
+			WindowTimer <= (others => '0');
+			LastWindow <= WindowTimer;
+  else 
+      HrtBtFMTxEn <= '0'; 
+		HeartBeatCnt <= HeartBeatCnt;
+		WindowTimer <= WindowTimer + 1;
+		LastWindow <= LastWindow;
   end if;
 
  if HrtBtBuff_rd_en = '1' 
@@ -2259,6 +2279,8 @@ main : process(SysClk, CpldRst)
 
 	FEBID_wea <= "0"; 
 	FEBID_addra <= (others => '0'); FEBID_addrb <= (others => '0');
+	
+	HeartBtCnt <= (others => '0');
 	
  elsif rising_edge (SysClk) then 
 
@@ -2535,9 +2557,11 @@ end if;
 -- start reading the packet data from the buffer
 	if HrtBtBuffRdCnt >= 9 and HrtBtRdCnt = 0 and FMTxBsy = '0' then 
 		HrtBtRdCnt <= X"9";
+		HeartBtCnt <= HeartBtCnt + 1;
 	elsif HrtBtRdCnt /= 0 then 
 		HrtBtRdCnt <= HrtBtRdCnt - 1;
-	else HrtBtRdCnt <= HrtBtRdCnt;
+		HeartBtCnt <= HeartBtCnt;
+	else HrtBtRdCnt <= HrtBtRdCnt; HeartBtCnt <= HeartBtCnt;
 	end if;
 	
 --Debug(5 downto 3) <= HrtBtBuffRdCnt(3 downto 1);
@@ -2963,7 +2987,10 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 X"000" & uBdebug2 & uBdebug & uBwrt & uBinHeader when FormatRegAddr,
 		 uBcheck(31 downto 16) when uBLowRegAddr,
 		 uBcheck(15 downto  0) when uBHighRegAddr,
-		 X"0013" when DebugVersionAd,
+		 HeartBeatCnt & HeartBtCnt when HeartBeatCntAddr,
+		 X"00" & MarkerCnt when MarkerCntAddr,
+		 LastWindow when LastWindowLengthAddr,
+		 X"0014" when DebugVersionAd,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers
