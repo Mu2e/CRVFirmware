@@ -95,6 +95,12 @@ constant HrtBtFIFORdAd : AddrPtr := "00" & X"3E";
 -- Data request prescale during beam on
 constant PreScaleRegAd : AddrPtr := "00" & X"40";
 
+constant MarkerCntAddr : AddrPtr := "00" & X"41"; -- recieved markers
+constant HeartBeatCntAddr : AddrPtr := "00" & X"42"; -- sent out heartbeats, recieved heartbeat packages
+constant LastWindowLengthAddr : AddrPtr := "00" & X"43";
+constant InjectionLengthAddr : AddrPtr := "00" & X"44";
+
+
 constant DCSPktBuffAd    : AddrPtr := "00" & X"50";
 constant DCSPktWdUsedAd  : AddrPtr := "00" & X"51";
 constant DCSBuffCntAd    : AddrPtr := "00" & X"52";
