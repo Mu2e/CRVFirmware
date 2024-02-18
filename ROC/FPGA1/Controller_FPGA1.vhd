@@ -115,6 +115,8 @@ signal HeartBtCnt : std_logic_vector(7 downto 0); -- counts heart beat packages 
 -- event window timers
 signal WindowTimer : std_logic_vector(15 downto 0);
 signal LastWindow : std_logic_vector(15 downto 0);
+signal InjectionTs : std_logic_vector(15 downto 0);
+signal NimTrigLast : std_logic; -- latch the input to detect input rising edge
 
 -- foramt settings
 signal uBinHeader : std_logic; 
@@ -2167,6 +2169,8 @@ FMTxReq : process(Clk80MHz, CpldRst)
 	HeartBeatCnt <= (others => '0');
 	WindowTimer <= (others => '0');
 	LastWindow <= (others => '0');
+	InjectionTs <= (others => '0');
+	NimTrigLast <= '0';
 
  elsif rising_edge(Clk80MHz) then
  
@@ -2200,6 +2204,15 @@ FMTxReq : process(Clk80MHz, CpldRst)
 		HeartBeatCnt <= HeartBeatCnt;
 		WindowTimer <= WindowTimer + 1;
 		LastWindow <= LastWindow;
+  end if;
+  
+  -- detect NimTrig transition to hight and store the current time stamp
+  NimTrigLast <= NimTrig;
+  if NimTrig = '1' and NimTrigLast = '0'
+    then
+      InjectionTs <= WindowTimer;
+  else 
+      InjectionTs <= InjectionTs;
   end if;
 
  if HrtBtBuff_rd_en = '1' 
@@ -2990,6 +3003,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 HeartBeatCnt & HeartBtCnt when HeartBeatCntAddr,
 		 X"00" & MarkerCnt when MarkerCntAddr,
 		 LastWindow when LastWindowLengthAddr,
+		 InjectionTs when InjectionLengthAddr,
 		 X"0014" when DebugVersionAd,
 		 X"0000" when others;
 
