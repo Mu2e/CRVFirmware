@@ -24,6 +24,8 @@ use UNISIM.vcomponents.all;
 
 use work.Project_defs.all;
 
+use work.git_hash_pkg.all;
+
 entity ControllerFPGA_1 is port(
 
 -- 100 MHz VXO clock, 50MHz Phy clock
@@ -3005,6 +3007,8 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 LastWindow when LastWindowLengthAddr,
 		 InjectionTs when InjectionLengthAddr,
 		 X"0014" when DebugVersionAd,
+		 GIT_HASH(31 downto 16) when GitHashHiAddr,
+		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers

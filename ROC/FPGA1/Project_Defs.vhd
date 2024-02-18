@@ -146,6 +146,8 @@ constant LinkFIFOTraceAd : AddrPtr     := "00" & X"87";
 
 constant GTPRstCntAd : AddrPtr      := "00" & X"98";
 
+constant GitHashHiAddr : AddrPtr      := "00" & X"96";
+constant GitHashLoAddr : AddrPtr      := "00" & X"97";
 constant DebugVersionAd : AddrPtr      := "00" & X"99";
 
 ---------------------- Broadcast addresses ------------------------------
