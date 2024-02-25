@@ -249,7 +249,7 @@ end record;
 ------------------------ Xilinx Core gen Macros ------------------------
 
 -- Clock synthesizer macro
-component SysPll
+component SysPll2
 port
  (-- Clock in ports
   CLK_IN1_P         : in     std_logic;
