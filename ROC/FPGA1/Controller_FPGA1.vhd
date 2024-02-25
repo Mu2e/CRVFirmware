@@ -103,6 +103,9 @@ signal EthWRDL,EthRDDL : std_logic_vector (4 downto 0);
 signal SysClk,Clk80MHz,FMGenClk,ResetHi,Pll_Locked,nEthClk,
 		 EthClk,SerdesRst,LinkBuffRst,GTPRst, Seq_Rst : std_logic;
 
+signal Clk80MHzAlign : std_logic;
+signal Clk80MHzAlignCnt : std_logic_vector(7 downto 0);
+
 -- Counter that determines the trig out pulse width
 signal GPOCount : std_logic_vector(2 downto 0);
 
@@ -364,7 +367,7 @@ signal LinkFIFOTraceRdReq : std_logic;
 signal LinkFIFOTraceOut : std_logic_vector (15 downto 0);
 signal LinkFIFOTraceRdCnt : std_logic_vector (12 downto 0);
 
-signal GTPRstCnter : std_logic_vector (11 downto 0);
+signal GTPRstCnter : std_logic_vector(6 downto 0); -- used to be (11 downto 0);
 signal GTPRstFromCnt : std_logic;
 signal GTPTstFromCntEn : std_logic;
 signal GTPRstArm : std_logic;
@@ -389,9 +392,10 @@ Clk80MHzGenSync : Clk80MHzGen
   port map(
           clk160 => EthClk,
           rst => CpldRst,
-          syncEnable => '1',
+          syncEnable => Clk80MHzAlign,
           MarkerBits => MarkerBits,
-          clk80 => Clk80MHz);
+          clk80 => Clk80MHz,
+			 shiftCnt => Clk80MHzAlignCnt);
 
 BunchClkIn : IDDR2
    generic map(
@@ -1003,8 +1007,8 @@ end if;
 	end if;
 
 		if Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and HrtBtWrtCnt > 0
-	then HrtBtBuff_wr_en <= '1'; GPO(1) <= '1'; Debug(7) <= '1';
-	else HrtBtBuff_wr_en <= '0'; GPO(1) <= '0'; Debug(7) <= '0';
+	then HrtBtBuff_wr_en <= '1'; --GPO(1) <= '1'; Debug(7) <= '1';
+	else HrtBtBuff_wr_en <= '0'; --GPO(1) <= '0'; Debug(7) <= '0';
 	end if;
 
 -- Count down the nine words of the DCS packet being received
@@ -2083,6 +2087,8 @@ EthProc : process(EthClk, CpldRst)
 	else Marker <= Marker; GPO(0) <= GPO(0); MarkerCnt <= MarkerCnt;
 	end if;
 
+GPO(1) <= '0';
+
 --	if GPO(1) = '0' and MarkerBits = X"F0C0"
 --	  then GPO(1) <= '1';
 --	elsif GPO(1) = '1' and MarkerBits = X"F0FC"
@@ -2295,6 +2301,7 @@ main : process(SysClk, CpldRst)
 	LEDShiftReg <= (others => '0');	LED_Shift <= Idle;
 	DReqBuff_uCRd <= '0'; LinkBusy <= '0'; HrtBtTxInh <= '0';
 	DCSPktBuff_uCRd <= '0'; MarkerDelay <= (others => '0'); 
+	Clk80MHzAlign <= '1';
 	DCSBuff_wr_en <= '0'; DCSBuff_In <= (others => '0');
 	DCS_Header <= X"8040";
 	DCS_Status <= X"0040"; -- cnt [:7], status[6:5], op[4:0] => cnt = 1
@@ -2481,6 +2488,12 @@ end if;
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = MarkerDelayAd
 	then MarkerDelay <= uCD(7 downto 0);
 	else MarkerDelay <= MarkerDelay;
+end if;
+
+-- Enable/Disable 80MHz alignment
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = Clk80MHzAdd
+	then Clk80MHzAlign <= uCD(0);
+	else Clk80MHzAlign <= Clk80MHzAlign;
 end if;
 
 --	Read of the trigger request FIFO
@@ -3027,7 +3040,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 DCS_Header when DCSHeaderAd,
 		 DCS_EvCnt when DCSEvCntAd,
 		 DCS_Status when DCSStatusAd,
-		 GTPRstFromCnt & "0" & GTPTstFromCntEn & GTPRstArm & GTPRstCnter when GTPRstCntAd,
+		 GTPRstFromCnt & "0" & GTPTstFromCntEn & GTPRstArm & X"0" &"0" & GTPRstCnter when GTPRstCntAd,
 		 X"000" & uBdebug2 & uBdebug & uBwrt & uBinHeader when FormatRegAddr,
 		 uBcheck(31 downto 16) when uBLowRegAddr,
 		 uBcheck(15 downto  0) when uBHighRegAddr,
@@ -3035,7 +3048,8 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 MarkerDelayedCnt & MarkerCnt when MarkerCntAddr,
 		 LastWindow when LastWindowLengthAddr,
 		 InjectionTs when InjectionLengthAddr,
-		 X"0022" when DebugVersionAd,
+		 Clk80MHzAlignCnt & X"0" & "000" & Clk80MHzAlign when Clk80MHzAdd,
+		 X"0023" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 X"0000" when others;

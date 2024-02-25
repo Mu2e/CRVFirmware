@@ -99,6 +99,7 @@ constant MarkerCntAddr : AddrPtr := "00" & X"41"; -- recieved markers
 constant HeartBeatCntAddr : AddrPtr := "00" & X"42"; -- sent out heartbeats, recieved heartbeat packages
 constant LastWindowLengthAddr : AddrPtr := "00" & X"43";
 constant InjectionLengthAddr : AddrPtr := "00" & X"44";
+constant Clk80MHzAdd : AddrPtr := "00" & X"45";
 
 
 constant DCSPktBuffAd    : AddrPtr := "00" & X"50";
@@ -523,7 +524,8 @@ component Clk80MHzGen
          rst : in  std_logic;
          syncEnable : in  std_logic;
          MarkerBits : in  std_logic_vector(15 downto 0);
-         clk80 : out  std_logic
+         clk80 : out  std_logic;
+			shiftCnt : out std_logic_vector(7 downto 0)
         );
 end component;
 

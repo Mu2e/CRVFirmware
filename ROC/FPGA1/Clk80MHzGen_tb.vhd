@@ -45,7 +45,8 @@ ARCHITECTURE behavior OF Clk80MHzGen_tb IS
          rst : IN  std_logic;
          syncEnable : IN  std_logic;
          MarkerBits : IN  std_logic_vector(15 downto 0);
-         clk80 : OUT  std_logic
+         clk80 : OUT  std_logic;
+			shiftCnt : OUT std_logic_vector(7 downto 0)
         );
     END COMPONENT;
     
@@ -55,6 +56,7 @@ ARCHITECTURE behavior OF Clk80MHzGen_tb IS
    signal rst : std_logic := '0';
    signal syncEnable : std_logic := '0';
    signal MarkerBits : std_logic_vector(15 downto 0) := (others => '0');
+	signal shiftCnt : std_logic_vector(7 downto 0);
 
  	--Outputs
    signal clk80 : std_logic;
@@ -70,7 +72,8 @@ BEGIN
           rst => rst,
           syncEnable => syncEnable,
           MarkerBits => MarkerBits,
-          clk80 => clk80
+          clk80 => clk80,
+			 shiftCnt => shiftCnt
         );
 
    -- Clock process definitions

@@ -277,3 +277,8 @@ NET "LINKClk_P[1]" TNM_NET = "LINKClk_P1";
 TIMESPEC TS_LINKClk_P2 = PERIOD "LINKClk_P2" 4 ns HIGH 50%;
 NET "LINKClk_P[2]" TNM_NET = "LINKClk_P2";
 
+# Exclude settings from the uC/register from timing constraints.
+NET "Clk80MHzAlign" TIG;
+# the constraint below doesn't seem to work, I removed the debug out for the moment
+TIMESPEC "TS_MyPaths" = FROM "GTP_Xcvr_i/tile0_GTP_Xcvr_i/gtpa1_dual_i" TO "GPO_1" TIG; 
+
