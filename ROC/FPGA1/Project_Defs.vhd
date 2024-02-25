@@ -517,4 +517,14 @@ component FM_Rx is
 	      Rx_Out : buffer RxOutRec);
 end component;
 
+component Clk80MHzGen
+    port(
+         clk160 : in  std_logic;
+         rst : in  std_logic;
+         syncEnable : in  std_logic;
+         MarkerBits : in  std_logic_vector(15 downto 0);
+         clk80 : out  std_logic
+        );
+end component;
+
 end Project_Defs;

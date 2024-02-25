@@ -380,10 +380,18 @@ Sys_Pll : SysPll2
     CLK_OUT1 => SysClk,   -- 100 MHz
     CLK_OUT2 => EthClk,   -- 160 MHz used for Orange Tree I/O
 	 CLK_OUT3 => nEthClk,  -- 160 MHz 180 deg. phase fro DDR In
-	 CLK_OUT4 => Clk80MHz, -- 80 MHz for 20mbit FM transmitter
+	 CLK_OUT4 => open, --Clk80MHz, -- 80 MHz for 20mbit FM transmitter
 -- Status and control signals
     RESET  => ResetHi,
     LOCKED => Pll_Locked);
+
+Clk80MHzGenSync : Clk80MHzGen
+  port map(
+          clk160 => EthClk,
+          rst => CpldRst,
+          syncEnable => '1',
+          MarkerBits => MarkerBits,
+          clk80 => Clk80MHz);
 
 BunchClkIn : IDDR2
    generic map(
@@ -3027,7 +3035,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 MarkerDelayedCnt & MarkerCnt when MarkerCntAddr,
 		 LastWindow when LastWindowLengthAddr,
 		 InjectionTs when InjectionLengthAddr,
-		 X"0021" when DebugVersionAd,
+		 X"0022" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 X"0000" when others;
