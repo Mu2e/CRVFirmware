@@ -24,6 +24,8 @@ use UNISIM.vcomponents.all;
 
 use work.Project_defs.all;
 
+use work.git_hash_pkg.all;
+
 entity ControllerFPGA_1 is port(
 
 -- 100 MHz VXO clock, 50MHz Phy clock
@@ -107,6 +109,9 @@ signal EthWRDL,EthRDDL : std_logic_vector (4 downto 0);
 signal SysClk,Clk80MHz,FMGenClk,ResetHi,Pll_Locked,nEthClk,
 		 EthClk,SerdesRst,LinkBuffRst,GTPRst, Seq_Rst : std_logic;
 
+signal Clk80MHzAlign : std_logic;
+signal Clk80MHzAlignCnt : std_logic_vector(7 downto 0);
+
 -- Counter that determines the trig out pulse width
 signal GPOCount : std_logic_vector(2 downto 0);
 
@@ -114,13 +119,19 @@ signal GPOCount : std_logic_vector(2 downto 0);
 signal DDRBits : std_logic_vector(1 downto 0);
 signal MarkerBits : std_logic_vector(15 downto 0);
 signal MarkerDelay, MarkerDelayCounter : std_logic_vector(7 downto 0);
-signal Even_Odd,Marker,MarkerDelayed,MarkerReq,MarkerSyncEn, MarkerDelayArm : std_logic;
+signal Even_Odd,MarkerDelayed,Marker,MarkerReq,MarkerSyncEn, MarkerDelayArm : std_logic;
+signal MarkerLast : std_logic_vector(1 downto 0);
+attribute ASYNC_REG : string; 
+attribute ASYNC_REG of MarkerLast : signal is "TRUE"; 
 signal MarkerCnt : std_logic_vector(7 downto 0); -- counts decoded markers
+signal MarkerDelayedCnt : std_logic_vector(7 downto 0);
 signal HeartBeatCnt : std_logic_vector(7 downto 0); -- counts heartbeats sent out
 signal HeartBtCnt : std_logic_vector(7 downto 0); -- counts heart beat packages from fibers
 -- event window timers
 signal WindowTimer : std_logic_vector(15 downto 0);
 signal LastWindow : std_logic_vector(15 downto 0);
+signal InjectionTs : std_logic_vector(15 downto 0);
+signal NimTrigLast : std_logic; -- latch the input to detect input rising edge
 
 -- foramt settings
 signal uBinHeader : std_logic; 
@@ -362,14 +373,14 @@ signal LinkFIFOTraceRdReq : std_logic;
 signal LinkFIFOTraceOut : std_logic_vector (15 downto 0);
 signal LinkFIFOTraceRdCnt : std_logic_vector (12 downto 0);
 
-signal GTPRstCnter : std_logic_vector (11 downto 0);
+signal GTPRstCnter : std_logic_vector(6 downto 0); -- used to be (11 downto 0);
 signal GTPRstFromCnt : std_logic;
 signal GTPTstFromCntEn : std_logic;
 signal GTPRstArm : std_logic;
 
 begin
 
-Sys_Pll : SysPll
+Sys_Pll : SysPll2
   port map(
  -- Clock in ports
     CLK_IN1_P => ClkB_P,
@@ -378,7 +389,7 @@ Sys_Pll : SysPll
     CLK_OUT1 => SysClk,   -- 100 MHz
     CLK_OUT2 => EthClk,   -- 160 MHz used for Orange Tree I/O
 	 CLK_OUT3 => nEthClk,  -- 160 MHz 180 deg. phase fro DDR In
-	 CLK_OUT4 => Clk80MHz, -- 80 MHz for 20mbit FM transmitter
+	 CLK_OUT4 => open, --Clk80MHz, -- 80 MHz for 20mbit FM transmitter
 -- Status and control signals
     RESET  => ResetHi,
     LOCKED => Pll_Locked);
@@ -402,6 +413,14 @@ BunchClkDiffIn : IBUFDS
       I  => BnchClk_P,
       IB => BnchClk_N
    );
+Clk80MHzGenSync : Clk80MHzGen
+  port map(
+          clk160 => EthClk,
+          rst => CpldRst,
+          syncEnable => Clk80MHzAlign,
+          MarkerBits => MarkerBits,
+          clk80 => Clk80MHz,
+			 shiftCnt => Clk80MHzAlignCnt);
 
 BunchClkIn : IDDR2
    generic map(
@@ -1017,8 +1036,8 @@ end if;
 	end if;
 
 		if Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and HrtBtWrtCnt > 0
-	then HrtBtBuff_wr_en <= '1'; GPO(1) <= '1'; Debug(7) <= '1';
-	else HrtBtBuff_wr_en <= '0'; GPO(1) <= '0'; Debug(7) <= '0';
+	then HrtBtBuff_wr_en <= '1'; --GPO(1) <= '1'; Debug(7) <= '1';
+	else HrtBtBuff_wr_en <= '0'; --GPO(1) <= '0'; Debug(7) <= '0';
 	end if;
 
 -- Count down the nine words of the DCS packet being received
@@ -2097,6 +2116,8 @@ EthProc : process(EthClk, CpldRst)
 	else Marker <= Marker; GPO(0) <= GPO(0); MarkerCnt <= MarkerCnt;
 	end if;
 
+GPO(1) <= '0';
+
 --	if GPO(1) = '0' and MarkerBits = X"F0C0"
 --	  then GPO(1) <= '1';
 --	elsif GPO(1) = '1' and MarkerBits = X"F0FC"
@@ -2186,36 +2207,51 @@ end if;
 
 end process;
 
-FMTxReq : process(Clk80MHz, CpldRst)
+FMTxReq : process(Clk80MHz, CpldRst, GTPRxRst)
 
  begin 
 -- asynchronous reset/preset
- if CpldRst = '0' then
+ if CpldRst = '0' or GTPRxRst = '1' then
 
 	HrtBtFMTxEn <= '0'; FMTxBsy <= '0';
 	MarkerDelayCounter <= (others => '0');
 	HeartBeatCnt <= (others => '0');
 	WindowTimer <= (others => '0');
-	LastWindow <= (others => '0');
+	MarkerDelayedCnt <= (others => '0');
+	LastWindow <= X"FFFF";
+	InjectionTs <= X"FFFF";
+	NimTrigLast <= '0';
+	MarkerDelayArm <= '0';
+	MarkerLast <= "00";
 
  elsif rising_edge(Clk80MHz) then
  
 -- Counter to manage delay of marker receipt
-  if Marker = '1'
-		then 
+   MarkerLast(0) <= Marker; 
+	MarkerLast(1) <= MarkerLast(0);
+  
+
+  --if Marker = '1' and MarkerLast = '0' -- rising edge of the marker, marker is 90deg shifted, markerlast is sync
+  if MarkerLast = "01"
+  --if Marker = '1'
+ 		then 
 		    MarkerDelayCounter <= MarkerDelay; 
 			 MarkerDelayArm     <= '1';
+			 MarkerDelayedCnt   <= MarkerDelayedCnt;
 	elsif MarkerDelayCounter > 0
 		then 
 		    MarkerDelayCounter <= MarkerDelayCounter - 1; 
 		    MarkerDelayArm     <= MarkerDelayArm;
+			 MarkerDelayedCnt   <= MarkerDelayedCnt;
 	elsif MarkerDelayCounter = 0 and MarkerDelayed = '0' and MarkerDelayArm = '1'
 		then 
 		    MarkerDelayed  <= '1'; 
 			 MarkerDelayArm <= '0';
+			 MarkerDelayedCnt <= MarkerDelayedCnt + 1;
 	else
 		MarkerDelayed  <= '0'; 
 		MarkerDelayArm <= MarkerDelayArm;
+		MarkerDelayedCnt   <= MarkerDelayedCnt;
   end if;
 
 -- Send a heart beat without pause if there is no marker input expected
@@ -2230,6 +2266,15 @@ FMTxReq : process(Clk80MHz, CpldRst)
 		HeartBeatCnt <= HeartBeatCnt;
 		WindowTimer <= WindowTimer + 1;
 		LastWindow <= LastWindow;
+  end if;
+  
+  -- detect NimTrig transition to hight and store the current time stamp
+  NimTrigLast <= NimTrig;
+  if NimTrig = '1' and NimTrigLast = '0'
+    then
+      InjectionTs <= WindowTimer;
+  else 
+      InjectionTs <= InjectionTs;
   end if;
 
  if HrtBtBuff_rd_en = '1' 
@@ -2285,6 +2330,7 @@ main : process(SysClk, CpldRst)
 	LEDShiftReg <= (others => '0');	LED_Shift <= Idle;
 	DReqBuff_uCRd <= '0'; LinkBusy <= '0'; HrtBtTxInh <= '0';
 	DCSPktBuff_uCRd <= '0'; MarkerDelay <= (others => '0'); 
+	Clk80MHzAlign <= '1';
 	DCSBuff_wr_en <= '0'; DCSBuff_In <= (others => '0');
 	DCS_Header <= X"8040";
 	DCS_Status <= X"0040"; -- cnt [:7], status[6:5], op[4:0] => cnt = 1
@@ -2473,6 +2519,12 @@ if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = MarkerDelayAd
 	else MarkerDelay <= MarkerDelay;
 end if;
 
+-- Enable/Disable 80MHz alignment
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = Clk80MHzAdd
+	then Clk80MHzAlign <= uCD(0);
+	else Clk80MHzAlign <= Clk80MHzAlign;
+end if;
+
 --	Read of the trigger request FIFO
 	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = TRigReqBuffAd 
 	then DReqBuff_uCRd <= '1';
@@ -2590,7 +2642,11 @@ end if;
 		HeartBtCnt <= HeartBtCnt + 1;
 	elsif HrtBtRdCnt /= 0 then 
 		HrtBtRdCnt <= HrtBtRdCnt - 1;
-		HeartBtCnt <= HeartBtCnt;
+		--if GTPRxRst = '0' then
+		    HeartBtCnt <= HeartBtCnt;
+	   --else
+		--    HeartBtCnt <= (others => '0');
+		--end if;
 	else HrtBtRdCnt <= HrtBtRdCnt; HeartBtCnt <= HeartBtCnt;
 	end if;
 	
@@ -3013,14 +3069,18 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 DCS_Header when DCSHeaderAd,
 		 DCS_EvCnt when DCSEvCntAd,
 		 DCS_Status when DCSStatusAd,
-		 GTPRstFromCnt & "0" & GTPTstFromCntEn & GTPRstArm & GTPRstCnter when GTPRstCntAd,
+		 GTPRstFromCnt & "0" & GTPTstFromCntEn & GTPRstArm & X"0" &"0" & GTPRstCnter when GTPRstCntAd,
 		 X"000" & uBdebug2 & uBdebug & uBwrt & uBinHeader when FormatRegAddr,
 		 uBcheck(31 downto 16) when uBLowRegAddr,
 		 uBcheck(15 downto  0) when uBHighRegAddr,
 		 HeartBeatCnt & HeartBtCnt when HeartBeatCntAddr,
-		 X"00" & MarkerCnt when MarkerCntAddr,
+		 MarkerDelayedCnt & MarkerCnt when MarkerCntAddr,
 		 LastWindow when LastWindowLengthAddr,
-		 X"0014" when DebugVersionAd,
+		 InjectionTs when InjectionLengthAddr,
+		 Clk80MHzAlignCnt & X"0" & "000" & Clk80MHzAlign when Clk80MHzAdd,
+		 X"0023" when DebugVersionAd,
+		 GIT_HASH(31 downto 16) when GitHashHiAddr,
+		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers

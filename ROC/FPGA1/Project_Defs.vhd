@@ -99,6 +99,7 @@ constant MarkerCntAddr : AddrPtr := "00" & X"41"; -- recieved markers
 constant HeartBeatCntAddr : AddrPtr := "00" & X"42"; -- sent out heartbeats, recieved heartbeat packages
 constant LastWindowLengthAddr : AddrPtr := "00" & X"43";
 constant InjectionLengthAddr : AddrPtr := "00" & X"44";
+constant Clk80MHzAdd : AddrPtr := "00" & X"45";
 
 
 constant DCSPktBuffAd    : AddrPtr := "00" & X"50";
@@ -146,6 +147,8 @@ constant LinkFIFOTraceAd : AddrPtr     := "00" & X"87";
 
 constant GTPRstCntAd : AddrPtr      := "00" & X"98";
 
+constant GitHashHiAddr : AddrPtr      := "00" & X"96";
+constant GitHashLoAddr : AddrPtr      := "00" & X"97";
 constant DebugVersionAd : AddrPtr      := "00" & X"99";
 
 ---------------------- Broadcast addresses ------------------------------
@@ -247,7 +250,7 @@ end record;
 ------------------------ Xilinx Core gen Macros ------------------------
 
 -- Clock synthesizer macro
-component SysPll
+component SysPll2
 port
  (-- Clock in ports
   CLK_IN1_P         : in     std_logic;
@@ -513,6 +516,17 @@ component FM_Rx is
 			Rx_In : in RxInRec;
 	      Data : buffer std_logic_vector (Pwidth - 1 downto 0);
 	      Rx_Out : buffer RxOutRec);
+end component;
+
+component Clk80MHzGen
+    port(
+         clk160 : in  std_logic;
+         rst : in  std_logic;
+         syncEnable : in  std_logic;
+         MarkerBits : in  std_logic_vector(15 downto 0);
+         clk80 : out  std_logic;
+			shiftCnt : out std_logic_vector(7 downto 0)
+        );
 end component;
 
 end Project_Defs;
