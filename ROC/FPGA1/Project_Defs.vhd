@@ -100,6 +100,7 @@ constant HeartBeatCntAddr : AddrPtr := "00" & X"42"; -- sent out heartbeats, rec
 constant LastWindowLengthAddr : AddrPtr := "00" & X"43";
 constant InjectionLengthAddr : AddrPtr := "00" & X"44";
 constant Clk80MHzAdd : AddrPtr := "00" & X"45";
+constant MarkerCnt2Addr : AddrPtr := "00" & X"46";
 
 
 constant DCSPktBuffAd    : AddrPtr := "00" & X"50";

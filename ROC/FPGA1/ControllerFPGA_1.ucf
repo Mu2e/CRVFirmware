@@ -215,7 +215,12 @@ NET "VXO_P" LOC = M3;
 NET "ClkB_P" LOC = P3;
 
 NET "Clk50MHz" LOC = M20;
-NET "BnchClk" LOC = E22;
+# NET "BnchClk" LOC = E22;
+NET "BnchClk_P" LOC = F14;
+NET "BnchClk_N" LOC = F15;
+NET "Marker_P" LOC = J6;
+NET "Marker_N" LOC = H5;
+
 
 # Optical transceiver connections
 NET "TDisA" LOC = D4;

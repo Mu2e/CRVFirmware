@@ -29,7 +29,10 @@ use work.git_hash_pkg.all;
 entity ControllerFPGA_1 is port(
 
 -- 100 MHz VXO clock, 50MHz Phy clock
-	VXO_P,VXO_N,ClkB_P,ClkB_N,Clk50MHz,BnchClk_P,BnchClk_N : in std_logic;
+	VXO_P,VXO_N,ClkB_P,ClkB_N,Clk50MHz,
+	BnchClk_P,BnchClk_N,Marker_P,Marker_N : in std_logic;
+-- clock return lines, not used
+   -- TDAQRtn0_P, TDAQRtn0_N,TDAQRtn1_P,TDAQRtn1_N : out std_logic;
 -- 156.25 MHz GTP Reference clock, Gigabit data lines
 	GTPClk_P,GTPClk_N,GTPRx_P,GTPRx_N : in std_logic_vector(1 downto 0);
 	GTPTx_P,GTPTx_N : out std_logic_vector(1 downto 0);
@@ -50,9 +53,10 @@ entity ControllerFPGA_1 is port(
 -- Serial inter-chip link Data lines
 	LinkSDat_P,LinkSDat_N : in std_logic_vector(5 downto 0);
 -- FM Transmitters for uBunch and Triggers
-	HeartBeatFM_P,HeartBeatFM_N,TrigFM,uBunchLED,TrigLED,
+	TrigFM,uBunchLED,TrigLED,
 -- Pll control lines
 	PllSClk,PllSDat,PllLd,PllPDn : buffer std_logic;
+   HeartBeatFM_P,HeartBeatFM_N : out  std_logic;
 	PllStat : in std_logic;
 -- Serial control lines for the RJ-45 LEDs
 	LEDSClk,LEDSDat : out std_logic_vector(2 downto 0);
@@ -99,7 +103,7 @@ Type Array_3x16 is Array(0 to 2) of std_logic_vector (15 downto 0);
 Type Array_3x2x10 is Array (0 to 2) of Array_2x10;
 
 -- these signals used to be single ended I/O
-signal BnchClk,HeartBeatFM : std_logic;
+signal BnchClk,HeartBeatFM,BnchMarker : std_logic;
 
 -- Synchronous edge detectors of uC read and write strobes
 Signal RDDL,WRDL : std_logic_vector (1 downto 0);
@@ -123,7 +127,8 @@ signal Even_Odd,MarkerDelayed,Marker,MarkerReq,MarkerSyncEn, MarkerDelayArm : st
 signal MarkerLast : std_logic_vector(1 downto 0);
 attribute ASYNC_REG : string; 
 attribute ASYNC_REG of MarkerLast : signal is "TRUE"; 
-signal MarkerCnt : std_logic_vector(7 downto 0); -- counts decoded markers
+signal MarkerCnt, MarkerCnt2 : std_logic_vector(7 downto 0); -- counts decoded markers
+signal BnchMarkerLast : std_logic;
 signal MarkerDelayedCnt : std_logic_vector(7 downto 0);
 signal HeartBeatCnt : std_logic_vector(7 downto 0); -- counts heartbeats sent out
 signal HeartBtCnt : std_logic_vector(7 downto 0); -- counts heart beat packages from fibers
@@ -407,12 +412,23 @@ BunchClkDiffIn : IBUFDS
    generic map (
       DIFF_TERM => TRUE,
       IBUF_LOW_PWR => FALSE,
-      IOSTANDARD => "DEFAULT")
+      IOSTANDARD => "LVDS_25")
    port map (
       O  => BnchClk,
       I  => BnchClk_P,
       IB => BnchClk_N
    );
+BunchMarkerDiffIn : IBUFDS
+   generic map (
+      DIFF_TERM => TRUE,
+      IBUF_LOW_PWR => FALSE,
+      IOSTANDARD => "DEFAULT")
+   port map (
+      O  => BnchMarker,
+      I  => Marker_P,
+      IB => Marker_N
+   );
+	
 Clk80MHzGenSync : Clk80MHzGen
   port map(
           clk160 => EthClk,
@@ -2101,20 +2117,32 @@ EthProc : process(EthClk, CpldRst)
 	ZEthCS <= '1'; ZEthWE <= '1'; 
 	ZEthBE <= "11"; EthRDDL <= (others => '0');
 	MarkerBits <= X"0000"; Even_Odd <= '0'; 
-	GPO(0) <= '0'; Marker <= '0'; MarkerCnt <= (others => '0');
+	GPO(0) <= '0'; Marker <= '0'; 
+	MarkerCnt <= (others => '0'); MarkerCnt2 <= (others => '0');
+	BnchMarkerLast <= '0';
+	
 
  elsif rising_edge (EthClk) then 
 
 	MarkerBits <= MarkerBits(13 downto 0) & DDRBits;
-
-	if Marker = '0' and (MarkerBits = X"F0C0" or MarkerBits = X"F0FC") then  
-		GPO(0) <= '1'; Marker <= '1'; 
-		MarkerCnt <= MarkerCnt + 1;
-	elsif Marker = '1' and (MarkerBits = X"FCF0" or MarkerBits = X"C0F0") then 
-	   GPO(0) <= '0'; Marker <= '0';
-		MarkerCnt <= MarkerCnt;
-	else Marker <= Marker; GPO(0) <= GPO(0); MarkerCnt <= MarkerCnt;
+   --if MarkerMode = '0' then
+	   if Marker = '0' and (MarkerBits = X"F0C0" or MarkerBits = X"F0FC") then  
+		   GPO(0) <= '1'; Marker <= '1'; 
+		   MarkerCnt <= MarkerCnt + 1;
+	   elsif Marker = '1' and (MarkerBits = X"FCF0" or MarkerBits = X"C0F0") then 
+	      GPO(0) <= '0'; Marker <= '0';
+		   MarkerCnt <= MarkerCnt;
+	   else Marker <= Marker; GPO(0) <= GPO(0); MarkerCnt <= MarkerCnt;
+	   end if;
+   --else 
+	--end if;
+	if BnchMarker = '1' and BnchMarkerLast = '0' then
+	   MarkerCnt2 <= MarkerCnt2 + 1;
+	else
+	   MarkerCnt2 <= MarkerCnt2;
 	end if;
+	BnchMarkerLast <= BnchMarker;
+	
 
 GPO(1) <= '0';
 
@@ -3075,10 +3103,11 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 uBcheck(15 downto  0) when uBHighRegAddr,
 		 HeartBeatCnt & HeartBtCnt when HeartBeatCntAddr,
 		 MarkerDelayedCnt & MarkerCnt when MarkerCntAddr,
+		 X"00" & MarkerCnt2 when MarkerCnt2Addr,
 		 LastWindow when LastWindowLengthAddr,
 		 InjectionTs when InjectionLengthAddr,
 		 Clk80MHzAlignCnt & X"0" & "000" & Clk80MHzAlign when Clk80MHzAdd,
-		 X"0023" when DebugVersionAd,
+		 X"0024" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 X"0000" when others;
