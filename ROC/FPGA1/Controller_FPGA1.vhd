@@ -115,6 +115,7 @@ signal SysClk,Clk80MHz,FMGenClk,ResetHi,Pll_Locked,nEthClk,
 
 signal Clk80MHzAlign : std_logic;
 signal Clk80MHzAlignCnt : std_logic_vector(7 downto 0);
+signal LoopbackMode : std_logic_vector(2 downto 0);
 
 -- Counter that determines the trig out pulse width
 signal GPOCount : std_logic_vector(2 downto 0);
@@ -127,8 +128,8 @@ signal Even_Odd,MarkerDelayed,Marker,MarkerReq,MarkerSyncEn, MarkerDelayArm : st
 signal MarkerLast : std_logic_vector(1 downto 0);
 attribute ASYNC_REG : string; 
 attribute ASYNC_REG of MarkerLast : signal is "TRUE"; 
-signal MarkerCnt, MarkerCnt2 : std_logic_vector(7 downto 0); -- counts decoded markers
-signal BnchMarkerLast : std_logic;
+signal MarkerCnt, MarkerCnt2, MarkerCnt3, MarkerCnt4, MarkerCnt5 : std_logic_vector(7 downto 0); -- counts decoded markers
+signal BnchMarkerLast : std_logic_vector(7 downto 0);
 signal MarkerDelayedCnt : std_logic_vector(7 downto 0);
 signal HeartBeatCnt : std_logic_vector(7 downto 0); -- counts heartbeats sent out
 signal HeartBtCnt : std_logic_vector(7 downto 0); -- counts heart beat packages from fibers
@@ -348,7 +349,7 @@ Type Packet_Parser_Seq is (Idle,Read_Type,Check_Seq_No,Wrt_uC_Queue,
 									Wrt_FPGA_Queue,Check_CRC);
 signal Packet_Parser : Packet_Parser_Seq;
 
-Type Packet_Former_Seq is (Idle,WrtPktCnt,WrtHdrPkt,WrtCtrlHdrPkt,WrtDatPkt,WrtDCSPkt);
+Type Packet_Former_Seq is (Idle,WrtPktCnt,WrtHdrPkt,WrtCtrlHdrPkt,WrtDatPkt,WrtDCSPkt,Loopback,Loopback2);
 signal Packet_Former : Packet_Former_Seq;
 signal ChkCntr,FormStatReg,EmptyLatch : std_logic_vector (2 downto 0);
 signal Pkt_Timer : std_logic_vector (3 downto 0);
@@ -980,6 +981,9 @@ end if;
 			 When others => GTPTxStage(0) <= X"0000"; TxCRCDat(0) <= X"0000";
 	      end case;
 -- Pad is K28.5 K28.1 pair
+    elsif Packet_Former = Loopback
+	    then
+		    GTPTxStage(0) <= X"1C90";
 	 else GTPTxStage(0) <= X"BC3C"; TxCRCDat(0) <= X"0000";
 	end if;
 
@@ -1566,8 +1570,25 @@ Case Packet_Former is
 	when Idle => FormStatReg <= "000"; 
 		if EventBuff_Empty = '0' then Packet_Former <= WrtPktCnt;
 		elsif DCSBuffRdCnt > 1 then  Packet_Former <= WrtDCSPkt;
+		--elsif (LoopbackMode = "1" and Marker = '1') then Packet_Former <= Loopback;
+		elsif (LoopbackMode = 1) then Packet_Former <= Loopback;
+		elsif (LoopbackMode = 2 and Marker = '1') then Packet_Former <= Loopback;
+		elsif (LoopbackMode = 3 and MarkerDelayed = '1') then Packet_Former <= Loopback;
+		elsif (LoopbackMode = 4 and MarkerDelayed = '1') then Packet_Former <= Loopback; -- TODO, markerfromfiber
 		else Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
 		end if;
+-- Loopback
+   when Loopback => Packet_Former <= Loopback2;
+	when Loopback2 =>
+	--if (LoopbackMode = "0" or Marker = '0') then Packet_Former <= Idle;
+	if (LoopbackMode = 0 or 
+	    (LoopbackMode = 2 and Marker = '0') or
+		 (LoopbackMode = 3 and MarkerDelayed = '0') or 
+		 (LoopbackMode = 4 and MarkerDelayed = '0') ) 
+		 then Packet_Former <= Idle;
+	else Packet_Former <= Packet_Former;
+	end if;
+		
 -- Divide by eight to get the number of packets
 	when WrtPktCnt => Packet_Former <= WrtHdrPkt;  FormStatReg <= "001";  
 -- Send the packet header, packet type, packet count, time stamp and status
@@ -2119,32 +2140,128 @@ EthProc : process(EthClk, CpldRst)
 	MarkerBits <= X"0000"; Even_Odd <= '0'; 
 	GPO(0) <= '0'; Marker <= '0'; 
 	MarkerCnt <= (others => '0'); MarkerCnt2 <= (others => '0');
-	BnchMarkerLast <= '0';
+	MarkerCnt3 <= (others => '0'); MarkerCnt4 <= (others => '0'); MarkerCnt5 <= (others => '0');
+	BnchMarkerLast <= (others => '0');
 	
 
  elsif rising_edge (EthClk) then 
 
 	MarkerBits <= MarkerBits(13 downto 0) & DDRBits;
-   --if MarkerMode = '0' then
-	   if Marker = '0' and (MarkerBits = X"F0C0" or MarkerBits = X"F0FC") then  
-		   GPO(0) <= '1'; Marker <= '1'; 
-		   MarkerCnt <= MarkerCnt + 1;
-	   elsif Marker = '1' and (MarkerBits = X"FCF0" or MarkerBits = X"C0F0") then 
-	      GPO(0) <= '0'; Marker <= '0';
-		   MarkerCnt <= MarkerCnt;
-	   else Marker <= Marker; GPO(0) <= GPO(0); MarkerCnt <= MarkerCnt;
-	   end if;
+	-- old style with punched clock
+   ----if MarkerMode = '0' then
+	--   if Marker = '0' and (MarkerBits = X"F0C0" or MarkerBits = X"F0FC") then  
+	--	   GPO(0) <= '1'; Marker <= '1'; 
+	--	   MarkerCnt <= MarkerCnt + 1;
+	--   elsif Marker = '1' and (MarkerBits = X"FCF0" or MarkerBits = X"C0F0") then 
+	--      GPO(0) <= '0'; Marker <= '0';
+	--	   MarkerCnt <= MarkerCnt;
+	--   else Marker <= Marker; GPO(0) <= GPO(0); MarkerCnt <= MarkerCnt;
+	--   end if;
    --else 
 	--end if;
-	if BnchMarker = '1' and BnchMarkerLast = '0' then
+	
+	-- new style, punch or dedicated marker on separate line
+	BnchMarkerLast(0) <= BnchMarker;
+	BnchMarkerLast(7 downto 1) <= BnchMarkerLast(6 downto 0);
+	
+	-- full marker
+	if BnchMarkerLast = "11101000" or
+	   BnchMarkerLast = "10001110" then
 	   MarkerCnt2 <= MarkerCnt2 + 1;
 	else
 	   MarkerCnt2 <= MarkerCnt2;
 	end if;
-	BnchMarkerLast <= BnchMarker;
+	
+	if Marker = '0' and (BnchMarkerLast = "11101000" or
+	   BnchMarkerLast = "10001110") then
+	   MarkerCnt <= MarkerCnt + 1;
+		Marker <= '1'; 
+	elsif Marker = '1' and BnchMarkerLast = "11001100" then
+	   Marker <= '0';
+		MarkerCnt <= MarkerCnt;
+	else
+	   MarkerCnt <= MarkerCnt;
+		Marker <= Marker;
+	end if;
+	
+	
+	--if BnchMarker = '1' then
+	--if (MarkerBits(7) = '1' and
+	--    MarkerBits(5) = '0' and
+	--	 MarkerBits(3) = '0' and
+	--	 MarkerBits(1) = '0') or 
+	--	(MarkerBits(7) = '1' and
+	--    MarkerBits(5) = '1' and
+	--	 MarkerBits(3) = '1' and
+	--	 MarkerBits(1) = '0') then
+
+	--if BnchMarkerLast = "00001111" then
+	--if (MarkerBits(6) = '1' and
+	--    MarkerBits(4) = '0' and
+	--	 MarkerBits(2) = '0' and
+	--	 MarkerBits(0) = '0') or 
+	--	(MarkerBits(6) = '1' and
+	--    MarkerBits(4) = '1' and
+	--	 MarkerBits(2) = '1' and
+	--	 MarkerBits(0) = '0') then
+	if BnchMarkerLast = "00001111" then
+	   MarkerCnt3 <= MarkerCnt3 + 1;
+	else
+	   MarkerCnt3 <= MarkerCnt3;
+	end if;
+	
+	--if BnchMarkerLast(3 downto 0) = "0011" then
+	--if (MarkerBits(14) = '1' and
+	--    MarkerBits(12) = '1' and
+	--	 MarkerBits(10) = '0' and
+	--	 MarkerBits(8)  = '0' and
+	--    MarkerBits(6)  = '1' and
+	--    MarkerBits(4)  = '0' and
+	--	 MarkerBits(2)  = '0' and
+	--	 MarkerBits(0)  = '0'
+	--	 ) or 
+	--	(MarkerBits(14) = '1' and
+	--    MarkerBits(12) = '1' and
+	--	 MarkerBits(10) = '0' and
+	--	 MarkerBits(8)  = '0' and
+	--    MarkerBits(6)  = '1' and
+	--    MarkerBits(4)  = '0' and
+	--	 MarkerBits(2)  = '0' and
+	--	 MarkerBits(0)  = '0') then
+	if BnchMarkerLast(3 downto 0) = "0011"	then
+	   MarkerCnt4 <= MarkerCnt4 + 1;
+	else
+	   MarkerCnt4 <= MarkerCnt4;
+	end if;
+	
+	--if BnchMarkerLast(1 downto 0) = "01" then
+	--if (MarkerBits(15) = '1' and
+	--    MarkerBits(13) = '1' and
+	--	 MarkerBits(11) = '0' and
+	--	 MarkerBits(9)  = '0' and
+	--    MarkerBits(7)  = '1' and
+	--    MarkerBits(5)  = '0' and
+	--	 MarkerBits(3)  = '0' and
+	--	 MarkerBits(1)  = '0'
+	--	 ) or 
+	--	(MarkerBits(15) = '1' and
+	--    MarkerBits(13) = '1' and
+	--	 MarkerBits(11) = '0' and
+	--	 MarkerBits(9)  = '0' and
+	--    MarkerBits(7)  = '1' and
+	--    MarkerBits(5)  = '0' and
+	--	 MarkerBits(3)  = '0' and
+	--	 MarkerBits(1)  = '0') then
+	if BnchMarkerLast(1 downto 0) = "01" then
+	   MarkerCnt5 <= MarkerCnt5 + 1;
+	else
+	   MarkerCnt5 <= MarkerCnt5;
+	end if;
 	
 
-GPO(1) <= '0';
+	
+
+   GPO(1) <= BnchMarker;
 
 --	if GPO(1) = '0' and MarkerBits = X"F0C0"
 --	  then GPO(1) <= '1';
@@ -2358,7 +2475,8 @@ main : process(SysClk, CpldRst)
 	LEDShiftReg <= (others => '0');	LED_Shift <= Idle;
 	DReqBuff_uCRd <= '0'; LinkBusy <= '0'; HrtBtTxInh <= '0';
 	DCSPktBuff_uCRd <= '0'; MarkerDelay <= (others => '0'); 
-	Clk80MHzAlign <= '1';
+	Clk80MHzAlign <= '0';
+	LoopbackMode <= (others => '0');
 	DCSBuff_wr_en <= '0'; DCSBuff_In <= (others => '0');
 	DCS_Header <= X"8040";
 	DCS_Status <= X"0040"; -- cnt [:7], status[6:5], op[4:0] => cnt = 1
@@ -2551,6 +2669,12 @@ end if;
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = Clk80MHzAdd
 	then Clk80MHzAlign <= uCD(0);
 	else Clk80MHzAlign <= Clk80MHzAlign;
+end if;
+
+-- Set Loopback mode
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = LoopbackAdd
+	then LoopbackMode(2 downto 0) <= uCD(2 downto 0);
+	else LoopbackMode <= LoopbackMode;
 end if;
 
 --	Read of the trigger request FIFO
@@ -3103,11 +3227,13 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 uBcheck(15 downto  0) when uBHighRegAddr,
 		 HeartBeatCnt & HeartBtCnt when HeartBeatCntAddr,
 		 MarkerDelayedCnt & MarkerCnt when MarkerCntAddr,
-		 X"00" & MarkerCnt2 when MarkerCnt2Addr,
+		 MarkerCnt3 & MarkerCnt2 when MarkerCnt2Addr,
+		 MarkerCnt4 & MarkerCnt5 when MarkerCnt3Addr,
 		 LastWindow when LastWindowLengthAddr,
 		 InjectionTs when InjectionLengthAddr,
 		 Clk80MHzAlignCnt & X"0" & "000" & Clk80MHzAlign when Clk80MHzAdd,
-		 X"0024" when DebugVersionAd,
+		 X"000" & "0" & LoopbackMode when LoopbackAdd,
+		 X"002A" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 X"0000" when others;

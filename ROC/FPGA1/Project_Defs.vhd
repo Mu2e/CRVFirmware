@@ -101,6 +101,8 @@ constant LastWindowLengthAddr : AddrPtr := "00" & X"43";
 constant InjectionLengthAddr : AddrPtr := "00" & X"44";
 constant Clk80MHzAdd : AddrPtr := "00" & X"45";
 constant MarkerCnt2Addr : AddrPtr := "00" & X"46";
+constant LoopbackAdd : AddrPtr := "00" & X"47";
+constant MarkerCnt3Addr : AddrPtr := "00" & X"48";
 
 
 constant DCSPktBuffAd    : AddrPtr := "00" & X"50";
