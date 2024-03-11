@@ -150,11 +150,53 @@ class CRV:
         heartb  = self.read("42")
         last    = self.read("43")
         buffer_ = self.read("3D")
+        markers2 = self.read("46")
+        markers3 = self.read("48")
         print("words in counter (9 per hb): ", buffer_)
         print("heart beats counter (sent, read): ", heartb)
         print("marker count: ", markers)
+        print("marker count 3/2 ", markers2)
+        print("marker count 4/5 ", markers3)
         print("time of last event window:", last)
         #print(markers, heartb, last)
+
+    def rocDebBuffStatus(self):
+       d = self.read("4C")[0]
+       pattern = self.read("4E")
+       mask    = self.read("4D")
+       print("Patten: %s" % pattern[0])
+       print("Mask: %s" % mask[0])
+       full_  = (int(d[0],16) & 0x8) > 0
+       empty_ = (int(d[0],16) & 0x4) > 0
+       sel_   = (int(d[1],16) & 0x1) > 0
+       reset_ = (int(d[0],16) & 0x1) > 0
+       print("Sel:   %i" % sel_)
+       print("Rst:   %s" % reset_)
+       print("Empty: %s" % empty_)
+       print("Full:  %s" % full_)
+
+    def rocDebBuffTrig(self, pattern, ch="0"):
+       self.write("4C", "1"+ch+pattern)
+       time.sleep(0.1)
+       self.write("4C", "0"+ch+pattern)
+
+    def rocDebBuffGet(self, n=4):
+        data = self.readm("4B", 20*n, lc=False)
+        if self.verbose:
+            for n_ in range(n):
+                print(data[n_*20   :n_*20+10])
+                print(data[n_*20+10:n_*20+20])
+
+
+    def rocDuty(self):
+       d = self.read("49")[0]
+       print("Input 1: %.2f" % (int(d[:2],16)/0xff))
+       print("Input 2: %.2f" % (int(d[2:],16)/0xff))
+
+    def rocLock(self):
+        self.write("17","12")
+        self.write("18","12")
+        return self.read("19")
 
     def rocRx(self, n=1):
         data = self.readm("20", 20*n, lc=False)
@@ -331,6 +373,9 @@ class CRV:
         self.write("403","0")
         self.write("404","0")
         self.write("405","0")
+
+    def rocMarkerBits(self):
+        print(bin(int(self.read("77")[0],16)))
 
     def rocSetup(self, tdaq=True, tdaq_timing=True, uB_offset="a"):
         print("Test Fiber Connection")
