@@ -121,14 +121,14 @@ signal LoopbackMode : std_logic_vector(2 downto 0);
 signal GPOCount : std_logic_vector(2 downto 0);
 
 -- Signals for decoding duty cycle modulated microbunch marker
-signal DDRBits : std_logic_vector(1 downto 0);
+signal DDRBits,DDRBitsC,DDRBitsM : std_logic_vector(1 downto 0);
 signal MarkerBits : std_logic_vector(15 downto 0);
 signal MarkerDelay, MarkerDelayCounter : std_logic_vector(7 downto 0);
-signal Even_Odd,MarkerDelayed,Marker,MarkerReq,MarkerSyncEn, MarkerDelayArm : std_logic;
+signal Even_Odd,MarkerDelayed,Marker,LoopbackMarker,MarkerReq,MarkerSyncEn, MarkerDelayArm : std_logic;
 signal MarkerLast : std_logic_vector(1 downto 0);
 attribute ASYNC_REG : string; 
 attribute ASYNC_REG of MarkerLast : signal is "TRUE"; 
-signal MarkerCnt, MarkerCnt2, MarkerCnt3, MarkerCnt4, MarkerCnt5 : std_logic_vector(7 downto 0); -- counts decoded markers
+signal MarkerCnt, MarkerCnt2, MarkerCnt3, MarkerCnt4, MarkerCnt5, LoopbackMarkerCnt : std_logic_vector(7 downto 0); -- counts decoded markers
 signal BnchMarkerLast : std_logic_vector(7 downto 0);
 signal MarkerDelayedCnt : std_logic_vector(7 downto 0);
 signal HeartBeatCnt : std_logic_vector(7 downto 0); -- counts heartbeats sent out
@@ -384,6 +384,13 @@ signal GTPRstFromCnt : std_logic;
 signal GTPTstFromCntEn : std_logic;
 signal GTPRstArm : std_logic;
 
+signal DutyCnt, Duty0, Duty1, HighCnt0, HighCnt1 : std_logic_vector(7 downto 0);
+
+-- debugMarkerBuffer signals
+signal debugBuff_rd_en, debugTrig, debugFull, debugEmpty, DDRSel, DDRIn, debugRst : std_logic;
+signal debugTrigPattern, debugTrigMask : std_logic_vector(15 downto 0);
+signal debugBuffData : std_logic_vector(15 downto 0);
+
 begin
 
 Sys_Pll : SysPll2
@@ -446,8 +453,8 @@ BunchClkIn : IDDR2
       INIT_Q1 => '0', -- Sets initial state of the Q1 output to '0' or '1'
       SRTYPE => "SYNC") -- Specifies "SYNC" or "ASYNC" set/reset
    port map (
-      Q0 => DDRBits(0), -- 1-bit output captured with C0 clock
-      Q1 => DDRBits(1), -- 1-bit output captured with C1 clock
+      Q0 => DDRBitsC(0), -- 1-bit output captured with C0 clock
+      Q1 => DDRBitsC(1), -- 1-bit output captured with C1 clock
       C0 => EthClk,  -- 1-bit clock input
       C1 => nEthClk, -- 1-bit clock input
       CE => '1',  -- 1-bit clock enable input
@@ -455,6 +462,25 @@ BunchClkIn : IDDR2
       R => ResetHi,    -- 1-bit reset input
       S => '0'     -- 1-bit set input
    );
+	
+BnchMarkerIn : IDDR2
+   generic map(
+      DDR_ALIGNMENT => "C0", -- Sets output alignment to "NONE", "C0", "C1" 
+      INIT_Q0 => '0', -- Sets initial state of the Q0 output to '0' or '1'
+      INIT_Q1 => '0', -- Sets initial state of the Q1 output to '0' or '1'
+      SRTYPE => "SYNC") -- Specifies "SYNC" or "ASYNC" set/reset
+   port map (
+      Q0 => DDRBitsM(0), -- 1-bit output captured with C0 clock
+      Q1 => DDRBitsM(1), -- 1-bit output captured with C1 clock
+      C0 => EthClk,  -- 1-bit clock input
+      C1 => nEthClk, -- 1-bit clock input
+      CE => '1',  -- 1-bit clock enable input
+      D => BnchMarker,--BnchClk,   -- 1-bit data input 
+      R => ResetHi,    -- 1-bit reset input
+      S => '0'     -- 1-bit set input
+   );
+
+DDRBits <= DDRBitsC when DDRSel = '0' else DDRBitsM;
 
 TrigLED <= '0';
 
@@ -852,6 +878,13 @@ begin
 	GTPTxBuff_wr_en <= '0';
 	GTPRstCnter <= (others=>'0'); GTPRstFromCnt <= '0'; GTPTstFromCntEn <= '1';
 	GTPRstArm <= '0';
+	loopbackMarker <= '0';
+	loopbackMarkerCnt <= (others =>'0');
+	debugTrigPattern <= X"FFFF";
+	debugTrigMask <= X"00FF";
+	debugRst <= '1'; -- active high
+	debugBuff_rd_en <= '0';
+	DDRSel <= '0'; -- 0 is bunch clock, 1 is marker line
 
 elsif rising_edge (UsrClk2(0)) then
 
@@ -897,6 +930,29 @@ elsif rising_edge (UsrClk2(0)) then
 	if (uCWR = '0' or uCRD = '0') and CpldCS = '0' then AddrReg <= uCA;
 	else AddrReg <= AddrReg;
 	end if;
+
+if (UsrRDDL(0) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = debugBuffAdd) 
+   --or (GTPRxBuff_DatCnt(0) >= '0' & X"FFE" and GTPRxBuff_wr_en(0) = '1') -- this line makes the fifo behave like a trace buffer
+then debugBuff_rd_en <= '1';
+else debugBuff_rd_en <= '0'; 
+end if;
+
+if WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = debugTrigAdd
+   then 
+      DDRSel <= uCD(8);
+		debugRst <= uCD(12);
+else DDRSel <= DDRSel; debugRst <= debugRst;
+end if;
+if WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = debugTrigPatternAdd
+   then 
+	   debugTrigPattern <= uCD(15 downto 0); 
+else debugTrigPattern <= debugTrigPattern;
+end if;
+if WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = debugTrigMaskAdd
+   then
+	    debugTrigMask <= uCD(15 downto 0); 
+else debugTrigMask <= debugTrigMask;
+end if;
 
 if (UsrRDDL(0) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPRdAddr0) 
    or (GTPRxBuff_DatCnt(0) >= '0' & X"FFE" and GTPRxBuff_wr_en(0) = '1') -- this line makes the fifo behave like a trace buffer
@@ -1073,6 +1129,15 @@ end if;
 	then DCSPktBuff_wr_en <= '1';
 	else DCSPktBuff_wr_en <= '0';
 	end if;
+
+-- loopback marker
+   if Rx_IsComma(0) = "00" and ReFrame(0) = '0' and Rx_IsCtrl(0) = "10" and GTPRx(0) = 18 
+	    then 
+		    loopbackMarker <= '1';
+			 loopbackMarkerCnt <= loopbackMarkerCnt + 1;
+	else loopbackMarker <= '0'; loopbackMarkerCnt <= loopbackMarkerCnt;
+	end if;
+
 
 -- Check CRC
    if (((HrtBtWrtCnt = X"1") or (TrigReqWdCnt = X"1")) and 
@@ -1574,7 +1639,7 @@ Case Packet_Former is
 		elsif (LoopbackMode = 1) then Packet_Former <= Loopback;
 		elsif (LoopbackMode = 2 and Marker = '1') then Packet_Former <= Loopback;
 		elsif (LoopbackMode = 3 and MarkerDelayed = '1') then Packet_Former <= Loopback;
-		elsif (LoopbackMode = 4 and MarkerDelayed = '1') then Packet_Former <= Loopback; -- TODO, markerfromfiber
+		elsif (LoopbackMode = 4 and loopbackMarker = '1') then Packet_Former <= Loopback; -- TODO, markerfromfiber
 		else Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
 		end if;
 -- Loopback
@@ -1584,7 +1649,7 @@ Case Packet_Former is
 	if (LoopbackMode = 0 or 
 	    (LoopbackMode = 2 and Marker = '0') or
 		 (LoopbackMode = 3 and MarkerDelayed = '0') or 
-		 (LoopbackMode = 4 and MarkerDelayed = '0') ) 
+		 (LoopbackMode = 4 and loopbackMarker = '0') ) 
 		 then Packet_Former <= Idle;
 	else Packet_Former <= Packet_Former;
 	end if;
@@ -2125,6 +2190,22 @@ ResetHi <= not CpldRst;  -- Generate and active high reset for the Xilinx macros
  DQ <= DQWrtDly(2) when DQEn = '1' else (others => 'Z'); 
 iDQ <= DQ when EthRDDL(4 downto 3) = 1 else iDQ;
 
+
+
+debugMarkerInputBufferInst : debugMarkerkInputBuffer
+  PORT MAP (
+    rst     => debugRst, -- active heigh -- not GTPRxRst, -- todo, use reset used for 0x20
+    clk     => EthClk,
+	 trig    => debugTrig,
+    data_in => DDRBits,
+    rd_clk  => UsrClk2(0),
+    rd_en   => debugBuff_rd_en,
+    rd_data => debugBuffData,
+	 rd_empty => debugEmpty,
+	 rd_full  => debugFull
+	 );
+
+
 EthProc : process(EthClk, CpldRst)
 
  begin 
@@ -2143,8 +2224,22 @@ EthProc : process(EthClk, CpldRst)
 	MarkerCnt3 <= (others => '0'); MarkerCnt4 <= (others => '0'); MarkerCnt5 <= (others => '0');
 	BnchMarkerLast <= (others => '0');
 	
+	DutyCnt  <= (others => '0'); 
+	Duty0 <= (others => '0'); 
+	Duty1 <= (others => '0'); 
+	HighCnt0 <= (others => '0'); 
+	HighCnt1 <= (others => '0'); 
+	debugTrig <= '0';
+	
 
  elsif rising_edge (EthClk) then 
+ 
+   if ((MarkerBits(13 downto 0) & DDRBits) and debugTrigMask) 
+	  = (debugTrigPattern and debugTrigMask) then
+      debugTrig <= '1';
+	else
+	   debugTrig <= '0';
+	end if;
 
 	MarkerBits <= MarkerBits(13 downto 0) & DDRBits;
 	-- old style with punched clock
@@ -2204,7 +2299,7 @@ EthProc : process(EthClk, CpldRst)
 	--    MarkerBits(4) = '1' and
 	--	 MarkerBits(2) = '1' and
 	--	 MarkerBits(0) = '0') then
-	if BnchMarkerLast = "00001111" then
+	if debugTrig = '1' then
 	   MarkerCnt3 <= MarkerCnt3 + 1;
 	else
 	   MarkerCnt3 <= MarkerCnt3;
@@ -2252,14 +2347,35 @@ EthProc : process(EthClk, CpldRst)
 	--    MarkerBits(5)  = '0' and
 	--	 MarkerBits(3)  = '0' and
 	--	 MarkerBits(1)  = '0') then
-	if BnchMarkerLast(1 downto 0) = "01" then
+	--if BnchMarkerLast(1 downto 0) = "01" then
+	if BnchMarker = '1' then
 	   MarkerCnt5 <= MarkerCnt5 + 1;
 	else
 	   MarkerCnt5 <= MarkerCnt5;
 	end if;
 	
-
 	
+	-- duty cycle counters for both inputs
+	DutyCnt <= DutyCnt+1;
+	if DutyCnt = X"FF" then
+	    Duty0 <= HighCnt0;
+		 Duty1 <= HighCnt1;
+		 HighCnt0 <= (others => '0');
+		 HighCnt1 <= (others => '0');
+	else
+	   if BnchMarker = '1' then
+	      HighCnt1 <= HighCnt1 + 1;
+	   else HighCnt1 <= HighCnt1;
+	   end if;
+	   if BnchClk = '1' then
+	      HighCnt0 <= HighCnt0 + 1;
+	   else HighCnt0 <= HighCnt0;
+	  end if;
+	  Duty0 <= Duty0;
+	  Duty1 <= Duty1;
+	end if;
+	
+
 
    GPO(1) <= BnchMarker;
 
@@ -3229,11 +3345,17 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 MarkerDelayedCnt & MarkerCnt when MarkerCntAddr,
 		 MarkerCnt3 & MarkerCnt2 when MarkerCnt2Addr,
 		 MarkerCnt4 & MarkerCnt5 when MarkerCnt3Addr,
+		 Duty0 & Duty1 when DutyAdd,
 		 LastWindow when LastWindowLengthAddr,
 		 InjectionTs when InjectionLengthAddr,
 		 Clk80MHzAlignCnt & X"0" & "000" & Clk80MHzAlign when Clk80MHzAdd,
 		 X"000" & "0" & LoopbackMode when LoopbackAdd,
-		 X"002A" when DebugVersionAd,
+		 X"00" & LoopbackMarkerCnt when LoopbackMarkerCntAdd,
+		 debugBuffData when debugBuffAdd,
+		 debugFull & debugEmpty & "0" & debugRst & "000" & DDRSel & X"00" when debugTrigAdd,
+		 debugTrigPattern when debugTrigPatternAdd,
+		 debugTrigMask when debugTrigMaskAdd,
+		 X"0033" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 X"0000" when others;

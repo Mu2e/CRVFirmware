@@ -103,6 +103,13 @@ constant Clk80MHzAdd : AddrPtr := "00" & X"45";
 constant MarkerCnt2Addr : AddrPtr := "00" & X"46";
 constant LoopbackAdd : AddrPtr := "00" & X"47";
 constant MarkerCnt3Addr : AddrPtr := "00" & X"48";
+constant DutyAdd : AddrPtr := "00" & X"49";
+constant LoopbackMarkerCntAdd : AddrPtr := "00" & X"4A";
+constant debugBuffAdd : AddrPtr := "00" & X"4B";
+constant debugTrigAdd : AddrPtr := "00" & X"4C";
+constant debugTrigMaskAdd : AddrPtr := "00" & X"4D";
+constant debugTrigPatternAdd : AddrPtr := "00" & X"4E";
+
 
 
 constant DCSPktBuffAd    : AddrPtr := "00" & X"50";
@@ -531,5 +538,21 @@ component Clk80MHzGen
 			shiftCnt : out std_logic_vector(7 downto 0)
         );
 end component;
+
+
+component debugMarkerkInputBuffer
+   port(
+	        rst      : in  std_logic; -- active low
+           clk      : in  std_logic;
+			  trig     : in  std_logic;
+           data_in  : in  std_logic_vector (1 downto 0);
+           rd_clk   : in  std_logic;
+           rd_en    : in  std_logic;
+           rd_data  : out std_logic_vector (15 downto 0);
+			  rd_full  : out std_logic;
+			  rd_empty : out std_logic
+			  );
+end component;
+
 
 end Project_Defs;
