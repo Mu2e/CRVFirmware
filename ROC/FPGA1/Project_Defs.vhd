@@ -121,6 +121,12 @@ constant DCSHeaderAd     : AddrPtr := "00" & X"55";
 constant DCSEvCntAd      : AddrPtr := "00" & X"56";
 constant DCSStatusAd     : AddrPtr := "00" & X"57";
 
+
+constant sendGRAdd           : AddrPtr := "00" & X"58";
+constant InjectionCntAdd     : AddrPtr := "00" & X"59";
+constant InjectionWindowAdd  : AddrPtr := "00" & X"5A";
+constant InjectionDutyAdd    : AddrPtr := "00" & X"5B";
+
 constant SpillTrigCntAdHi : AddrPtr := "00" & X"66";
 constant SpillTrigCntAdLo : AddrPtr := "00" & X"67";
 
