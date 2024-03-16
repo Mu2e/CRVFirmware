@@ -152,13 +152,19 @@ class CRV:
         buffer_ = self.read("3D")
         markers2 = self.read("46")
         markers3 = self.read("48")
-        print("words in counter (9 per hb): ", buffer_)
-        print("heart beats counter (sent, read): ", heartb)
-        print("marker count: ", markers)
+        if not hasattr(self, 'markers_'):
+            self.markers_ = 0 
+        if not hasattr(self, 'heartb_'):
+            self.heartb_ = 0
+        print("words in buffer (9 per hb): ", buffer_)
+        print("heart beats counter (sent, read): ", heartb, int(heartb[0][2:],16)-self.heartb_)
+        print("marker count: ", markers, int(markers[0][2:],16)-self.markers_)
         print("marker count 3/2 ", markers2)
         print("marker count 4/5 ", markers3)
         print("time of last event window:", last)
         #print(markers, heartb, last)
+        self.markers_ = int(markers[0][2:],16)
+        self.heartb_ = int(heartb[0][2:],16)
 
     def rocDebBuffStatus(self):
        d = self.read("4C")[0]
@@ -196,7 +202,7 @@ class CRV:
     def rocLock(self):
         self.write("17","12")
         self.write("18","12")
-        return self.read("19")
+        return int(self.read("19")[0][2])
 
     def rocRx(self, n=1):
         data = self.readm("20", 20*n, lc=False)
@@ -565,6 +571,7 @@ class CRV:
                         print("DEBUG", afe, fpga)
                         self.febAFEHighGain(gains[np],afe=afe,fpga=fpga)
         self.write("401","0") # switch off the active numbers
+        self.write("58","1")
 
     def markerBits(self):
         data = self.read("77", lc=False)
