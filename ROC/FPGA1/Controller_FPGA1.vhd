@@ -124,7 +124,8 @@ signal GPOCount : std_logic_vector(2 downto 0);
 signal DDRBits,DDRBitsC,DDRBitsM : std_logic_vector(1 downto 0);
 signal MarkerBits : std_logic_vector(15 downto 0);
 signal MarkerDelay, MarkerDelayCounter : std_logic_vector(7 downto 0);
-signal Even_Odd,MarkerDelayed,Marker,LoopbackMarker,MarkerReq,MarkerSyncEn, MarkerDelayArm : std_logic;
+signal Even_Odd,Marker,LoopbackMarker,MarkerReq,MarkerSyncEn, MarkerDelayArm : std_logic;
+signal MarkerDelayed : std_logic_vector(3 downto 0);
 signal MarkerLast : std_logic_vector(1 downto 0);
 attribute ASYNC_REG : string; 
 attribute ASYNC_REG of MarkerLast : signal is "TRUE"; 
@@ -215,10 +216,17 @@ Type Event_Builder_Seq is (Idle,RdInWdCnt0,RdInWdCnt1,RdInWdCnt2,SumWdCnt,WrtWdC
 								   RdStat1,RdStat2,WrtStat,WrtUbLow,WrtUbHigh,WaitEvent,ReadFIFO,ReadFIFO0,ReadFIFO1,ReadFIFO2,
 									RdUb0low,RdUb0high,RdUb1low,RdUb1high,RdUb2low,RdUb2high, RduB,
 									VerifyUb0low,VerifyUb0high,VerifyUb1low,VerifyUb1high,VerifyUb2low,VerifyUb2high,
-									Fake,FakeWrite);
+									Fake,FakeWrite,FakeReset);
 signal Event_Builder : Event_Builder_Seq;
-signal FakeCnt : std_logic_vector ( 2 downto 0);
+signal FakeCnt : std_logic_vector ( 3 downto 0);
 signal FakeDat : std_logic_vector (15 downto 0);
+
+
+-- DR_Handler
+signal pktFormerTimeout, pktFormerSend, DRdone : std_logic;
+signal DRcnt : std_logic_vector (7 downto 0);
+Type DR_Handler_Seq is (Idle,StartCounter,Waiting,Send,Timeout);
+signal DR_Handler : DR_Handler_Seq;
 
 -- Front panel LED Shifter signals
 signal CMDwr_en,CMDrd_en,CMD_Full,CMD_Empty : std_logic;
@@ -289,6 +297,8 @@ signal DReqBuff_wr_en,DReqBuff_rd_en,DReqBuff_uCRd, DCSPktBuff_uCRd,
 		 DReqBuff_Full,TrigTx_Sel,DReqBuff_Emtpy,
 		 Dreq_Tx_Req,Dreq_Tx_ReqD,DReq_Tx_Ack,BmOnTrigReq,Stat_DReq : std_logic;
 signal LinkFIFOStatReg,Lower_FM_Bits : std_logic_vector (2 downto 0);  
+signal EventBuffSpy_RdEn : std_logic;
+signal EventBuffSpy_Out : std_logic_vector (15 downto 0);
 
 Type Trig_Tx_State is (Idle,SendTrigHdr,SendPad0,SendPktType,SenduBunch0,SenduBunch1,
 								SenduBunch2,SendPad1,SendPad2,SendPad3,WaitCRC,SendCRC,SetPktType);
@@ -352,7 +362,7 @@ Type Packet_Parser_Seq is (Idle,Read_Type,Check_Seq_No,Wrt_uC_Queue,
 									Wrt_FPGA_Queue,Check_CRC);
 signal Packet_Parser : Packet_Parser_Seq;
 
-Type Packet_Former_Seq is (Idle,WrtPktCnt,WrtHdrPkt,WrtCtrlHdrPkt,WrtDatPkt,WrtDCSPkt,Loopback,Loopback2,WrtGRPkt,WrtGRPkt2);
+Type Packet_Former_Seq is (Idle,WrtPktCnt,WrtPktCntTimeout,WrtHdrPkt,WrtHdrPktTimeout,WrtCtrlHdrPkt,WrtDatPkt,WrtDCSPkt,Loopback,Loopback2,WrtGRPkt,WrtGRPkt2);
 signal Packet_Former : Packet_Former_Seq;
 signal ChkCntr,FormStatReg,EmptyLatch : std_logic_vector (2 downto 0);
 signal Pkt_Timer : std_logic_vector (3 downto 0);
@@ -398,6 +408,8 @@ signal sendGR : std_logic; -- used in GR to send back special GR events
 signal InjectionTimer, InjectionWindow : std_logic_vector(15 downto 0);
 signal InjectionCnt : std_logic_vector(7 downto 0);
 signal InjectionDutyCnt, InjectionDuty, InjectionHighCnt : std_logic_vector(7 downto 0);
+
+signal EventBuffErr : std_logic; -- indicates if we try to read more data from the EventBuffer than there is, indicates data corruption
 
 begin
 
@@ -625,13 +637,25 @@ FEBIDList : FEBIDListRam
 
 EventBuff: FIFO_SC_4Kx16
   port map (clk => UsrClk2(0),
-		rst => ResetHi,
+		rst => ResetHi or GTPRxRst,
 		wr_en => EventBuff_WrtEn,
 		rd_en => EventBuff_RdEn,
       din => EventBuff_Dat,
       dout => EventBuff_Out,
       full => EventBuff_Full,
 	   empty => EventBuff_Empty);
+		
+EventBuffSpy : LinkFIFO
+  PORT MAP (rst => ResetHi or GTPRxRst,
+	 wr_clk => UsrClk2(0),
+    rd_clk => SysClk,
+    din => EventBuff_Dat,
+    wr_en => EventBuff_WrtEn,
+    rd_en => EventBuffSpy_RdEn,
+    dout => EventBuffSpy_Out,
+    full => open,
+    empty => open,
+	 rd_data_count => open);
 
 WdCountBuff: GTPRxFIFO
   port map (clk => UsrClk2(0),
@@ -894,11 +918,18 @@ begin
 	debugBuff_rd_en <= '0';
 	DDRSel <= '0'; -- 0 is bunch clock, 1 is marker line
 	FakeCnt <= (others =>'0'); FakeDat <= (others =>'0');
+	DRdone <= '0'; DRCnt <= (others =>'0');
+	pktFormerTimeout <= '0';
+	pktFormerSend <= '0';
+	DR_Handler <= Idle;
+	EventBuffErr <= '0'; -- high if the Packed former tries to read more data from the EventBuffer than there is
 
 elsif rising_edge (UsrClk2(0)) then
 
 	if Pkt_Timer = 0 and 
-		(Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt 
+		(Packet_Former = WrtHdrPkt 
+		  or Packet_Former = WrtHdrPktTimeout 
+		  or Packet_Former = WrtCtrlHdrPkt 
 		  or Packet_Former = WrtDatPkt 
 		  or (Packet_Former = WrtDCSPkt and FormStatReg = "111")
 		  or (Packet_Former = WrtGrPkt  and FormStatReg = "111")
@@ -998,6 +1029,20 @@ end if;
 			 When X"6" => GTPTxStage(0) <= TStmpBuff_Out; TxCRCDat(0) <= TStmpBuff_Out;
 			 When X"5" => GTPTxStage(0) <= TStmpBuff_Out; TxCRCDat(0) <= TStmpBuff_Out;
 			 When X"4" => GTPTxStage(0) <= TStmpBuff_Out; TxCRCDat(0) <= TStmpBuff_Out;
+			 When X"3" => GTPTxStage(0) <= X"000" & "0" & EventBuffErr & "01"; TxCRCDat(0) <= X"000" & "0" & EventBuffErr & "01";
+			 When X"0" => GTPTxStage(0) <= X"BC3C"; TxCRCDat(0) <= X"0000";
+			 When others => GTPTxStage(0) <= X"0000"; TxCRCDat(0) <= X"0000";
+	      end case;
+	elsif Packet_Former = WrtHdrPktTimeout 
+	 then
+			Case Pkt_Timer is
+			 When X"A" => GTPTxStage(0) <= X"1C" & TxSeqNo(0) & "00101"; TxCRCDat(0) <= X"0000";
+			 When X"8" => GTPTxStage(0) <= X"8" & IDReg & X"50"; TxCRCDat(0) <= X"8" & IDReg & X"50";
+			 When X"7" => GTPTxStage(0) <= "01000" & "000" & X"00"; TxCRCDat(0) <= "01000" & "000" & X"00"; 
+			 When X"6" => GTPTxStage(0) <= TStmpBuff_Out; TxCRCDat(0) <= TStmpBuff_Out;
+			 When X"5" => GTPTxStage(0) <= TStmpBuff_Out; TxCRCDat(0) <= TStmpBuff_Out;
+			 When X"4" => GTPTxStage(0) <= TStmpBuff_Out; TxCRCDat(0) <= TStmpBuff_Out;
+			 When X"3" => GTPTxStage(0) <= X"000" & "1" & EventBuffErr & "00"; TxCRCDat(0) <= X"000" & "1" & EventBuffErr & "00";
 			 When X"0" => GTPTxStage(0) <= X"BC3C"; TxCRCDat(0) <= X"0000";
 			 When others => GTPTxStage(0) <= X"0000"; TxCRCDat(0) <= X"0000";
 	      end case;
@@ -1103,7 +1148,7 @@ end if;
 
 	-- Increment the sequence number and clear CRC when sending Packet ID
 	if (UsrWRDL(0) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPWrtAddr(0))
-		or ((Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt or Packet_Former = WrtDCSPkt
+		or ((Packet_Former = WrtHdrPkt or Packet_Former = WrtHdrPktTimeout or Packet_Former = WrtCtrlHdrPkt or Packet_Former = WrtDCSPkt
 		or Packet_Former = WrtDatPkt or Packet_Former = WrtGRPkt or Packet_Former = WrtGRPkt2) and Pkt_Timer = 10)
 	 then TxSeqNo(0) <= TxSeqNo(0) + 1;
 			TxCRCRst(0) <= '1';
@@ -1113,7 +1158,7 @@ end if;
 
 -- Accumulate CRC while transmitting data
 	if (UsrWRDL(0) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPWrtAddr(2))
-	 or ((Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt
+	 or ((Packet_Former = WrtHdrPkt or Packet_Former = WrtHdrPktTimeout or Packet_Former = WrtCtrlHdrPkt
 	 or (	Packet_Former = WrtDCSPkt and FormStatReg = "111")
 	 or (	Packet_Former = WrtGRPkt and FormStatReg = "111")
 	 or (	Packet_Former = WrtGRPkt2) -- and FormStatReg = "110")
@@ -1125,12 +1170,12 @@ end if;
 
 -- One byte is control when sending the packet ID
 	if (UsrWRDL(0) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPWrtAddr(0))
-		or ((Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt or Packet_Former = WrtDCSPkt
+		or ((Packet_Former = WrtHdrPkt or Packet_Former = WrtHdrPktTimeout or Packet_Former = WrtCtrlHdrPkt or Packet_Former = WrtDCSPkt
 		or Packet_Former = WrtDatPkt or Packet_Former = WrtGRPkt or Packet_Former = WrtGRPkt2) and Pkt_Timer = 9)
 	 then	TxCharIsK(0) <= "10";
 -- Two bytes are data when sending the packet payload
 	elsif (UsrWRDL(0) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPWrtAddr(2))
-	 or  ((Packet_Former = WrtHdrPkt or Packet_Former = WrtCtrlHdrPkt 
+	 or  ((Packet_Former = WrtHdrPkt or Packet_Former = WrtHdrPktTimeout or Packet_Former = WrtCtrlHdrPkt 
 	      or (	Packet_Former = WrtDCSPkt and FormStatReg = "111") -- neded because it starts with Pkt_Timer = 0, with BC3C
 	      or (	Packet_Former = WrtGRPkt and FormStatReg = "111")
 			or (	Packet_Former = WrtGRPkt2) -- and FormStatReg = "110") 
@@ -1270,15 +1315,20 @@ if Packet_Parser = Check_Seq_No and GTPRxBuff_Out(0)(7 downto 5) /= RxSeqNo(0)
 ---------------------------------------------------------------------------
 Case Event_Builder is
 	when Idle => --Debug(10 downto 7) <= X"0";
-		if LinkFIFOEmpty /= 7 and FormHold = '0' and TStmpWds >= 3 
+		if LinkFIFOEmpty /= 7 and FormHold = '0' and TStmpWds >= 3 and sendGR = '0'
 		 then Event_Builder <= WaitEvent;
-		elsif (sendGR = '1' and MarkerDelayed = '1') then Event_Builder <= Fake;
+		--elsif (sendGR = '1' and MarkerDelayed /= 0) then Event_Builder <= Fake;
+		elsif sendGR = '1' then Event_Builder <= Fake;
 		else Event_Builder <= Idle;
 		end if;
 	when Fake => Event_Builder <= FakeWrite;
 	when FakeWrite =>
 	   if FakeCnt /= 0 then Event_Builder <= FakeWrite;
-		else Event_Builder <= Idle;
+		else Event_Builder <= FakeReset;
+		end if;
+	when FakeReset =>
+	   if sendGR = '0' then Event_Builder <= Idle;
+		else                 Event_Builder <= FakeReset;
 		end if;
 	when WaitEvent => --Debug(10 downto 7) <= X"1";
 			-- Wait for a complete event to be in all link FIFOs from active ports
@@ -1437,14 +1487,24 @@ Case Event_Builder is
 
 -- GR Fake Data
    if Event_Builder = Fake then
-	   FakeCnt <= "111"; -- 7
-		FakeDat <= X"0008";
+	   FakeCnt <= X"b"; -- 11 = 8+4-1
+		FakeDat <= X"0008"; -- payload, exclude cnt + 3 x uB number
 	elsif Event_Builder = FakeWrite then
 	   FakeCnt <= FakeCnt - 1;
-	   if    FakeCnt = 7 then FakeDat <= X"cafe";
-	   elsif FakeCnt = 6 then FakeDat <= X"beef";
-	   else                   FakeDat <= X"1234";
-		end if;
+		Case FakeCnt is
+		   when X"B" => FakeDat <= X"aaaa";
+	      when X"A" => FakeDat <= X"9999";
+		   when X"9" => FakeDat <= X"8888";
+		   when X"8" => FakeDat <= X"7777";
+		   when X"7" => FakeDat <= X"6666";
+		   when X"6" => FakeDat <= X"5555";
+		   when X"5" => FakeDat <= X"4444";
+		   when X"4" => FakeDat <= X"3333";
+		   when X"3" => FakeDat <= X"2222";
+		   when X"2" => FakeDat <= X"1111";
+		   when X"1" => FakeDat <= X"FFFF";
+		   when others => FakeDat <= (others => '0');
+		end Case;
 	else
 	   FakeCnt <= FakeCnt;
 		FakeDat <= (others => '0');
@@ -1490,7 +1550,7 @@ Case Event_Builder is
 	elsif LinkFIFORdReq(1) = '1'    then EventBuff_Dat <= LinkFIFOOut(1);
 	elsif LinkFIFORdReq(2) = '1'    then EventBuff_Dat <= LinkFIFOOut(2);
 	elsif Event_Builder = FakeWrite then EventBuff_Dat <= FakeDat;
-	else EventBuff_Dat <= EventBuff_Dat;
+	else                                 EventBuff_Dat <= EventBuff_Dat;
 	end if;
 
 -- Do an "or" of the FEB error words for the cotroller error word
@@ -1698,14 +1758,23 @@ end if;
   else EventBuff_WrtEn <= '0';  --Debug(6) <= '0';
  end if;
 
+
 if (Packet_Former = WrtCtrlHdrPkt and (Pkt_Timer = 8 or Pkt_Timer = 5 
     or (uBwrt = '1' and (Pkt_Timer = 4 or Pkt_Timer = 3)) -- iff uB is written, also read it again
     ---or Pkt_Timer = 7 or Pkt_Timer = 4 or Pkt_Timer = 3 or Pkt_Timer = 2)
 	 ))
  or (Packet_Former = WrtDatPkt and Pkt_Timer > 2 and EvTxWdCnt > 0)
-then EventBuff_RdEn <= '1';  --Debug(9) <= '1';
+then 
+  EventBuff_RdEn <= '1';  --Debug(9) <= '1';
+  if EventBuff_Empty = '0' then
+      EventBuffErr <= '0';
+  else -- error!
+      EventBuffErr <= '1';
+  end if;
 else EventBuff_RdEn <= '0';  --Debug(9) <= '0';
+     EventBuffErr <= EventBuffErr;
 end if;
+
 
 if (Packet_Former = WrtDCSPkt and (Pkt_Timer = 7 or Pkt_Timer = 6)) --reads are one cycle ahead
 then DCSBuff_rd_en <= '1';
@@ -1716,6 +1785,53 @@ end if;
 
 --Debug(3 downto 1) <= LinkFIFOEmpty;
 
+-------------------------------------
+-- TODO Statemachine handling DR 
+-------------------------------------
+Case DR_Handler is
+   when Idle =>
+	    if TStmpWds >= 3 and DRdone = '0' then
+		     DR_Handler <= StartCounter;
+		 else
+		     DR_Handler <= Idle;
+		 end if;
+	when StartCounter =>
+	    DR_Handler <= Waiting;
+	when Waiting =>
+	    if EventBuff_Empty = '0' then DR_Handler <= Send; -- data avaiable
+		 elsif DRcnt = 0         then DR_Handler <= Timeout;
+		 else                         DR_Handler <= Waiting;
+		 end if;
+	when Send =>
+	    if DRdone = '1' then DR_Handler <= Idle;
+		 else                 DR_Handler <= Send;
+		 end if;
+	when Timeout =>
+	    if DRdone = '1' then DR_Handler <= Idle;
+		 else                 DR_Handler <= Timeout;
+		 end if;
+	when others => 
+	    DR_Handler <= Idle;
+end Case;
+
+if DR_Handler = StartCounter then
+    DRcnt <= X"FF";
+elsif DR_Handler = Waiting then
+    DRcnt <= DRcnt - 1;
+else DRcnt <= DRcnt;
+end if;
+
+if  DR_Handler = Send then
+    pktFormerSend    <= '1';
+	 pktFormerTimeout <= '0';
+elsif DR_Handler = Timeout then
+    pktFormerSend    <= '1';
+	 pktFormerTimeout <= '1';
+else
+    pktFormerSend    <= '0';
+	 pktFormerTimeout <= '0';
+end if;
+
 ---------------------------------------------------------------------------
 -- Idle,WrtPktCnt,WrtHdrPkt,WrtCtrlHdrPkt,WrtDatPkt,WrtDCSPkt
 ---------------------------------------------------------------------------
@@ -1724,8 +1840,13 @@ Case Packet_Former is
 	when Idle => FormStatReg <= "000"; 
 		--if ((sendGR = '0') and (EventBuff_Empty = '0')) then Packet_Former <= WrtPktCnt;
 		--TODO: only if DR pending to allow for pre-fetch
-		if (EventBuff_Empty = '0') then Packet_Former <= WrtPktCnt;
+		-- TStmpWds makes it wait for the DR 
+		--if (EventBuff_Empty = '0') then Packet_Former <= WrtPktCnt;
+		if    pktFormerSend = '1' and pktFormerTimeout = '0' then Packet_Former <= WrtPktCnt;
+		--elsif pktFormerSend = '1' and pktFormerTimeout = '1' then Packet_Former <= WrtPktCntTimeout;
+		elsif pktFormerSend = '1' and pktFormerTimeout = '1' then Packet_Former <= WrtPktCntTimeout; -- 
 		elsif DCSBuffRdCnt > 1 then  Packet_Former <= WrtDCSPkt;
+		-- TODO: add a timeout to answer if no data is present?
 		--elsif ((sendGR = '1') and (TrgPktRdCnt >= 8) and (TStmpWds>0) ) then Packet_Former <= WrtGRPkt;
 		--elsif (LoopbackMode = "1" and Marker = '1') then Packet_Former <= Loopback;
 		--elsif (LoopbackMode = 1) then Packet_Former <= Loopback;
@@ -1747,13 +1868,22 @@ Case Packet_Former is
 	--end if;
 		
 -- Divide by eight to get the number of packets
-	when WrtPktCnt => Packet_Former <= WrtHdrPkt;  FormStatReg <= "001";  
+	when WrtPktCnt        => Packet_Former <= WrtHdrPkt;  FormStatReg <= "001";  
+	when WrtPktCntTimeout => Packet_Former <= WrtHdrPktTimeout;  FormStatReg <= "001";
 -- Send the packet header, packet type, packet count, time stamp and status
 	when WrtHdrPkt => FormStatReg <= "010"; 
-		if Pkt_Timer = 0 then Packet_Former <= WrtCtrlHdrPkt; --Debug(5 downto 3) <= "011";
-	    elsif FormRst = '1' then Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
+	   if    Pkt_Timer = 0 then Packet_Former <= WrtCtrlHdrPkt; --Debug(5 downto 3) <= "011";
+		--if    Pkt_Timer = 0 and pktFormerTimeout = '0' then Packet_Former <= WrtCtrlHdrPkt; --Debug(5 downto 3) <= "011";
+	   --elsif Pkt_Timer = 0 and pktFormerTimeout = '1' then Packet_Former <= Idle;
+		elsif FormRst = '1' then Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
 		else Packet_Former <= WrtHdrPkt; --Debug(5 downto 3) <= "101";
 		end if;
+		
+	when WrtHdrPktTimeout => FormStatReg <= "010";
+	   if    Pkt_Timer = 0 then Packet_Former <= Idle;
+		else                     Packet_Former <= WrtHdrPktTimeout;
+		end if;
+	
 	when WrtCtrlHdrPkt =>  FormStatReg <= "011";  
 		if Pkt_Timer = 0 then 
 		  if EvTxWdCnt = 0 then -- TO CHECK
@@ -1767,22 +1897,20 @@ Case Packet_Former is
 -- After Controller header is sent, the packets contain data for this FEB
 -- The FEB header data is embedded in the sream coming from the front FPGAs
 	when WrtDatPkt => FormStatReg <= "100";   
-		if EvTxWdCnt = 0 and Pkt_Timer = 0
-			then Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
-		 elsif FormRst = '1' then Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
-		else Packet_Former <= WrtDatPkt; --Debug(5 downto 3) <= "111";
+		if     EvTxWdCnt = 0 and Pkt_Timer = 0    then Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
+		elsif EventBuffErr = '1' and Pkt_Timer = 0 then Packet_Former <= Idle;
+		elsif FormRst = '1'                       then Packet_Former <= Idle; --Debug(5 downto 3) <= "000";
+		else                                           Packet_Former <= WrtDatPkt; --Debug(5 downto 3) <= "111";
 		end if;
 	when WrtDCSPkt => FormStatReg <= "111";
-	   if FormStatReg = "111" and Pkt_Timer = 0
-		   then Packet_Former <= Idle;
-		elsif FormRst = '1' then Packet_Former <= Idle;
-		else Packet_Former <= WrtDCSPkt;
+	   if FormStatReg = "111" and Pkt_Timer = 0 then Packet_Former <= Idle;
+		elsif FormRst = '1'                      then Packet_Former <= Idle;
+		else                                          Packet_Former <= WrtDCSPkt;
 		end if;
 	when WrtGRPkt => FormStatReg <= "111";
-	   if FormStatReg = "111" and Pkt_Timer = 0
-		    then Packet_Former <= WrtGRPkt2;
-		elsif FormRst = '1' then Packet_Former <= Idle;
-		else Packet_Former <= WrtGRPkt;
+	   if FormStatReg = "111" and Pkt_Timer = 0 then Packet_Former <= WrtGRPkt2;
+		elsif FormRst = '1'                      then Packet_Former <= Idle;
+		else                                          Packet_Former <= WrtGRPkt;
 		end if;
 	when WrtGRPkt2 => FormStatReg <= "110";
 	   if FormStatReg = "110" and Pkt_Timer = 0 and DReqBuff_Emtpy = '0' -- "100" guard probably not needed
@@ -1798,6 +1926,11 @@ if Packet_Former = WrtPktCnt then WdCountBuff_WrtEn <= '1';
 else  WdCountBuff_WrtEn <= '0';
 end if;
 
+-- this is used to advance the DR_Handler state machine
+if Packet_Former = WrtHdrPkt or Packet_Former = WrtHdrPktTimeout then DRdone <= '1';
+else DRdone <= '0';
+end if;
+
 if UsrRDDL(0) = 2 and uCA(11 downto 10) = GA and uCA(9 downto 0) = EvWdCntBuffAd
 then WdCountBuff_RdEn <= '1';
 else WdCountBuff_RdEn <= '0';
@@ -1807,6 +1940,8 @@ end if;
    if Packet_Former = WrtPktCnt and EventBuff_Out(2 downto 0)  = 0 then TxPkCnt <= EventBuff_Out(13 downto 3) + 1;
 -- If not and even multiple of eight, account for final partially filled packet
 elsif Packet_Former = WrtPktCnt and EventBuff_Out(2 downto 0) /= 0 then TxPkCnt <= EventBuff_Out(13 downto 3) + 2;
+-- if timeout, only return data header
+-- elsif Packet_Former = WrtPktCntTimeout then TxPkCnt <= (others => '0');
 -- Decrement the packet count once for each packet ID write
 elsif ((Packet_Former = WrtDatPkt or Packet_Former = WrtCtrlHdrPkt) and Pkt_Timer = 9) then TxPkCnt <= TxPkCnt - 1;
 else TxPkCnt <= TxPkCnt;
@@ -1815,6 +1950,8 @@ end if;
 -- Extract the word count from the event buffer FIFO 
    if Packet_Former = WrtPktCnt
 		then EvTxWdCnt <= EventBuff_Out(13 downto 0);
+	--elsif Packet_Former = WrtPktCntTimeout
+	--   then EvTxWdCnt <= (others => '0'); -- no payload when timeout
 -- Decrement the word count for each word sent within a data packet
 	elsif EvTxWdCnt /= 0 and Packet_Former = WrtDatPkt and Pkt_Timer > 2
 		then EvTxWdCnt <= EvTxWdCnt - 1;
@@ -1832,26 +1969,28 @@ end if;
 
 -- Read of timestamps for use in forming the header packet
  if (Packet_Former = WrtHdrPkt and Pkt_Timer <= 7 and Pkt_Timer >= 5) or
-    (Packet_Former = WrtGRPkt  and Pkt_Timer <= 7 and Pkt_Timer >= 5)
+    (Packet_Former = WrtHdrPktTimeout  and Pkt_Timer <= 7 and Pkt_Timer >= 5)
+    --(Packet_Former = WrtGRPkt  and Pkt_Timer <= 7 and Pkt_Timer >= 5)
 	then TStmpBuff_rd_en <= '1';
 	else TStmpBuff_rd_en <= '0';
 	end if;
 
 -- Increment the data request counter when forming the header packet.
 if (Packet_Former = WrtHdrPkt and Pkt_Timer = 9) or 
-   (Packet_Former = WrtGRPkt  and Pkt_Timer = 9)
+    (Packet_Former = WrtHdrPktTimeout and Pkt_Timer = 9)
+   --(Packet_Former = WrtGRPkt  and Pkt_Timer = 9)
    then DReq_Count <= DReq_Count + 1;
 elsif GTPRxRst = '1' or RxLOS(0)(1) = '1' then DReq_Count <= (others => '0');
 else DReq_Count <= DReq_Count;
 end if;
 
 -- Counter for dividing data into packets
-if Packet_Former = WrtPktCnt then Pkt_Timer <= X"A";
-elsif Pkt_Timer /= 0 and (Packet_Former = WrtHdrPkt 
+if Packet_Former = WrtPktCnt or Packet_Former = WrtPktCntTimeout then Pkt_Timer <= X"A";
+elsif Pkt_Timer /= 0 and (Packet_Former = WrtHdrPkt or Packet_Former = WrtHdrPktTimeout
 or Packet_Former = WrtCtrlHdrPkt or Packet_Former = WrtDatPkt 
 or Packet_Former = WrtDCSPkt or Packet_Former = WrtGRPkt or Packet_Former = WrtGRPkt2)
 	then Pkt_Timer <= Pkt_Timer - 1;
-elsif Pkt_Timer = 0 and (Packet_Former = WrtHdrPkt 
+elsif Pkt_Timer = 0 and (Packet_Former = WrtHdrPkt or Packet_Former = WrtHdrPktTimeout -- WrtHdrPktTimeout not needed if we send only one package
 or Packet_Former = WrtCtrlHdrPkt or Packet_Former = WrtDatPkt 
 or Packet_Former = WrtDCSPkt or Packet_Former = WrtGRPkt or Packet_Former = WrtGRPkt2)
 	then Pkt_Timer <= X"A";
@@ -2622,19 +2761,20 @@ FMTxReq : process(Clk80MHz, CpldRst, GTPRxRst)
 		    MarkerDelayCounter <= MarkerDelayCounter - 1; 
 		    MarkerDelayArm     <= MarkerDelayArm;
 			 --MarkerDelayedCnt   <= MarkerDelayedCnt;
-	elsif MarkerDelayCounter = 0 and MarkerDelayed = '0' and MarkerDelayArm = '1'
+	elsif MarkerDelayCounter = 0 and MarkerDelayed(0) = '0' and MarkerDelayArm = '1'
 		then 
-		    MarkerDelayed  <= '1'; 
+		    MarkerDelayed(0)  <= '1'; 
 			 MarkerDelayArm <= '0';
 			 --MarkerDelayedCnt <= MarkerDelayedCnt + 1;
 	else
-		MarkerDelayed  <= '0'; 
+		MarkerDelayed(0)  <= '0'; 
 		MarkerDelayArm <= MarkerDelayArm;
 		--MarkerDelayedCnt   <= MarkerDelayedCnt;
   end if;
+  MarkerDelayed(3 downto 1) <= MarkerDelayed(2 downto 0);
 
 -- Send a heart beat without pause if there is no marker input expected
-  if HrtBtFMReq = '1' or (MarkerSyncEn = '1' and MarkerDelayed = '1')
+  if HrtBtFMReq = '1' or (MarkerSyncEn = '1' and MarkerDelayed(0) = '1')
 	  then 
 	      HrtBtFMTxEn <= '1'; 
 			HeartBeatCnt <= HeartBeatCnt + 1;
@@ -2736,6 +2876,7 @@ main : process(SysClk, CpldRst)
 	--DCS_Status <= X"0040"; -- cnt [:7], status[6:5], op[4:0] => cnt = 1
 	--DCS_EvCnt  <= X"0010"; -- 8 words, 16 bytes
 	sendGR <= '0';
+	EventBuffSpy_RdEn <= '0';
 	
 -- Pll Chip Shifter signals
 	PLLBuffwr_en <= '0'; PLLBuffrd_en <= '0'; PllPDn <= '1';
@@ -2943,6 +3084,14 @@ end if;
 	then DCSPktBuff_uCRd <= '1';
 	else DCSPktBuff_uCRd <= '0';
 	end if;
+	
+-- REMOVE ME
+--	Read of the dcs request FIFO
+	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = EventBuffSpyAd 
+	then EventBuffSpy_RdEn <= '1';
+	else EventBuffSpy_RdEn <= '0';
+	end if;
+	
 	
 -- write to the DCS answer FIFO
 	if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DCSBuffAd 
@@ -3481,6 +3630,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
 		 "000" & DCSPktRdCnt when DCSPktWdUsedAd,
 		 DCSPktBuff_Out(15 downto 0) when DCSPktBuffAd,
+       EventBuffSpy_Out(15 downto 0) when EventBuffSpyAd,
 		 ExtuBunchOffset when HrtBtOffsetAd,
 		 DReq_Count(15 downto 0) when DReqCountLowAd,
 		 DReq_Count(31 downto 16) when DReqCountHiAd,
@@ -3516,7 +3666,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 X"000" & "000" & sendGR when sendGRAdd,
 		 "00" & NimTrigLast & GPI & "000" & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"0046" when DebugVersionAd,
+		 X"0054" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 X"0000" when others;
