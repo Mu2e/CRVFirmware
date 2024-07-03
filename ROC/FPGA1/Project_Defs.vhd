@@ -109,6 +109,7 @@ constant debugBuffAdd : AddrPtr := "00" & X"4B";
 constant debugTrigAdd : AddrPtr := "00" & X"4C";
 constant debugTrigMaskAdd : AddrPtr := "00" & X"4D";
 constant debugTrigPatternAdd : AddrPtr := "00" & X"4E";
+constant HeartBeatCnAddr  : AddrPtr := "00" & X"4F";
 
 
 
@@ -139,6 +140,8 @@ constant SpillWdCntLoAd : AddrPtr := "00" & X"6B";
 constant UpTimeRegAddrHi : AddrPtr := "00" & X"6C";
 constant UpTimeRegAddrLo : AddrPtr := "00" & X"6D";
 
+
+constant LastUbSentAddr : AddrPtr:= "00" & X"70";
 constant TimeStampAdHi : AddrPtr := "00" & X"72";
 constant TimeStampAdLo : AddrPtr := "00" & X"73";
 
