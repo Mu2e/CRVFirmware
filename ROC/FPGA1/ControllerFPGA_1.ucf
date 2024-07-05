@@ -8,16 +8,16 @@ NET "Debug[4]" LOC = D19;
 NET "Debug[3]" LOC = C18;
 NET "Debug[2]" LOC = D17;
 NET "Debug[1]" LOC = D18;
-NET "Debug[10]" FAST;
-NET "Debug[9]" FAST;
-NET "Debug[8]" FAST;
-NET "Debug[7]" FAST;
-NET "Debug[6]" FAST;
-NET "Debug[5]" FAST;
-NET "Debug[4]" FAST;
-NET "Debug[3]" FAST;
-NET "Debug[2]" FAST;
-NET "Debug[1]" FAST;
+NET "Debug[10]" SLEW = FAST;
+NET "Debug[9]" SLEW = FAST;
+NET "Debug[8]" SLEW = FAST;
+NET "Debug[7]" SLEW = FAST;
+NET "Debug[6]" SLEW = FAST;
+NET "Debug[5]" SLEW = FAST;
+NET "Debug[4]" SLEW = FAST;
+NET "Debug[3]" SLEW = FAST;
+NET "Debug[2]" SLEW = FAST;
+NET "Debug[1]" SLEW = FAST;
 
 NET "LINKClk_P[0]" LOC = M5;
 NET "LinkFR_P[0]" LOC = C1;
@@ -67,26 +67,26 @@ NET "uCD[2]" LOC = T14;
 NET "uCD[1]" LOC = R13;
 NET "uCD[0]" LOC = AA20;
 
-NET "uCD[15]" FAST;
-NET "uCD[14]" FAST;
-NET "uCD[13]" FAST;
-NET "uCD[12]" FAST;
-NET "uCD[11]" FAST;
-NET "uCD[10]" FAST;
-NET "uCD[9]" FAST;
-NET "uCD[8]" FAST;
-NET "uCD[7]" FAST;
-NET "uCD[6]" FAST;
-NET "uCD[5]" FAST;
-NET "uCD[4]" FAST;
-NET "uCD[3]" FAST;
-NET "uCD[2]" FAST;
-NET "uCD[1]" FAST;
-NET "uCD[0]" FAST;
+NET "uCD[15]" SLEW = FAST;
+NET "uCD[14]" SLEW = FAST;
+NET "uCD[13]" SLEW = FAST;
+NET "uCD[12]" SLEW = FAST;
+NET "uCD[11]" SLEW = FAST;
+NET "uCD[10]" SLEW = FAST;
+NET "uCD[9]" SLEW = FAST;
+NET "uCD[8]" SLEW = FAST;
+NET "uCD[7]" SLEW = FAST;
+NET "uCD[6]" SLEW = FAST;
+NET "uCD[5]" SLEW = FAST;
+NET "uCD[4]" SLEW = FAST;
+NET "uCD[3]" SLEW = FAST;
+NET "uCD[2]" SLEW = FAST;
+NET "uCD[1]" SLEW = FAST;
+NET "uCD[0]" SLEW = FAST;
 
 NET "CpldCS" LOC = W15;
 NET "CpldRst" LOC = AB4;
-NET "CpldRst" PULLUP = TRUE;
+NET "CpldRst" PULLUP;
 NET "uCRd" LOC = Y20;
 NET "uCWr" LOC = R7;
 
@@ -111,22 +111,22 @@ NET "DQ[2]" LOC = F1;
 NET "DQ[1]" LOC = E3;
 NET "DQ[0]" LOC = E1;
 
-NET "DQ[15]" FAST;
-NET "DQ[14]" FAST;
-NET "DQ[13]" FAST;
-NET "DQ[12]" FAST;
-NET "DQ[11]" FAST;
-NET "DQ[10]" FAST;
-NET "DQ[9]" FAST;
-NET "DQ[8]" FAST;
-NET "DQ[7]" FAST;
-NET "DQ[6]" FAST;
-NET "DQ[5]" FAST;
-NET "DQ[4]" FAST;
-NET "DQ[3]" FAST;
-NET "DQ[2]" FAST;
-NET "DQ[1]" FAST;
-NET "DQ[0]" FAST;
+NET "DQ[15]" SLEW = FAST;
+NET "DQ[14]" SLEW = FAST;
+NET "DQ[13]" SLEW = FAST;
+NET "DQ[12]" SLEW = FAST;
+NET "DQ[11]" SLEW = FAST;
+NET "DQ[10]" SLEW = FAST;
+NET "DQ[9]" SLEW = FAST;
+NET "DQ[8]" SLEW = FAST;
+NET "DQ[7]" SLEW = FAST;
+NET "DQ[6]" SLEW = FAST;
+NET "DQ[5]" SLEW = FAST;
+NET "DQ[4]" SLEW = FAST;
+NET "DQ[3]" SLEW = FAST;
+NET "DQ[2]" SLEW = FAST;
+NET "DQ[1]" SLEW = FAST;
+NET "DQ[0]" SLEW = FAST;
 
 NET "ZEthA[8]" LOC = R3;
 NET "ZEthA[7]" LOC = N3;
@@ -138,15 +138,15 @@ NET "ZEthA[2]" LOC = L6;
 NET "ZEthA[1]" LOC = U1;
 NET "ZEthA[0]" LOC = V1;
 
-NET "ZEthA[8]" FAST;
-NET "ZEthA[7]" FAST;
-NET "ZEthA[6]" FAST;
-NET "ZEthA[5]" FAST;
-NET "ZEthA[4]" FAST;
-NET "ZEthA[3]" FAST;
-NET "ZEthA[2]" FAST;
-NET "ZEthA[1]" FAST;
-NET "ZEthA[0]" FAST;
+NET "ZEthA[8]" SLEW = FAST;
+NET "ZEthA[7]" SLEW = FAST;
+NET "ZEthA[6]" SLEW = FAST;
+NET "ZEthA[5]" SLEW = FAST;
+NET "ZEthA[4]" SLEW = FAST;
+NET "ZEthA[3]" SLEW = FAST;
+NET "ZEthA[2]" SLEW = FAST;
+NET "ZEthA[1]" SLEW = FAST;
+NET "ZEthA[0]" SLEW = FAST;
 
 NET "ZEthCS" LOC = M1;
 NET "ZEthWE" LOC = M2;
@@ -157,11 +157,11 @@ NET "ZEthEOF[1]" LOC = P2;
 NET "ZEthEOF[0]" LOC = V2;
 NET "ZEthLen" LOC = P1;
 
-NET "ZEthCS" FAST;
-NET "ZEthWE" FAST;
-NET "ZEthClk" FAST;
-NET "ZEthBE[1]" FAST;
-NET "ZEthBE[0]" FAST;
+NET "ZEthCS" SLEW = FAST;
+NET "ZEthWE" SLEW = FAST;
+NET "ZEthClk" SLEW = FAST;
+NET "ZEthBE[1]" SLEW = FAST;
+NET "ZEthBE[0]" SLEW = FAST;
 
 # Pll serial link, control, status lines
 NET "PllSClk" LOC = F21;
@@ -174,7 +174,7 @@ NET "PllStat" LOC = H22;
 NET "LEDRst" LOC = V19;
 NET "LEDSClk[2]" LOC = R22;
 NET "LEDSClk[1]" LOC = U22;
-NET "LEDSClk[0]" LOC = W22; 
+NET "LEDSClk[0]" LOC = W22;
 
 NET "LEDSDat[2]" LOC = T21;
 NET "LEDSDat[1]" LOC = V22;
@@ -192,7 +192,8 @@ NET "GPO[1]" LOC = F9;
 NET "GPO[0]" LOC = G8;
 NET "GPI" LOC = C22;
 #NET "NimTrig" LOC = E20; Prototype version
-NET "NimTrig" LOC = H18; # Production version
+# Production version
+NET "NimTrig" LOC = H18;
 
 # FM tramsmitters for trigger and timing fanout
 # OLD: "HeartBeatFM" LOC = P4;
@@ -203,13 +204,12 @@ NET "HeartBeatFM_N" LOC = P4;
 
 # OLD: NET "TrigFM" LOC = P5;
 NET "TrigFM" LOC = P8;
-NET "TrigFM" SLEW = "FAST";
-NET "TrigFM" DRIVE = "16";
+NET "TrigFM" SLEW = FAST;
+NET "TrigFM" DRIVE = 16;
 
 
 # Status LEDs
 NET "uBunchLED" LOC = T20;
-NET "TrigLED" LOC = V20;
 
 NET "VXO_P" LOC = M3;
 NET "ClkB_P" LOC = P3;
@@ -228,75 +228,86 @@ NET "TDisB" LOC = B3;
 NET "SD_A" LOC = D5;
 NET "SD_B" LOC = A3;
 
-NET "GTPClk_P(0)" LOC = A10;
-NET "GTPClk_N(0)" LOC = B10;
-NET "GTPClk_P(1)" LOC = C11;
-NET "GTPClk_N(1)" LOC = D11;
+NET "GTPClk_P[0]" LOC = A10;
+NET "GTPClk_N[0]" LOC = B10;
+NET "GTPClk_P[1]" LOC = C11;
+NET "GTPClk_N[1]" LOC = D11;
 
-NET "GTPRx_P(0)" LOC = D7;
-NET "GTPRx_N(0)" LOC = C7;
-NET "GTPRx_P(1)" LOC = D9;
-NET "GTPRx_N(1)" LOC = C9;
+NET "GTPRx_P[0]" LOC = D7;
+NET "GTPRx_N[0]" LOC = C7;
+NET "GTPRx_P[1]" LOC = D9;
+NET "GTPRx_N[1]" LOC = C9;
 
-NET "GTPTx_P(0)" LOC = B6;
-NET "GTPTx_N(0)" LOC = A6;
-NET "GTPTx_P(1)" LOC = B8;
-NET "GTPTx_N(1)" LOC = A8;
+NET "GTPTx_P[0]" LOC = B6;
+NET "GTPTx_N[0]" LOC = A6;
+NET "GTPTx_P[1]" LOC = B8;
+NET "GTPTx_N[1]" LOC = A8;
 
 #NET "TDAQRtn0_P" LOC = E20;
 #NET "TDAQRtn0_N" LOC = E22;
 #NET "TDAQRtn1_P" LOC = H12;
 #NET "TDAQRtn1_N" LOC = G11;
-NET "OGLEDA"     LOC = E16;
-NET "OGLEDB"     LOC = C17;
-NET "YLED"       LOC = A17;
+NET "OGLEDA" LOC = E16;
+NET "OGLEDB" LOC = C17;
+NET "TrigLED" LOC = A17;
 
 
 ##---------- Set placement for tile0_rocketio_wrapper_i/GTPA1_DUAL ------
 
-INST GTP_Xcvr_i/tile0_GTP_Xcvr_i/gtpa1_dual_i LOC=GTPA1_DUAL_X0Y0;
+INST "GTP_Xcvr_i/tile0_GTP_Xcvr_i/gtpa1_dual_i" LOC = GTPA1_DUAL_X0Y0;
 
 ## Specifiying clock rates
 
 # Specifying GTP clock rate 156.25MHz
-TIMESPEC TS_GTPClk_P0 = PERIOD "GTPClk_P0" 6.4 ns HIGH 50%;
+TIMESPEC TS_GTPClk_P0 = PERIOD "GTPClk_P0" 6.4 ns HIGH 50 %;
 NET "GTPClk_P[0]" TNM_NET = "GTPClk_P0";
 #
-TIMESPEC TS_GTPClk_P1 = PERIOD "GTPClk_P1" 6.4 ns HIGH 50%;
+TIMESPEC TS_GTPClk_P1 = PERIOD "GTPClk_P1" 6.4 ns HIGH 50 %;
 NET "GTPClk_P[1]" TNM_NET = "GTPClk_P1";
 
 # Usr Clock Constraints
 NET "UsrClk[0]" TNM_NET = "tile0_txusrclk0_i";
-TIMESPEC "TS_tile0_txusrclk0_i" = PERIOD "tile0_txusrclk0_i" 3.2 ns;
+TIMESPEC TS_tile0_txusrclk0_i = PERIOD "tile0_txusrclk0_i" 3.2 ns;
 
 NET "UsrClk2[0]" TNM_NET = "tile0_txusrclk20_i";
-TIMESPEC "TS_tile0_txusrclk20_i" = PERIOD "tile0_txusrclk20_i" 6.4 ns;
+TIMESPEC TS_tile0_txusrclk20_i = PERIOD "tile0_txusrclk20_i" 6.4 ns;
 
 NET "UsrClk[1]" TNM_NET = "tile0_txusrclk1_i";
-TIMESPEC "TS_tile0_txusrclk1_i" = PERIOD "tile0_txusrclk1_i" 3.2 ns;
+TIMESPEC TS_tile0_txusrclk1_i = PERIOD "tile0_txusrclk1_i" 3.2 ns;
 
 NET "UsrClk2[1]" TNM_NET = "tile0_txusrclk21_i";
-TIMESPEC "TS_tile0_txusrclk21_i" = PERIOD "tile0_txusrclk21_i" 6.4 ns;
+TIMESPEC TS_tile0_txusrclk21_i = PERIOD "tile0_txusrclk21_i" 6.4 ns;
 
 # Specifying VXO frequency
-TIMESPEC TS_ClkB_P = PERIOD "ClkB_P" 10 ns HIGH 50%;
+TIMESPEC TS_ClkB_P = PERIOD "ClkB_P" 10 ns HIGH 50 %;
 NET "ClkB_P" TNM_NET = "ClkB_P";
 
-TIMESPEC TS_VXO_P = PERIOD "VXO_P" 10 ns HIGH 50%;
+TIMESPEC TS_VXO_P = PERIOD "VXO_P" 10 ns HIGH 50 %;
 NET "VXO_P" TNM_NET = "VXO_P";
 
 # Specifying Inter FPGA Link source synchronous timing
-TIMESPEC TS_LINKClk_P0 = PERIOD "LINKClk_P0" 4 ns HIGH 50%;
+TIMESPEC TS_LINKClk_P0 = PERIOD "LINKClk_P0" 4 ns HIGH 50 %;
 NET "LINKClk_P[0]" TNM_NET = "LINKClk_P0";
 
-TIMESPEC TS_LINKClk_P1 = PERIOD "LINKClk_P1" 4 ns HIGH 50%;
+TIMESPEC TS_LINKClk_P1 = PERIOD "LINKClk_P1" 4 ns HIGH 50 %;
 NET "LINKClk_P[1]" TNM_NET = "LINKClk_P1";
 
-TIMESPEC TS_LINKClk_P2 = PERIOD "LINKClk_P2" 4 ns HIGH 50%;
+TIMESPEC TS_LINKClk_P2 = PERIOD "LINKClk_P2" 4 ns HIGH 50 %;
 NET "LINKClk_P[2]" TNM_NET = "LINKClk_P2";
 
 # Exclude settings from the uC/register from timing constraints.
-NET "Clk80MHzAlign" TIG;
 # the constraint below doesn't seem to work, I removed the debug out for the moment
-TIMESPEC "TS_MyPaths" = FROM "GTP_Xcvr_i/tile0_GTP_Xcvr_i/gtpa1_dual_i" TO "GPO_1" TIG; 
+TIMESPEC TS_MyPaths = FROM "GTP_Xcvr_i/tile0_GTP_Xcvr_i/gtpa1_dual_i" TO "GPO_1" TIG ;
 
+## don't enforce timing for settings
+NET "Clk80MHzAlign" TIG; #NET "*syncEnable" TIG;
+NET "FormHold" TIG;
+NET "sendGR" TIG;
+NET "uBwrt" TIG;
+
+#NET "HeartBeatFM_P" IOSTANDARD = LVDS_25;
+#NET "HeartBeatFM_N" IOSTANDARD = LVDS_25;
+NET "GPI" IOSTANDARD = LVCMOS25;
+
+
+NET "EthCS" IOSTANDARD = LVCMOS25;

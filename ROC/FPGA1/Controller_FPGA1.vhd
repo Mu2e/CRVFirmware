@@ -23,6 +23,7 @@ Library UNISIM;
 use UNISIM.vcomponents.all;
 
 use work.Project_defs.all;
+use work.Project_components.all;
 
 use work.git_hash_pkg.all;
 
@@ -96,9 +97,9 @@ Type Array_3x3 is Array(0 to 2) of std_logic_vector(2 downto 0);
 Type Array_3x4 is Array(0 to 2) of std_logic_vector(3 downto 0);
 Type Array_3x5 is Array(0 to 2) of std_logic_vector(4 downto 0);
 Type Array_3x8 is Array(0 to 2) of std_logic_vector(7 downto 0);
-Type Array_3x13 is Array(0 to 2) of std_logic_vector (12 downto 0);
-Type Array_3x14 is Array (0 to 2) of std_logic_vector (13 downto 0);
-Type Array_3x16 is Array(0 to 2) of std_logic_vector (15 downto 0);
+--Type Array_3x13 is Array(0 to 2) of std_logic_vector (12 downto 0);
+--Type Array_3x14 is Array (0 to 2) of std_logic_vector (13 downto 0);
+--Type Array_3x16 is Array(0 to 2) of std_logic_vector (15 downto 0);
 
 Type Array_3x2x10 is Array (0 to 2) of Array_2x10;
 
@@ -405,6 +406,7 @@ signal debugTrigPattern, debugTrigMask : std_logic_vector(15 downto 0);
 signal debugBuffData : std_logic_vector(15 downto 0);
 
 signal sendGR : std_logic; -- used in GR to send back special GR events
+signal FakeNum : std_logic_vector(7 downto 0); -- counts the number of generated fake events
 signal InjectionTimer, InjectionWindow : std_logic_vector(15 downto 0);
 signal InjectionCnt : std_logic_vector(7 downto 0);
 signal InjectionDutyCnt, InjectionDuty, InjectionHighCnt : std_logic_vector(7 downto 0);
@@ -465,6 +467,38 @@ Clk80MHzGenSync : Clk80MHzGen
           MarkerBits => MarkerBits,
           clk80 => Clk80MHz,
 			 shiftCnt => Clk80MHzAlignCnt);
+
+EventBuilderInst : EventBuilder
+    port map (
+            clk              => UsrClk2(0),
+            reset            => not CpldRst,
+            FormRst          => FormRst,
+            LinkFIFOOut      => LinkFIFOOut,
+            LinkFIFORdCnt    => LinkFIFORdCnt,
+            LinkFIFOEmpty    => LinkFIFOEmpty,
+            LinkFIFORdReq    => LinkFIFORdReq,
+            EventBuff_Dat     => EventBuff_Dat,
+            EventBuff_WrtEn   => EventBuff_WrtEn,
+            TStmpWds         => TStmpWds,
+            ActiveReg        => ActiveReg,
+				MarkerDelayed    => MarkerDelayed,
+            LinkRDDL         => LinkRDDL,
+            AddrReg          => AddrReg,
+            FormHold         => FormHold,
+            sendGR           => sendGR,
+            uBinHeader       => uBinHeader,
+			   uBwrt            => uBwrt,
+			   GA               => GA,
+				-- GR/fake data
+				ExtuBunchCount   => ExtuBunchCount,
+				HeartBtCnt       => HeartBtCnt,
+				HeartBeatCnt     => HeartBeatCnt,
+				LastWindow       => LastWindow,
+				Stats            => CRCErrCnt & LosCounter & "000" & PLLStat, -- Status
+				InjectionTs      => InjectionTs,
+				InjectionWindow  => InjectionWindow,
+				FakeNum          => FakeNum
+        );
 
 BunchClkIn : IDDR2
    generic map(
@@ -532,6 +566,7 @@ HeartBeatFM <= HrtBtTxOuts.FM when ExtTmg = '0' else GPI;
 --Debug(3) <= MarkerDelayed;
 --Debug(4) <= HrtBtDone;
 --Debug(5) <= HrtBtFMReq;
+Debug <= "0000000000";
 
 OGLEDA <= HrtBtFMTxEn; -- TODO, indicate PLL lock 
 OGLEDB <= Marker;
@@ -645,6 +680,7 @@ EventBuff: FIFO_SC_4Kx16
       full => EventBuff_Full,
 	   empty => EventBuff_Empty);
 		
+-- REMOVE ME		
 EventBuffSpy : LinkFIFO
   PORT MAP (rst => ResetHi or GTPRxRst,
 	 wr_clk => UsrClk2(0),
@@ -890,14 +926,12 @@ begin
 	TrigReqWdCnt <= X"0"; PRBSCntRst(0) <= '0'; DReqBuff_wr_en <= '0'; 
 	DCSReqWdCnt  <= X"0"; DCSPktBuff_wr_en <= '0'; 
 	DReq_Count <= (others =>'0');
-	LinkRDDL <= "00"; Packet_Parser <= Idle; Event_Builder <= Idle;
+	LinkRDDL <= "00"; Packet_Parser <= Idle;
 	--RxSeqNoErr(0) <= '0'; 
 	Packet_Former <= Idle; FormRst <= '0';
-	LinkFIFORdReq <= (others =>'0'); StatOr <= X"00";  Stat0 <= X"00";
-	uBcheck <= (others =>'0'); uBcheckRef  <= (others =>'0'); uBcheckFlag <= '0';
+	uBcheckRef  <= (others =>'0');
 	EvTxWdCnt <= (others => '0'); EvTxWdCntTC <= '0'; EventBuff_RdEn <= '0'; 
 	DCSBuff_rd_en <= '0';
-	FIFOCount <= (others => (others => '0')); EventBuff_WrtEn <= '0';
 	TStmpBuff_wr_en <= '0'; TStmpBuff_rd_en <= '0'; EvBuffWrtGate <= '0';
 	TStmpBuff_Full <= '0'; TStmpBuff_Emtpy <= '0';
 	TxPkCnt <= (others => '0'); Pkt_Timer <= X"0";
@@ -917,7 +951,6 @@ begin
 	debugRst <= '1'; -- active high
 	debugBuff_rd_en <= '0';
 	DDRSel <= '0'; -- 0 is bunch clock, 1 is marker line
-	FakeCnt <= (others =>'0'); FakeDat <= (others =>'0');
 	DRdone <= '0'; DRCnt <= (others =>'0');
 	pktFormerTimeout <= '0';
 	pktFormerSend <= '0';
@@ -944,14 +977,14 @@ elsif rising_edge (UsrClk2(0)) then
 	end if;
 
 -- If a packet header is being received then reset the Rx CRC generator
-	  if Rx_IsCtrl(0) = "10" and RxLOS(0)(1) = '0' then RxCRCRst(0) <= '1';
+	if Rx_IsCtrl(0) = "10" and RxLOS(0)(1) = '0' then RxCRCRst(0) <= '1';
 	else RxCRCRst(0) <= '0';
 	end if;
 
 	RxCRCRstD(0) <= RxCRCRst(0);
 	GTPRxReg(0) <= GTPRx(0);
 
-	  if Rx_IsCtrl(0) = "00" and RxLOS(0)(1) = '0' then RdCRCEn(0) <= '1'; 
+	if Rx_IsCtrl(0) = "00" and RxLOS(0)(1) = '0' then RdCRCEn(0) <= '1'; 
 	else RdCRCEn(0) <= '0'; 
 	end if;
 
@@ -965,7 +998,7 @@ elsif rising_edge (UsrClk2(0)) then
 	end if;
 
 	UsrWRDL(0)(0) <= not uCWR and not CpldCS;
-   UsrWRDL(0)(1) <= UsrWRDL(1)(0);
+    UsrWRDL(0)(1) <= UsrWRDL(1)(0);
 
 	UsrRDDL(0)(0) <= not uCRD and not CpldCS;
 	UsrRDDL(0)(1) <= UsrRDDL(0)(0);
@@ -986,16 +1019,16 @@ if WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = debugTrigAdd
 		debugRst <= uCD(12);
 else DDRSel <= DDRSel; debugRst <= debugRst;
 end if;
-if WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = debugTrigPatternAdd
-   then 
-	   debugTrigPattern <= uCD(15 downto 0); 
-else debugTrigPattern <= debugTrigPattern;
-end if;
-if WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = debugTrigMaskAdd
-   then
-	    debugTrigMask <= uCD(15 downto 0); 
-else debugTrigMask <= debugTrigMask;
-end if;
+--if WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = debugTrigPatternAdd
+--   then 
+--	   debugTrigPattern <= uCD(15 downto 0); 
+--else debugTrigPattern <= debugTrigPattern;
+--end if;
+--if WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = debugTrigMaskAdd
+--   then
+--	    debugTrigMask <= uCD(15 downto 0); 
+--else debugTrigMask <= debugTrigMask;
+--end if;
 
 if (UsrRDDL(0) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPRdAddr0) 
    or (GTPRxBuff_DatCnt(0) >= '0' & X"FFE" and GTPRxBuff_wr_en(0) = '1') -- this line makes the fifo behave like a trace buffer
@@ -1309,262 +1342,8 @@ if Packet_Parser = Check_Seq_No and GTPRxBuff_Out(0)(7 downto 5) /= RxSeqNo(0)
  elsif GTPRst = '1' then RxSeqNoErr(0) <= '0';
  end if;
 
----------------------------------------------------------------------------
--- Idle,RdInWdCnt0,RdInWdCnt1,RdInWdCnt2,SumWdCnt,WrtWdCnt,RdStat0,
--- RdStat1,RdStat2,WrtStat,WaitEvent,ReadFIFO0,ReadFIFO1,ReaddFIFO2
----------------------------------------------------------------------------
-Case Event_Builder is
-	when Idle => --Debug(10 downto 7) <= X"0";
-		if LinkFIFOEmpty /= 7 and FormHold = '0' and TStmpWds >= 3 and sendGR = '0'
-		 then Event_Builder <= WaitEvent;
-		--elsif (sendGR = '1' and MarkerDelayed /= 0) then Event_Builder <= Fake;
-		elsif sendGR = '1' then Event_Builder <= Fake;
-		else Event_Builder <= Idle;
-		end if;
-	when Fake => Event_Builder <= FakeWrite;
-	when FakeWrite =>
-	   if FakeCnt /= 0 then Event_Builder <= FakeWrite;
-		else Event_Builder <= FakeReset;
-		end if;
-	when FakeReset =>
-	   if sendGR = '0' then Event_Builder <= Idle;
-		else                 Event_Builder <= FakeReset;
-		end if;
-	when WaitEvent => --Debug(10 downto 7) <= X"1";
-			-- Wait for a complete event to be in all link FIFOs from active ports
-	    if ((LinkFIFOOut(0)(12 downto 0) <= LinkFIFORdCnt(0) and LinkFIFOEmpty(0) = '0') or ActiveReg(7 downto 0) = 0)
-	   and ((LinkFIFOOut(1)(12 downto 0) <= LinkFIFORdCnt(1) and LinkFIFOEmpty(1) = '0') or ActiveReg(15 downto 8) = 0)
-	   and ((LinkFIFOOut(2)(12 downto 0) <= LinkFIFORdCnt(2) and LinkFIFOEmpty(2) = '0') or ActiveReg(23 downto 16) = 0) 
-	    then
-		 if ActiveReg(15 downto 0) = 0 then Event_Builder <= RdInWdCnt2;
-	  elsif ActiveReg(7 downto 0) = 0 then Event_Builder <= RdInWdCnt1;
-	  else Event_Builder <= RdInWdCnt0;
-	  end if;
-	  elsif FormRst = '1' then Event_Builder <= Idle; 
-	  else Event_Builder <= WaitEvent;
-	end if;
- -- Read in three word counts in order to sum into a controller word count
-	when RdInWdCnt0 => --Debug(10 downto 7) <= X"2"; 
-		  if ActiveReg(23 downto 8) = 0 then Event_Builder <= SumWdCnt;
-	  elsif ActiveReg(15 downto 8) = 0 then Event_Builder <= RdInWdCnt2;
-	  else Event_Builder <= RdInWdCnt1;
-	  end if;
-	when RdInWdCnt1 => --Debug(10 downto 7) <= X"3";
-		if ActiveReg(23 downto 16) = 0 then Event_Builder <= SumWdCnt;
-			else Event_Builder <= RdInWdCnt2;
-		end if;
-	when RdInWdCnt2 => --Debug(10 downto 7) <= X"4";
-			Event_Builder <= SumWdCnt;
--- Subtract 2 from each link word count FIFO to account for the word count and status words
-	when SumWdCnt => --Debug(10 downto 7) <= X"5"; 
-			Event_Builder <= WrtWdCnt;
--- Write the controller word count	
-	when WrtWdCnt => --Debug(10 downto 7) <= X"6"; 
-		if ActiveReg(15 downto 0) = 0 then Event_Builder <= RdStat2;
-	elsif ActiveReg(7 downto 0) = 0 then Event_Builder <= RdStat1;
-	  else Event_Builder <= RdStat0;
-	end if;  
--- Read the status from the link FIFOs
-	when RdStat0 => --Debug(10 downto 7) <= X"7";
-		if ActiveReg(23 downto 8) = 0 then Event_Builder <= RduB;
-	elsif ActiveReg(15 downto 8) = 0 then Event_Builder <= RdStat2;
-	   else Event_Builder <= RdStat1;
-		end if;
-	when RdStat1 => --Debug(10 downto 7) <= X"8"; 
-			if ActiveReg(23 downto 16) = 0 then Event_Builder <= RduB;
-			else Event_Builder <= RdStat2;
-			end if;
-	when RdStat2 => --Debug(10 downto 7) <= X"9"; 
-		Event_Builder <= RduB;
--- Write the "OR" of the status as the controller status word
-
-   when RduB => -- this step could be jumped
-	if uBinHeader = '0' then
-	    Event_Builder <= WrtStat;
-	else
-	   if ActiveReg(15 downto 0) = 0 then Event_Builder <= RduB2low; -- only FPGA2 active 
-	   elsif ActiveReg(7 downto 0) = 0 then Event_Builder <= RduB1low; -- FPGA1 active, FPGA0 not active, FPGA2 maybe active
-	   else Event_Builder <= RduB0low; -- FPGA0 active
-	   end if;  
-   end if;
-
-   when RduB2low =>
-	    Event_Builder <= RduB2high;
-	when RduB2high =>
-	    Event_Builder <= WrtStat;
-		 
-	when RduB1low =>
-		 Event_Builder <= RduB1high;
-	when RduB1high =>
-		 if ActiveReg(23 downto 16) = 0 then Event_Builder <= WrtStat; -- only FPGA1 active
-		 else Event_Builder <= VerifyuB2low; -- verify against FPGA2, FPGA0 is not active
-		 end if;
-		 
-	when VerifyuB2low =>
-	    Event_Builder <= VerifyuB2high;
-	when VerifyuB2high =>
-	    Event_Builder <= WrtStat;
-		 
-	when RduB0low =>
-	    Event_Builder <= RduB0high;
-	when RduB0high =>
-	    if ActiveReg(23 downto 8) = 0 then Event_Builder <= WrtStat; -- only FPGA0
-	    elsif ActiveReg(15 downto 8) = 0 then Event_Builder <= VerifyuB2low; -- only FPGA2, check against it
-	    else Event_Builder <= VerifyuB1low; -- verify against FPGA1 and FPGA2
-		 end if;
-		 
-	when VerifyuB1low =>
-	    Event_Builder <= VerifyuB1high;
-	when VerifyuB1high =>
-	    if ActiveReg(23 downto 16) = 0 then Event_Builder <= WrtStat; -- only FPGA2 not active, done
-		 else Event_Builder <= VerifyuB2low; -- verify against FPGA2, FPGA0 is not active
-		 end if;
-
-	when WrtStat => 
-	   if uBwrt = '1' then
-		    Event_Builder <= WrtUbLow;
-		else
-		    Event_Builder <= ReadFIFO;
-		end if;
-	
-	when WrtUbLow => 
-	    Event_Builder <= WrtUbHigh;
-	when WrtUbHigh =>
-	    Event_Builder <= ReadFIFO;
-		 
-	--Debug(10 downto 7) <= X"A";
---	    Event_Builder <= WrtWdCnt0;
---   when WrtWdCnt0 =>
---	    Event_Builder <= WrtWdCnt1;
---	when WrtWdCnt1 => -- not really nded
---	    Event_Builder <= WrtWdCnt2;
---	when WrtWdCnt2 =>
--- Skip over any Link that has no data
-    when ReadFIFO => -- this step doesn't do anything, we could jump it to speed up things
-			if FIFOCount(0) /= 0 and ActiveReg(7 downto 0) /= 0 
-				then Event_Builder <= ReadFIFO0;
-	   elsif FIFOCount(0) = 0 and FIFOCount(1) /= 0 
-				and ActiveReg(15 downto 8) /= 0 
-				then Event_Builder <= ReadFIFO1; 
-	   elsif FIFOCount(0) = 0 and FIFOCount(1) = 0 
-				and FIFOCount(2) /= 0 and ActiveReg(23 downto 16) /= 0  
-				then Event_Builder <= ReadFIFO2; 
-	   else Event_Builder <= Idle;
-		end if;
--- Read the data words from the three link FIFOs in succession
-	 when ReadFIFO0 => --Debug(10 downto 7) <= X"B";
-		if FIFOCount(0) = 1 or FIFOCount(0) = 0 then  
--- Skip over any Link that has no data
-				if FIFOCount(1) /= 0 and ActiveReg(15 downto 8) /= 0  
-				  then Event_Builder <= ReadFIFO1; 
-				 elsif FIFOCount(1) = 0 and FIFOCount(2) /= 0 and ActiveReg(23 downto 16) /= 0 
-				  then Event_Builder <= ReadFIFO2;
-		       else Event_Builder <= Idle;
-		      end if;
-		  elsif FormRst = '1' then Event_Builder <= Idle;
-		else Event_Builder <= ReadFIFO0;
-		end if;
-	 when ReadFIFO1 => --Debug(10 downto 7) <= X"C";
-		if FIFOCount(1) = 1 or FIFOCount(1) = 0 then
--- Skip over any Link that has no data
-			 if FIFOCount(2) /= 0  and ActiveReg(23 downto 16) /= 0  
-			   then Event_Builder <= ReadFIFO2;
-		     else Event_Builder <= Idle;
-			 end if;
-		 elsif FormRst = '1' then Event_Builder <= Idle; 
-		else Event_Builder <= ReadFIFO1;
-		end if;
-	 when ReadFIFO2 => --Debug(10 downto 7) <= X"D";
-		if FIFOCount(2) = 1 or FIFOCount(2) = 0 
-			then Event_Builder <= Idle;
-		 elsif FormRst = '1' then Event_Builder <= Idle; 
-		else Event_Builder <= ReadFIFO2;
-		end if;
-	 when others => --Debug(10 downto 7) <= X"E";
-	   Event_Builder <= Idle;
-  end case;
 
 
--- GR Fake Data
-   if Event_Builder = Fake then
-	   FakeCnt <= X"b"; -- 11 = 8+4-1
-		FakeDat <= X"0008"; -- payload, exclude cnt + 3 x uB number
-	elsif Event_Builder = FakeWrite then
-	   FakeCnt <= FakeCnt - 1;
-		Case FakeCnt is
-		   when X"B" => FakeDat <= X"aaaa";
-	      when X"A" => FakeDat <= X"9999";
-		   when X"9" => FakeDat <= X"8888";
-		   when X"8" => FakeDat <= X"7777";
-		   when X"7" => FakeDat <= X"6666";
-		   when X"6" => FakeDat <= X"5555";
-		   when X"5" => FakeDat <= X"4444";
-		   when X"4" => FakeDat <= X"3333";
-		   when X"3" => FakeDat <= X"2222";
-		   when X"2" => FakeDat <= X"1111";
-		   when X"1" => FakeDat <= X"FFFF";
-		   when others => FakeDat <= (others => '0');
-		end Case;
-	else
-	   FakeCnt <= FakeCnt;
-		FakeDat <= (others => '0');
-	end if;
-
-
--- Sum the word counts from the three Link FIFOs.
-		if Event_Builder = Idle then EventSum <= (others => '0');
--- Account for removing the word count and status words from the data
-	elsif Event_Builder = RdInWdCnt0 then 
-	    if uBinHeader = '0' then EventSum <= LinkFIFOOut(0) - 2; else EventSum <= LinkFIFOOut(0) - 4; end if;
-	elsif Event_Builder = RdInWdCnt1 then 
-	    if uBinHeader = '0' then EventSum <= LinkFIFOOut(1) - 2; else EventSum <= LinkFIFOOut(1) - 4; end if;
-	elsif Event_Builder = RdInWdCnt2 then 
-	    if uBinHeader = '0' then EventSum <= LinkFIFOOut(2) - 2; else EventSum <= LinkFIFOOut(2) - 4; end if;
-	else EventSum <= EventSum;
-	end if;
-	
--- storte the number of events from the first two FPGAs
-      if Event_Builder = Idle then Event0 <= (others => '0');
-	elsif Event_Builder = RdInWdCnt0 then Event0 <= LinkFIFOOut(0) - 2;
-	else Event0 <= Event0;
-	end if;
-      if Event_Builder = Idle then Event1 <= (others => '0');
-	elsif Event_Builder = RdInWdCnt1 then Event1 <= LinkFIFOOut(1) - 2;
-	else Event1 <= Event1;
-	end if;
-      if Event_Builder = Idle then Event2 <= (others => '0');
-	elsif Event_Builder = RdInWdCnt2 then Event2 <= LinkFIFOOut(2) - 2;
-	else Event2 <= Event2;
-	end if;
-
--- Select the data source for the event buffer FIFO
-	   if Event_Builder = WrtWdCnt  then EventBuff_Dat <= EventSum;
-	--elsif Event_Builder = WrtStat	then EventBuff_Dat <= uBcheckFlag & Stat0(6 downto 0) & StatOR;
-	elsif Event_Builder = WrtStat	then EventBuff_Dat <= "0" & Stat0(6 downto 0) & StatOR;
-   elsif Event_Builder = WrtWdCnt0 then EventBuff_Dat <= Event0;
-	elsif Event_Builder = WrtWdCnt1 then EventBuff_Dat <= Event1;
-	elsif Event_Builder = WrtWdCnt2 then EventBuff_Dat <= Event2;
-	elsif Event_Builder = WrtUbLow  then EventBuff_Dat <= uBcheck(15 downto 0);
-	elsif Event_Builder = WrtUbHigh then EventBuff_Dat <= uBcheck(31 downto 16);
-	elsif LinkFIFORdReq(0) = '1'    then EventBuff_Dat <= LinkFIFOOut(0);
-	elsif LinkFIFORdReq(1) = '1'    then EventBuff_Dat <= LinkFIFOOut(1);
-	elsif LinkFIFORdReq(2) = '1'    then EventBuff_Dat <= LinkFIFOOut(2);
-	elsif Event_Builder = FakeWrite then EventBuff_Dat <= FakeDat;
-	else                                 EventBuff_Dat <= EventBuff_Dat;
-	end if;
-
--- Do an "or" of the FEB error words for the cotroller error word
-   if Event_Builder = RdStat0 then 
-				StatOr <= StatOr or LinkFIFOOut(0)(7 downto 0);
-				Stat0  <=           LinkFIFOOut(0)(7 downto 0);
-elsif Event_Builder = RdStat1 then 
-				StatOr <= StatOr or LinkFIFOOut(1)(7 downto 0);
-				Stat0 <= Stat0;
-elsif Event_Builder = RdStat2 then 
-				StatOr <= StatOr or LinkFIFOOut(2)(7 downto 0);
-				Stat0 <= Stat0;
-else StatOr <= StatOr; Stat0 <= Stat0;
-end if;
 
 -- latch uB status for comparison
 if Packet_Former = Idle then
@@ -1582,106 +1361,6 @@ elsif Packet_Former = WrtHdrPkt then
 end if;
 
 
-
--- read uB numbers from inout buffers
-   if Event_Builder = Idle then 
-	    if uBdebug2 = '1' then
-		    uBcheck <= uBcheck;
-		 else
-	        uBcheck <= (others =>'1');
-		 end if;
-	elsif Event_Builder = RdUb0low then 
-	    uBcheck(31 downto 16) <= uBcheck(31 downto 16);
-		 if uBdebug = '1' then
-		     uBcheck(15 downto  0) <= X"aa00";
-		 else
-		     uBcheck(15 downto  0) <= LinkFIFOOut(0);
-		 end if;
-	elsif Event_Builder = RdUb0high then 
-	    --uBcheck(31 downto 16) <= LinkFIFOOut(0);
-		 if uBdebug = '1'  then
-		     uBcheck(31 downto  16) <= X"aa01";
-		 else
-		     uBcheck(31 downto  16) <= LinkFIFOOut(0);
-		 end if;
-		 uBcheck(15 downto  0) <= uBcheck(15 downto 0);
-	elsif Event_Builder = RdUb1low then 
-	    uBcheck(31 downto 16) <= uBcheck(31 downto 16);
-		 --uBcheck(15 downto  0) <= LinkFIFOOut(1);
-		 if uBdebug = '1'  then
-		     uBcheck(15 downto  0) <= X"aa02";
-		 else
-		     uBcheck(15 downto  0) <= LinkFIFOOut(1);
-		 end if;
-	elsif Event_Builder = RdUb1high then 
-	    --uBcheck(31 downto 16) <= LinkFIFOOut(1);
-		 if uBdebug = '1'  then
-		     uBcheck(31 downto  16) <= X"aa03";
-		 else
-		     uBcheck(31 downto  16) <= LinkFIFOOut(1);
-		 end if;
-		 uBcheck(15 downto  0) <= uBcheck(15 downto 0);
-	elsif Event_Builder = RdUb2low then 
-	    uBcheck(31 downto 16) <= uBcheck(31 downto 16);
-		 --uBcheck(15 downto  0) <= LinkFIFOOut(2);
-		 if uBdebug = '1'  then
-		     uBcheck(15 downto  0) <= X"aa04";
-		 else
-		     uBcheck(15 downto  0) <= LinkFIFOOut(2);
-		 end if;
-	elsif Event_Builder = RdUb2high then 
-	    --uBcheck(31 downto 16) <= LinkFIFOOut(2);
-		 if uBdebug = '1'  then
-		     uBcheck(31 downto  16) <= X"aa05";
-		 else
-		     uBcheck(31 downto  16) <= LinkFIFOOut(2);
-		 end if;
-		 uBcheck(15 downto  0) <= uBcheck(15 downto 0);
-	else uBcheck <= uBcheck;
-	end if;
-	
--- check if uB are consistent
-   if Event_Builder = Idle then 
-	    uBcheckFlag <= '0';
-	elsif Event_Builder = VerifyUb0low then
-	       if (uBcheck(15 downto  0) xor LinkFIFOOut(0)) = X"0000" then
-			     uBcheckFlag <= uBcheckFlag;
-			 else
-				  uBcheckFlag <= '1';
-			 end if;
-	elsif Event_Builder = VerifyUb0high then
-	       if (uBcheck(31 downto  16) xor LinkFIFOOut(0)) = X"0000" then
-			     uBcheckFlag <= uBcheckFlag;
-			 else
-				  uBcheckFlag <= '1';
-			 end if;
-	elsif Event_Builder = VerifyUb1low then
-	       if (uBcheck(15 downto  0) xor LinkFIFOOut(1)) = X"0000" then
-			     uBcheckFlag <= uBcheckFlag;
-			 else
-				  uBcheckFlag <= '1';
-			 end if;
-	elsif Event_Builder = VerifyUb1high then
-	       if (uBcheck(31 downto  16) xor LinkFIFOOut(1)) = X"0000" then
-			     uBcheckFlag <= uBcheckFlag;
-			 else
-				  uBcheckFlag <= '1';
-			 end if;
-	elsif Event_Builder = VerifyUb2low then
-	       if (uBcheck(15 downto  0) xor LinkFIFOOut(2)) = X"0000" then
-			     uBcheckFlag <= uBcheckFlag;
-			 else
-				  uBcheckFlag <= '1';
-			 end if;
-	elsif Event_Builder = VerifyUb2high then
-	       if (uBcheck(31 downto  16) xor LinkFIFOOut(2)) = X"0000" then
-			     uBcheckFlag <= uBcheckFlag;
-			 else
-				  uBcheckFlag <= '1';
-			 end if;
-   else uBcheckFlag <= uBcheckFlag;
-	end if;
-
 --Copy port activity bits from the other FPGAs to this register
 if TrigTx_Sel = '1' 
    then 
@@ -1693,70 +1372,6 @@ if TrigTx_Sel = '1'
 	 end if;
    else ActiveReg <= FPGA234_Active(2) & FPGA234_Active(1) & FPGA234_Active(0);
 end if;
-
--- Count down the words read from each of the link FIFOs
-	if Event_Builder = RdInWdCnt0 then 
-	   if uBinHeader = '0' then FIFOCount(0) <= LinkFIFOOut(0) - 2; else FIFOCount(0) <= LinkFIFOOut(0) - 4; end if;   
-	elsif Event_Builder = ReadFIFO0 and FIFOCount(0) /= 0 
-						then FIFOCount(0) <= FIFOCount(0) - 1;
-	else FIFOCount(0) <= FIFOCount(0);
-	end if;
-
-	if Event_Builder = RdInWdCnt1 then 
-	    if uBinHeader = '0' then FIFOCount(1) <= LinkFIFOOut(1) - 2; else FIFOCount(1) <= LinkFIFOOut(1) - 4; end if;
-	elsif Event_Builder = ReadFIFO1 and FIFOCount(1) /= 0 
-						then FIFOCount(1) <= FIFOCount(1) - 1;
-	else FIFOCount(1) <= FIFOCount(1);
-	end if;
-
-	if Event_Builder = RdInWdCnt2 then 
-	    if uBinHeader = '0' then FIFOCount(2) <= LinkFIFOOut(2) - 2; else FIFOCount(2) <= LinkFIFOOut(2) - 4; end if;
-	elsif Event_Builder = ReadFIFO2 and FIFOCount(2) /= 0 
-						then FIFOCount(2) <= FIFOCount(2) - 1;
-	else FIFOCount(2) <= FIFOCount(2);
-	end if;
-
--- Link FIFO reads
--- Microcontroller read
-   if (LinkRDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = LinkRdAddr(0))
--- Read of header words, read of data words
-   or Event_Builder = RdInWdCnt0 or Event_Builder = RdStat0 or Event_Builder = ReadFIFO0
-	or (Event_Builder = RdUb and uBinHeader = '1') or Event_Builder = RdUb0low --or Event_Builder = RdUb0high
-	or Event_Builder = VerifyUb0low --or Event_Builder = VerifyUb0high
- 	then LinkFIFORdReq(0) <= '1'; 
-	else LinkFIFORdReq(0) <= '0'; 
-	end if;
-
- if (LinkRDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = LinkRdAddr(1))
--- Read of header words, read of data words
-   or Event_Builder = RdInWdCnt1 or Event_Builder = RdStat1 or Event_Builder = ReadFIFO1
-	or (Event_Builder = RdUb and uBinHeader = '1') or Event_Builder = RdUb1low --or Event_Builder = RdUb1high
-	or Event_Builder = VerifyUb1low --or Event_Builder = VerifyUb1high
-	then LinkFIFORdReq(1) <= '1'; 
-	else LinkFIFORdReq(1) <= '0'; 
-	end if;
-
- if (LinkRDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = LinkRdAddr(2))
--- Read of header words, read of data words
-   or Event_Builder = RdInWdCnt2 or Event_Builder = RdStat2 or Event_Builder = ReadFIFO2
-	or (Event_Builder = RdUb and uBinHeader = '1') or Event_Builder = RdUb2low --or Event_Builder = RdUb2high
-	or Event_Builder = VerifyUb2low --or Event_Builder = VerifyUb2high
-	then LinkFIFORdReq(2) <= '1'; 
-	else LinkFIFORdReq(2) <= '0'; 
-	end if;
-
- if Event_Builder = Idle then EvBuffWrtGate <= '0';
- elsif Event_Builder = WrtStat then EvBuffWrtGate <= '1';
- else EvBuffWrtGate <= EvBuffWrtGate;
- end if;
-
- if Event_Builder = WrtWdCnt or Event_Builder = WrtWdCnt0 or Event_Builder = WrtWdCnt1 or Event_Builder = WrtWdCnt2
-   or Event_Builder = WrtStat or Event_Builder = WrtUbLow or Event_Builder = WrtUbHigh
-	or (LinkFIFORdReq /= 0 and EvBuffWrtGate = '1')
-	or Event_Builder = FakeWrite
-   then EventBuff_WrtEn <= '1'; --Debug(6) <= '1';
-  else EventBuff_WrtEn <= '0';  --Debug(6) <= '0';
- end if;
 
 
 if (Packet_Former = WrtCtrlHdrPkt and (Pkt_Timer = 8 or Pkt_Timer = 5 
@@ -1907,17 +1522,17 @@ Case Packet_Former is
 		elsif FormRst = '1'                      then Packet_Former <= Idle;
 		else                                          Packet_Former <= WrtDCSPkt;
 		end if;
-	when WrtGRPkt => FormStatReg <= "111";
-	   if FormStatReg = "111" and Pkt_Timer = 0 then Packet_Former <= WrtGRPkt2;
-		elsif FormRst = '1'                      then Packet_Former <= Idle;
-		else                                          Packet_Former <= WrtGRPkt;
-		end if;
-	when WrtGRPkt2 => FormStatReg <= "110";
-	   if FormStatReg = "110" and Pkt_Timer = 0 and DReqBuff_Emtpy = '0' -- "100" guard probably not needed
-		    then Packet_Former <= Idle;
-		elsif FormRst = '1' then Packet_Former <= Idle;
-		else Packet_Former <= WrtGRPkt2;
-		end if;
+	--when WrtGRPkt => FormStatReg <= "111";
+	--   if FormStatReg = "111" and Pkt_Timer = 0 then Packet_Former <= WrtGRPkt2;
+	--	elsif FormRst = '1'                      then Packet_Former <= Idle;
+	--	else                                          Packet_Former <= WrtGRPkt;
+	--	end if;
+	--when WrtGRPkt2 => FormStatReg <= "110";
+	--   if FormStatReg = "110" and Pkt_Timer = 0 and DReqBuff_Emtpy = '0' -- "100" guard probably not needed
+	--	    then Packet_Former <= Idle;
+	--	elsif FormRst = '1' then Packet_Former <= Idle;
+	--	else Packet_Former <= WrtGRPkt2;
+	--	end if;
 		
 	when others => Packet_Former <= Idle; FormStatReg <= "101"; --Debug(5 downto 3) <= "000";
 end Case;
@@ -2126,40 +1741,40 @@ end if;
 -- State machine for sending trigger requests from internal trigger generator
 -- Idle,SendTrigHdr,SendPktType,SendPad0,SenduBunch0,SenduBunch1,
 --	SenduBunch2,SendPad1,SendPad2,SendPad3,SendCRC
-Case IntTrigSeq is
-	when Idle =>
-	  if HrtBtTxAck = '1' then IntTrigSeq <= SendTrigHdr;
-	   else IntTrigSeq <= Idle;
-	  end if;
-	when SendTrigHdr => IntTrigSeq <= SendPad0;
-	when SendPad0 => IntTrigSeq <= SendPktType;
-	when SendPktType =>  IntTrigSeq <= SenduBunch0;
-	when SenduBunch0 => IntTrigSeq <= SenduBunch1;
-	when SenduBunch1 => IntTrigSeq <= SenduBunch2;
-	when SenduBunch2 => IntTrigSeq <= SendPad1;
-	when SendPad1 => IntTrigSeq <= SendPad2;
-	when SendPad2 => IntTrigSeq <= SendPad3;
-	when SendPad3 => IntTrigSeq <= WaitCRC;
-	when WaitCRC => IntTrigSeq <= SendCRC;
-	when SendCRC => IntTrigSeq <= SetPktType;
-	when SetPktType => 
-		if Packet_Type = X"1" and DReq_Tx_Ack = '1' then
-			Packet_Type <= X"2";
-			IntTrigSeq <= SendTrigHdr;
-		else
-			Packet_Type <= X"1";
-			IntTrigSeq <= Idle;
-	   end if;
-	when others => IntTrigSeq <= Idle;
-end Case;
+--Case IntTrigSeq is
+--	when Idle =>
+--	  if HrtBtTxAck = '1' then IntTrigSeq <= SendTrigHdr;
+--	   else IntTrigSeq <= Idle;
+--	  end if;
+--	when SendTrigHdr => IntTrigSeq <= SendPad0;
+--	when SendPad0 => IntTrigSeq <= SendPktType;
+--	when SendPktType =>  IntTrigSeq <= SenduBunch0;
+--	when SenduBunch0 => IntTrigSeq <= SenduBunch1;
+--	when SenduBunch1 => IntTrigSeq <= SenduBunch2;
+--	when SenduBunch2 => IntTrigSeq <= SendPad1;
+--	when SendPad1 => IntTrigSeq <= SendPad2;
+--	when SendPad2 => IntTrigSeq <= SendPad3;
+--	when SendPad3 => IntTrigSeq <= WaitCRC;
+--	when WaitCRC => IntTrigSeq <= SendCRC;
+--	when SendCRC => IntTrigSeq <= SetPktType;
+--	when SetPktType => 
+--		if Packet_Type = X"1" and DReq_Tx_Ack = '1' then
+--			Packet_Type <= X"2";
+--			IntTrigSeq <= SendTrigHdr;
+--		else
+--			Packet_Type <= X"1";
+--			IntTrigSeq <= Idle;
+--	   end if;
+--	when others => IntTrigSeq <= Idle;
+--end Case;
 
-	if IntTrigSeq = SetPktType and Packet_Type = X"1" then 
-		HrtBtDone <= '1';
-	elsif
-		HrtBtFMTxEn = '1'
-	then 
-		HrtBtDone <= '0';
-	end if;
+--	if IntTrigSeq = SetPktType and Packet_Type = X"1" then 
+--		HrtBtDone <= '1';
+--	elsif
+--		HrtBtFMTxEn = '1'
+--	then 
+--		HrtBtDone <= '0';
+--	end if;
 
 -- Use this address to append K28.0 to Dx.y where x is 5 bits of data and
 -- y is the packet sequence number
@@ -2307,7 +1922,7 @@ port map (
 	datain_p     	=> SerDesInP(i),
 	datain_n     	=> SerDesInN(i),
 	rxioclkp    	=> rxioclkp(i),
-	rxioclkn   		=> rxioclkn(i),
+	rxioclkn   		=> rxioclkn(i), 
 	rxserdesstrobe => rx_serdesstrobe(i),
 	gclk    		=> RxOutClk(i), -- this clock is assymmetric beacuse of the odd serialization factor
 	bitslip   	=> SlipReq(i),
@@ -3029,26 +2644,26 @@ if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr
   end if;
 
 -- Counter used to prescale data requests during beam on
-	if Beam_On = '0'  
-	 or (TstTrigEn = '1' and IntTmgEn = '1' and Int_uBunch = 1 
-	and Beam_On = '1' and DRCount = 7 and BmOnTrigReq = '1' and DReqPrescale = PreScaleReg) then 
-	  DReqPrescale <= (others => '0'); 
-	elsif TstTrigEn = '1' and IntTmgEn = '1' and Int_uBunch = 1 
-	and Beam_On = '1' and DRCount = 7 and BmOnTrigReq = '1' and DReqPrescale /= PreScaleReg then 
-	  DReqPrescale <= DReqPrescale + 1;
-	else
-	  DReqPrescale <= DReqPrescale;
-	end if;
+--	if Beam_On = '0'  
+--	 or (TstTrigEn = '1' and IntTmgEn = '1' and Int_uBunch = 1 
+--	and Beam_On = '1' and DRCount = 7 and BmOnTrigReq = '1' and DReqPrescale = PreScaleReg) then 
+--	  DReqPrescale <= (others => '0'); 
+--	elsif TstTrigEn = '1' and IntTmgEn = '1' and Int_uBunch = 1 
+--	and Beam_On = '1' and DRCount = 7 and BmOnTrigReq = '1' and DReqPrescale /= PreScaleReg then 
+--	  DReqPrescale <= DReqPrescale + 1;
+--	else
+--	  DReqPrescale <= DReqPrescale;
+--	end if;
 
 -- Send a heart request to transmit a data request packet.
-if TstTrigEn = '1' and IntTmgEn = '1' and Int_uBunch = 1 
-	and ((Beam_On = '1' and DRCount = 7 and BmOnTrigReq = '1' and DReqPrescale = PreScaleReg) 
-	or DRCount = 143)
-	then Dreq_Tx_Req <= '1';
-elsif DReq_Tx_Ack = '1'
-	then Dreq_Tx_Req <= '0';
-end if;
-Dreq_Tx_ReqD <= Dreq_Tx_Req;
+--if TstTrigEn = '1' and IntTmgEn = '1' and Int_uBunch = 1 
+--	and ((Beam_On = '1' and DRCount = 7 and BmOnTrigReq = '1' and DReqPrescale = PreScaleReg) 
+--	or DRCount = 143)
+--	then Dreq_Tx_Req <= '1';
+--elsif DReq_Tx_Ack = '1'
+--	then Dreq_Tx_Req <= '0';
+--end if;
+--Dreq_Tx_ReqD <= Dreq_Tx_Req;
 
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = IDregAddr 
 then IDReg <= uCD(3 downto 0);
@@ -3151,50 +2766,50 @@ else Counter1s <= (others => '0');
 end if;
 
 -- 1.4 second super cycle count in 100 us steps (14000)
-if IntTmgEn = '1' and Counter100us = Count100us and SuperCycleCount /= SuperCycleLength 
- then SuperCycleCount <= SuperCycleCount + 1;
-elsif (Counter100us = Count100us and SuperCycleCount = SuperCycleLength) or IntTmgEn = '0'
- then SuperCycleCount <= (others => '0');
-else SuperCycleCount <= SuperCycleCount;
-end if;
+--if IntTmgEn = '1' and Counter100us = Count100us and SuperCycleCount /= SuperCycleLength 
+-- then SuperCycleCount <= SuperCycleCount + 1;
+--elsif (Counter100us = Count100us and SuperCycleCount = SuperCycleLength) or IntTmgEn = '0'
+-- then SuperCycleCount <= (others => '0');
+--else SuperCycleCount <= SuperCycleCount;
+--end if;
 
 -- 4.72 MHz generator
-if IntTmgEn = '1' then DRFreq <= DRFreq + X"0C154C98";
-else DRFreq <= (others => '0');
-end if;
+--if IntTmgEn = '1' then DRFreq <= DRFreq + X"0C154C98";
+--else DRFreq <= (others => '0');
+--end if;
 
 -- Edge detector for the DDS MSB
-if DRFreq(31) = '1' then Int_uBunch(0) <= '1';
-else Int_uBunch(0) <= '0';
-end if;
-Int_uBunch(1) <= Int_uBunch(0);
+--if DRFreq(31) = '1' then Int_uBunch(0) <= '1';
+--else Int_uBunch(0) <= '0';
+--end if;
+--Int_uBunch(1) <= Int_uBunch(0);
 
 -- For now define the on spill to be 8 4.7MHz ticks and the off spill 144 ticks
 -- "DR" for delivery ring 
-if IntTmgEn = '1' and 
-   Int_uBunch = 1 and not((Beam_On = '1' and DRCount = 7) or DRCount = 143)
-then DRCount <= DRCount + 1;
-elsif Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
-then DRCount <= (others => '0');
-else DRCount <= DRCount;
-end if;
+--if IntTmgEn = '1' and 
+--   Int_uBunch = 1 and not((Beam_On = '1' and DRCount = 7) or DRCount = 143)
+--then DRCount <= DRCount + 1;
+--elsif Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
+--then DRCount <= (others => '0');
+--else DRCount <= DRCount;
+--end if;
 
 -- If timing is internal, increment the microbunch number
-if IntTmgEn = '1' and 
-	Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
-then IntuBunchCount <= IntuBunchCount + 1;
-elsif WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = TrigCtrlAddr	and uCD(2) = '1'
-then IntuBunchCount <= (others => '0');
-else IntuBunchCount <= IntuBunchCount;
-end if;
+--if IntTmgEn = '1' and 
+--	Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
+--then IntuBunchCount <= IntuBunchCount + 1;
+--elsif WRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = TrigCtrlAddr	and uCD(2) = '1'
+--then IntuBunchCount <= (others => '0');
+--else IntuBunchCount <= IntuBunchCount;
+--end if;
 
 
 -- Send a heartbeat transmit request to GTPTx(1) 
-if IntTmgEn = '1' and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
- then HrtBtTxReq <= '1'; 
-	elsif HrtBtTxAck = '1' then HrtBtTxReq <= '0';
- else HrtBtTxReq <= HrtBtTxReq;
-end if;
+--if IntTmgEn = '1' and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
+-- then HrtBtTxReq <= '1'; 
+--	elsif HrtBtTxAck = '1' then HrtBtTxReq <= '0';
+-- else HrtBtTxReq <= HrtBtTxReq;
+--end if;
 
 -- If there are at least eight words in the heartbeat receive FIFO
 -- start reading the packet data from the buffer
@@ -3265,68 +2880,68 @@ end if;
  end if;
 
 -- Counter used to send a burst of mirobunches.
- if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtBrstCntAdHi
- then HrtBtBrstCntReg(23 downto 16) <= uCD(7 downto 0);
- else HrtBtBrstCntReg(23 downto 16) <= HrtBtBrstCntReg(23 downto 16);
- end if;
+-- if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtBrstCntAdHi
+-- then HrtBtBrstCntReg(23 downto 16) <= uCD(7 downto 0);
+-- else HrtBtBrstCntReg(23 downto 16) <= HrtBtBrstCntReg(23 downto 16);
+-- end if;
 
- if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtBrstCntAdLo
- then HrtBtBrstCntReg(15 downto 0) <= uCD(15 downto 0);
- else HrtBtBrstCntReg(15 downto 0) <= HrtBtBrstCntReg(15 downto 0);
- end if;
+-- if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtBrstCntAdLo
+-- then HrtBtBrstCntReg(15 downto 0) <= uCD(15 downto 0);
+-- else HrtBtBrstCntReg(15 downto 0) <= HrtBtBrstCntReg(15 downto 0);
+-- end if;
 
 -- Overall gate to denote the 380 ms spill region of the super cycle
-if Spill_Req = '0' and SuperCycleCount = SpillBegin and Counter100us = Count100us 
-then Spill_Req <= '1'; 
-elsif (Spill_Req = '1' and Counter100us = Count100us and SuperCycleCount = SpillEnd)
-	   or IntTmgEn = '0'
-then Spill_Req <= '0'; 
-end if;
+--if Spill_Req = '0' and SuperCycleCount = SpillBegin and Counter100us = Count100us 
+--then Spill_Req <= '1'; 
+--elsif (Spill_Req = '1' and Counter100us = Count100us and SuperCycleCount = SpillEnd)
+--	   or IntTmgEn = '0'
+--then Spill_Req <= '0'; 
+--end if;
 
 -- A flag to indicate the individual 53 ms spills
-if Counter100us = Count100us and Beam_On = '0' 
- and ((Spill_Req = '0' and SuperCycleCount = SpillBegin)
-	or (Spill_Req = '1' and InterSpillCount = InterSpillLength))
-then Beam_On <= '1';
-elsif (Beam_On = '1' and SpillWidthCount = SpillLength and Counter100us = Count100us)
-	   or IntTmgEn = '0'
-then Beam_On <= '0';
-else Beam_On <= Beam_On;
-end if;
+--if Counter100us = Count100us and Beam_On = '0' 
+-- and ((Spill_Req = '0' and SuperCycleCount = SpillBegin)
+--	or (Spill_Req = '1' and InterSpillCount = InterSpillLength))
+--then Beam_On <= '1';
+--elsif (Beam_On = '1' and SpillWidthCount = SpillLength and Counter100us = Count100us)
+--	   or IntTmgEn = '0'
+--then Beam_On <= '0';
+--else Beam_On <= Beam_On;
+--end if;
 
 -- Count 53.1 ms spill length
-if Spill_Req = '1' and Beam_On = '1' and SpillWidthCount /= SpillLength
- and Counter100us = Count100us
-then SpillWidthCount <= SpillWidthCount + 1;
-elsif (Counter100us = Count100us and SpillWidthCount = SpillLength)
-      or IntTmgEn = '0'
-then SpillWidthCount <= (others => '0');
-end if;
+--if Spill_Req = '1' and Beam_On = '1' and SpillWidthCount /= SpillLength
+-- and Counter100us = Count100us
+--then SpillWidthCount <= SpillWidthCount + 1;
+--elsif (Counter100us = Count100us and SpillWidthCount = SpillLength)
+--      or IntTmgEn = '0'
+--then SpillWidthCount <= (others => '0');
+--end if;
 
 -- Count the 5 ms interspill length
-if Spill_Req = '1' and Beam_On = '0' and InterSpillCount /= InterSpillLength 
-	and Counter100us = Count100us
- then InterSpillCount <= InterSpillCount  + 1;
-elsif IntTmgEn = '0' or Spill_Req = '0' or (InterSpillCount = InterSpillLength 
-	and Counter100us = Count100us)
- then InterSpillCount <= (others => '0');
-else InterSpillCount <= InterSpillCount;
-end if;
+--if Spill_Req = '1' and Beam_On = '0' and InterSpillCount /= InterSpillLength 
+--	and Counter100us = Count100us
+-- then InterSpillCount <= InterSpillCount  + 1;
+--elsif IntTmgEn = '0' or Spill_Req = '0' or (InterSpillCount = InterSpillLength 
+--	and Counter100us = Count100us)
+-- then InterSpillCount <= (others => '0');
+--else InterSpillCount <= InterSpillCount;
+--end if;
 
-if uBunchLED = '0' and Beam_On = '0' and Spill_Req = '1' 
-	and InterSpillCount = 0 and Counter100us = Count100us
-then uBunchLED <= '1';
-elsif uBunchLED = '1' and uBunchLEDCnt = 1 then uBunchLED <= '0'; 
-else uBunchLED <=  uBunchLED;
-end if;
+--if uBunchLED = '0' and Beam_On = '0' and Spill_Req = '1' 
+--	and InterSpillCount = 0 and Counter100us = Count100us
+--then uBunchLED <= '1';
+--elsif uBunchLED = '1' and uBunchLEDCnt = 1 then uBunchLED <= '0'; 
+--else uBunchLED <=  uBunchLED;
+--end if;
 
-if uBunchLED = '0' and Beam_On = '0' and Spill_Req = '1' 
-	and InterSpillCount = 0 and Counter100us = Count100us
-then uBunchLEDCnt <= '1' & X"4";
-elsif uBunchLEDCnt /= 0 and Counter1ms = Count1ms
-then uBunchLEDCnt <= uBunchLEDCnt - 1;
-else uBunchLEDCnt <= uBunchLEDCnt;
-end if; 
+--if uBunchLED = '0' and Beam_On = '0' and Spill_Req = '1' 
+--	and InterSpillCount = 0 and Counter100us = Count100us
+--then uBunchLEDCnt <= '1' & X"4";
+--elsif uBunchLEDCnt /= 0 and Counter1ms = Count1ms
+--then uBunchLEDCnt <= uBunchLEDCnt - 1;
+--else uBunchLEDCnt <= uBunchLEDCnt;
+--end if; 
 
 -- Uptime in seconds since th last FPGA configure
 if	Counter1s = Count1s then UpTimeCount <= UpTimeCount + 1;
@@ -3528,29 +3143,29 @@ end if;
 
 ------------------------------- Trigger Logic ----------------------------
 
-PhaseAcc <= PhaseAcc + FreqReg;
-PhaseAccD <= PhaseAcc(31);
+--PhaseAcc <= PhaseAcc + FreqReg;
+--PhaseAccD <= PhaseAcc(31);
 
-if TstTrigEn = '1'
-	and PhaseAcc(31) = '1' and PhaseAccD = '0' then 
-   BmOnTrigReq <= '1';
-elsif HrtBtDone = '1' then 
-	BmOnTrigReq <= '0';
-else BmOnTrigReq <= BmOnTrigReq;
-end if;
+--if TstTrigEn = '1'
+--	and PhaseAcc(31) = '1' and PhaseAccD = '0' then 
+--   BmOnTrigReq <= '1';
+--elsif HrtBtDone = '1' then 
+--	BmOnTrigReq <= '0';
+--else BmOnTrigReq <= BmOnTrigReq;
+--end if;
 
 -- Trig out width counter
-if GPOCount = 0 and MarkerReq = '1' then GPOCount <= "111";
-elsif GPOCount /= 0 then GPOCount <= GPOCount - 1;
-else GPOCount <= GPOCount;
-end if;
+--if GPOCount = 0 and MarkerReq = '1' then GPOCount <= "111";
+--elsif GPOCount /= 0 then GPOCount <= GPOCount - 1;
+--else GPOCount <= GPOCount;
+--end if;
 
 -- Flag bit indicating a software trigger 
-if WrDL = 1 and uCA(9 downto 0) = TrigCtrlAddr and uCD(0) = '1' then IntTrig <= '1';
- elsif GPIDL(0) = 1 or TstTrigEn = '1'
- then  IntTrig <= '0';
- else  IntTrig <= IntTrig;
-end if;
+--if WrDL = 1 and uCA(9 downto 0) = TrigCtrlAddr and uCD(0) = '1' then IntTrig <= '1';
+-- elsif GPIDL(0) = 1 or TstTrigEn = '1'
+-- then  IntTrig <= '0';
+-- else  IntTrig <= IntTrig;
+--end if;
 
 --	Read of the trigger request trace buffer
 	if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DReqBuffTraceAd ) or 
@@ -3583,13 +3198,13 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 X"00" & "000" & PLLStat & "000" & PllPDn when PLLPDnAddr,
 		 DReqBuff_Out(15 downto 0) when TRigReqBuffAd,
 		 X"0" & '0' & TrgPktRdCnt when TRigReqWdUsedAd,
-		 X"000" & "00" & TrgSrc & TstPlsEn when TrigCtrlAddr,
+		 --X"000" & "00" & TrgSrc & TstPlsEn when TrigCtrlAddr,
 		 X"00" & ActiveReg(23 downto 16) when ActvRegAddrHi,
 		 ActiveReg(15 downto 0) when ActvRegAddrLo,
 		 X"000" & IDReg when IDregAddr,
-		 X"0" & "00" & Debug when DebugPinAd,
-		 X"000" & '0' & FormStatReg when GTPSeqStatAd,
-		 X"000" & '0' & Beam_On & '0' & '0' when SpillStatAddr,
+		 --X"0" & "00" & Debug when DebugPinAd,
+		 --X"000" & '0' & FormStatReg when GTPSeqStatAd,
+		 --X"000" & '0' & Beam_On & '0' & '0' when SpillStatAddr,
 		 UpTimeStage(31 downto 16) when UpTimeRegAddrHi,
 		 UpTimeStage(15 downto 0) when UpTimeRegAddrLo,
 		 TestCount(31 downto 16) when TestCounterHiAd,
@@ -3614,15 +3229,15 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 X"000" & "00" & EventBuff_Full & EventBuff_empty when EvBuffStatAd,
 		 '0' & GtpRxBuffStat(1) & '0' & GtpRxBuffCnt(1) 
 	  & '0' & GtpRxBuffStat(0) & '0' & GtpRxBuffCnt(0) when ElasticStatAd,
-	    DReqBrstCntReg when DReqBrstCntAd,
-	    X"00" & HrtBtBrstCntReg(23 downto 16) when HrtBtBrstCntAdHi,
-	    HrtBtBrstCntReg(15 downto 0) when HrtBtBrstCntAdLo,
-		 IntuBunchCount(47 downto 32) when MicroBunchAdHi,
-		 IntuBunchCount(31 downto 16) when MicroBunchAdMid,
-		 IntuBunchCount(15 downto 0) when MicroBunchAdLo,
-		 FreqReg(31 downto 16) when FreqRegAdHi,
-		 FreqReg(15 downto 0) when FreqRegAdLo,
-		 MarkerBits when MarkerBitsAd,
+	    --DReqBrstCntReg when DReqBrstCntAd,
+	    --X"00" & HrtBtBrstCntReg(23 downto 16) when HrtBtBrstCntAdHi,
+	    --HrtBtBrstCntReg(15 downto 0) when HrtBtBrstCntAdLo,
+		 --IntuBunchCount(47 downto 32) when MicroBunchAdHi,
+		 --IntuBunchCount(31 downto 16) when MicroBunchAdMid,
+		 --IntuBunchCount(15 downto 0) when MicroBunchAdLo,
+		 --FreqReg(31 downto 16) when FreqRegAdHi,
+		 --FreqReg(15 downto 0) when FreqRegAdLo,
+		 --MarkerBits when MarkerBitsAd,
 		 DReqBuff_Emtpy & "0000" & TrgPktRdCnt when DreqBuffStatAd,
 		 HrtBtBuff_Emtpy & "0000" & HrtBtBuffRdCnt when HrtBtBuffStatAd,
 		 HrtBtBuff_Out when HrtBtFIFORdAd,
@@ -3638,14 +3253,14 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 DReqBuffTrace_Out when DReqBuffTraceAd,
 		 LinkFIFOTraceOut when LinkFIFOTraceAd,
 		 DCSBuff_wr_en & DCSBuff_Full & DCSBuff_Emtpy & DCSBuffRdCnt when DCSBuffCntAd,	
-       DCSBuff_In when DCSBuffAd,
+         DCSBuff_In when DCSBuffAd,
 		 --DCS_Header when DCSHeaderAd,
 		 --DCS_EvCnt when DCSEvCntAd,
 		 --DCS_Status when DCSStatusAd,
 		 GTPRstFromCnt & "0" & GTPTstFromCntEn & GTPRstArm & X"0" &"0" & GTPRstCnter when GTPRstCntAd,
-		 X"000" & uBdebug2 & uBdebug & uBwrt & uBinHeader when FormatRegAddr,
-		 uBcheck(31 downto 16) when uBLowRegAddr,
-		 uBcheck(15 downto  0) when uBHighRegAddr,
+		 --X"000" & uBdebug2 & uBdebug & uBwrt & uBinHeader when FormatRegAddr,
+		 --uBcheck(31 downto 16) when uBLowRegAddr,
+		 --uBcheck(15 downto  0) when uBHighRegAddr,
 		 HeartBeatCnt when HeartBeatCntAddr, -- markers sent out
 		 HeartBtCnt   when HeartBeatCnAddr,  -- EWT from fibers
 		 --MarkerDelayedCnt & MarkerCnt when MarkerCntAddr,
@@ -3663,10 +3278,10 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 --debugFull & debugEmpty & "0" & debugRst & "000" & DDRSel & X"00" when debugTrigAdd,
 		 --debugTrigPattern when debugTrigPatternAdd,
 		 --debugTrigMask when debugTrigMaskAdd,
-		 X"000" & "000" & sendGR when sendGRAdd,
+		 FakeNum & X"0" & "000" & sendGR when sendGRAdd,
 		 "00" & NimTrigLast & GPI & "000" & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"0054" when DebugVersionAd,
+		 X"005a" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 X"0000" when others;
