@@ -74,9 +74,10 @@ begin
 	 
     
     -- Next state logic (combinational)
-    next_state_process: process(current_state, LinkFIFOEmpty, FormHold, TStmpWds, sendGR, FakeCnt, 
-                                LinkFIFOOut, LinkFIFORdCnt, ActiveReg, FormRst, 
-                                uBinHeader, FIFOCount)
+    next_state_process: process(current_state, LinkFIFOEmpty, TStmpWds, FakeCnt, 
+                                LinkFIFOOut, LinkFIFORdCnt, FormRst, 
+                                FIFOCount, MarkerDelayed(0))
+--										  -- removed ActiveReg, FormHold, sendGR, uBinHeader
     begin
         --next_state <= current_state;  -- Default assignment
 
@@ -84,7 +85,7 @@ begin
             when Idle => --Debug(10 downto 7) <= X"0";
                 if LinkFIFOEmpty /= 7 and FormHold = '0' and TStmpWds >= 3 and sendGR = '0'
                                    then next_state <= WaitEvent;
-                elsif sendGR = '1' and MarkerDelayed /= 0 then next_state <= Fake;
+                elsif sendGR = '1' and MarkerDelayed(0 downto 0) /= 0 then next_state <= Fake;
                 else                    next_state <= Idle;
                 end if;
             when Fake =>                next_state <= FakeWrite;
@@ -238,7 +239,7 @@ begin
     state_and_output_process: process(clk, reset)
     begin
         if reset = '1' then
-            current_state <= idle;
+            current_state <= Idle;
             FakeCnt <= (others => '0');
             FakeDat <= (others => '0');
             EventSum <= (others => '0');
@@ -253,6 +254,8 @@ begin
             FIFOCount <= (others => (others => '0'));
             LinkFIFORdReq_b <= (others => '0');
             EventBuff_WrtEn_b <= '0';
+				EventBuff_Dat     <= (others => '0');
+	         EventBuff_WrtEn   <= '0';
 				EvBuffWrtGate <= '0';
 				FakeCntCalls <= (others => '0');
 

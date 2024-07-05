@@ -369,7 +369,7 @@ signal ChkCntr,FormStatReg,EmptyLatch : std_logic_vector (2 downto 0);
 signal Pkt_Timer : std_logic_vector (3 downto 0);
 signal TxPkCnt : std_logic_vector (10 downto 0);
 signal EvTxWdCnt : std_logic_vector (13 downto 0);
-signal FMTxBsy,FormHold,HrtBtTxInh,FormRst,ExtTmg,EvTxWdCntTC : std_logic;
+signal FMTxBsy,FormHold,HrtBtTxInh,FormRst,ExtTmg,EvTxWdCntTC,DRHold : std_logic;
 
 signal TxSeqNo,RxSeqNo,WrtCount,GtpRxBuffStat,GtpRxBuffCnt : Array_2x3;
 signal RxSeqNoErr : std_logic_vector (1 downto 0);
@@ -471,7 +471,7 @@ Clk80MHzGenSync : Clk80MHzGen
 EventBuilderInst : EventBuilder
     port map (
             clk              => UsrClk2(0),
-            reset            => not CpldRst,
+            reset            => ResetHi or GTPRxRst,
             FormRst          => FormRst,
             LinkFIFOOut      => LinkFIFOOut,
             LinkFIFORdCnt    => LinkFIFORdCnt,
@@ -1405,7 +1405,7 @@ end if;
 -------------------------------------
 Case DR_Handler is
    when Idle =>
-	    if TStmpWds >= 3 and DRdone = '0' then
+	    if TStmpWds >= 3 and DRdone = '0' and DRHold = '0' then
 		     DR_Handler <= StartCounter;
 		 else
 		     DR_Handler <= Idle;
@@ -2505,6 +2505,7 @@ main : process(SysClk, CpldRst)
 
 	PunchBits <= X"0"; FormHold <= '0'; ExtTmg <= '0';
 	IDReg <= X"1";
+	DRHold <= '0';
 
 	DReqBrstCntReg <= X"0001"; DReqBrstCounter <= (others => '0');
 	Dreq_Tx_Req <= '0'; Dreq_Tx_ReqD <= '0';
@@ -2549,11 +2550,13 @@ then FormHold <= uCD(2);
 -- Choose between internal and TDAQ supplied timing
 	  TrigTx_Sel <= uCD(6);
 	  HrtBtTxInh <= uCD(10);
+	  DRHold <= uCD(11);
 else FormHold <= FormHold;
 	  ExtTmg <= ExtTmg;
 	  TrigTx_Sel <= TrigTx_Sel;
 	  MarkerSyncEn <= MarkerSyncEn;
 	  HrtBtTxInh <= HrtBtTxInh;
+	  DRHold <= DRHold;
 end if;
 
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = FormatRegAddr
@@ -3190,8 +3193,10 @@ end process;
 
 with uCA(9 downto 0) select
 
-iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel 
-		 & MarkerSyncEn & ExtTmg & '0' & FormHold & TmgCntEn & IntTmgEn when CSRRegAddr,
+iCD <= X"0" & 
+       DRHold & HrtBtTxInh & TstTrigCE & TstTrigEn & 
+		 '0' & TrigTx_Sel & MarkerSyncEn & ExtTmg &
+		 '0' & FormHold & TmgCntEn & IntTmgEn when CSRRegAddr,
 		   Rx_IsCtrl(1) & InvalidChar(1) & Rx_IsComma(1) & Reframe(1) & TDisB 
 		 & Rx_IsCtrl(0) & InvalidChar(0) & Rx_IsComma(0) & Reframe(0) & TDisA when GTPCSRAddr,
 		 X"00" & "00" & GTPRxBuff_Full & GTPRxBuff_Emtpy & "00" when GTPFIFOAddr,
@@ -3281,7 +3286,7 @@ iCD <= X"0" & '0' & HrtBtTxInh & TstTrigCE & TstTrigEn & '0' & TrigTx_Sel
 		 FakeNum & X"0" & "000" & sendGR when sendGRAdd,
 		 "00" & NimTrigLast & GPI & "000" & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"005a" when DebugVersionAd,
+		 X"005d" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 X"0000" when others;
