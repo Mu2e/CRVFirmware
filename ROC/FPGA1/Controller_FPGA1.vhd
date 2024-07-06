@@ -3286,7 +3286,7 @@ iCD <= X"0" &
 		 FakeNum & X"0" & "000" & sendGR when sendGRAdd,
 		 "00" & NimTrigLast & GPI & "000" & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"005d" when DebugVersionAd,
+		 X"0061" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 X"0000" when others;

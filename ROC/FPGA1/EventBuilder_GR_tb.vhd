@@ -170,7 +170,15 @@ BEGIN
 		MarkerDelayed <= "1000";
 		
 
-      wait for clk_period*10;
+      wait for clk_period*10.34;
+		wait for clk_period  * 3.2;
+		MarkerDelayed <= "0001";
+		wait for 12.5ns;
+		MarkerDelayed <= "0010";
+		wait for 12.5ns;
+		MarkerDelayed <= "0100";
+		wait for 12.5ns;
+		MarkerDelayed <= "1000";
 
       -- insert stimulus here 
 

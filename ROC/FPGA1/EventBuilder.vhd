@@ -63,13 +63,16 @@ architecture rtl of EventBuilder is
 	 signal EvBuffWrtGate  : std_logic;
 	 
 	 -- out buffers
-	 signal LinkFIFORdReq_b  : std_logic_vector(2 downto 0);
-	 signal EventBuff_Dat_b   : std_logic_vector (15 downto 0);
-    signal EventBuff_WrtEn_b : std_logic;
+	 signal LinkFIFORdReq_b                      : std_logic_vector(2 downto 0);
+	 signal EventBuff_Dat_b,   EventBuff_Dat_reg   : std_logic_vector (15 downto 0);
+    signal EventBuff_WrtEn_b, EventBuff_WrtEn_reg : std_logic;
+	 
+	 -- debug
+	 signal debugCnt : std_logic_vector (15 downto 0);
 begin
     LinkFIFORdReq   <= LinkFIFORdReq_b; -- no pipeline
-	 --EventBuff_Dat    <= EventBuff_Dat_b;   -- could add a pipeline for EventBuffer
-	 --EventBuff_WrtEn  <= EventBuff_WrtEn_b; -- could add a pipeline for EventBuffer
+	 EventBuff_Dat    <= EventBuff_Dat_reg;   -- could add a pipeline for EventBuffer
+	 EventBuff_WrtEn  <= EventBuff_WrtEn_reg; -- could add a pipeline for EventBuffer
 	 FakeNum <= FakeCntCalls;
 	 
     
@@ -90,8 +93,8 @@ begin
                 end if;
             when Fake =>                next_state <= FakeWrite;
             when FakeWrite =>
-                if FakeCnt /= 0    then next_state <= FakeWrite;
-                else                    next_state <= FakeReset;
+                if FakeCnt = X"B"  then next_state <= FakeReset; -- 11 = 4 -1 + 8
+                else                    next_state <= FakeWrite;
                 end if;
             when FakeReset =>
 				                            next_state <= Idle;   
@@ -246,47 +249,62 @@ begin
             Event0 <= (others => '0');
             Event1 <= (others => '0');
             Event2 <= (others => '0');
+				--EventBuff_Dat     <= (others => '0');
             EventBuff_Dat_b <= (others => '0');
+				EventBuff_Dat_reg <= (others => '0');
             StatOr <= (others => '0');
             Stat0 <= (others => '0');
             uBcheck <= (others => '0');
             uBcheckFlag <= '0';
             FIFOCount <= (others => (others => '0'));
             LinkFIFORdReq_b <= (others => '0');
+				--EventBuff_WrtEn   <= '0';
             EventBuff_WrtEn_b <= '0';
-				EventBuff_Dat     <= (others => '0');
-	         EventBuff_WrtEn   <= '0';
+				EventBuff_WrtEn_reg <= '0';
 				EvBuffWrtGate <= '0';
 				FakeCntCalls <= (others => '0');
+				debugCnt <= (others => '0');
 
         elsif rising_edge(clk) then
             current_state <= next_state;
 
+            if current_state = FakeWrite then 
+				    if FakeCnt < X"B" then debugCnt <= debugCnt;
+					 else                   debugCnt <= debugCnt + 1;
+					 end if;
+				else                       debugCnt <= debugCnt;
+				end if;
+
             if current_state = Fake then
-                FakeCnt <= X"b"; -- 11 = 8+4-1
+                --FakeCnt <= X"B"; -- 11 = 8+4-1
                 FakeDat <= X"0008"; -- payload, exclude cnt + 3 x uB number
 					 FakeCntCalls <= FakeCntCalls + 1;
             elsif current_state = FakeWrite then
-                FakeCnt <= FakeCnt - 1;
+                --FakeCnt <= FakeCnt - 1;
 					 FakeCntCalls <= FakeCntCalls;
                 Case FakeCnt is
-                    when X"B" => FakeDat <= ExtuBunchCount(15 downto 0);
-                    when X"A" => FakeDat <= ExtuBunchCount(31 downto 16);
-                    when X"9" => FakeDat <= ExtuBunchCount(47 downto 32);
-                    when X"8" => FakeDat <= X"cafe";
-                    when X"7" => FakeDat <= HeartBtCnt;   -- EWT counter
-                    when X"6" => FakeDat <= HeartBeatCnt; -- marker counter
-                    when X"5" => FakeDat <= LastWindow;
-                    when X"4" => FakeDat <= Stats;
-                    when X"3" => FakeDat <= InjectionTs;     -- timestamp of injection (from the last window!)
-                    when X"2" => FakeDat <= InjectionWindow; -- time of last injection period
-                    when X"1" => FakeDat <= X"beef";
-                    when others => FakeDat <= (others => '0');
-                 end Case;	  
+                    when X"0" => FakeDat <= ExtuBunchCount(15 downto 0);
+                    when X"1" => FakeDat <= ExtuBunchCount(31 downto 16);
+                    when X"2" => FakeDat <= ExtuBunchCount(47 downto 32);
+                    when X"3" => FakeDat <= X"cafe";
+                    when X"4" => FakeDat <= HeartBtCnt;   -- EWT counter
+                    when X"5" => FakeDat <= HeartBeatCnt; -- marker counter
+                    when X"6" => FakeDat <= LastWindow;
+                    when X"7" => FakeDat <= Stats;
+                    when X"8" => FakeDat <= InjectionTs;     -- timestamp of injection (from the last window!)
+                    when X"9" => FakeDat <= InjectionWindow; -- time of last injection period
+                    when X"a" => FakeDat <= X"beef";
+                    when others => FakeDat <= debugCnt;
+                 end Case;	 
+			  
             else
-                FakeCnt <= FakeCnt;
+                --FakeCnt <= FakeCnt;
                 FakeDat <= (others => '0');
             end if;
+				
+				if current_state = FakeWrite then FakeCnt <= FakeCnt + 1;
+				else                              FakeCnt <= (others => '0');
+				end if;
 
             -- Sum the word counts from the three Link FIFOs.
 		    if current_state = Idle then EventSum <= (others => '0');
@@ -457,8 +475,8 @@ begin
     end if;
 	 	 
 	 -- pipeline for EventBuffer, might help with timing constraints?
-	 EventBuff_Dat    <= EventBuff_Dat_b;   -- could add a pipeline for EventBuffer
-	 EventBuff_WrtEn  <= EventBuff_WrtEn_b; -- could add a pipeline for EventBuffer
+	 EventBuff_Dat_reg    <= EventBuff_Dat_b;   -- could add a pipeline for EventBuffer
+	 EventBuff_WrtEn_reg  <= EventBuff_WrtEn_b; -- could add a pipeline for EventBuffer
 
 
 end if; -- rising edge
