@@ -128,6 +128,7 @@ constant InjectionCntAdd     : AddrPtr := "00" & X"59";
 constant InjectionWindowAdd  : AddrPtr := "00" & X"5A";
 constant InjectionDutyAdd    : AddrPtr := "00" & X"5B";
 constant EventBuffSpyAd       : AddrPtr := "00" & X"5C";
+constant DRTimeoutAdd        : AddrPtr := "00" & X"5D";
 
 constant SpillTrigCntAdHi : AddrPtr := "00" & X"66";
 constant SpillTrigCntAdLo : AddrPtr := "00" & X"67";

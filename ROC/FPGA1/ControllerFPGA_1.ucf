@@ -304,6 +304,8 @@ NET "Clk80MHzAlign" TIG; #NET "*syncEnable" TIG;
 NET "FormHold" TIG;
 NET "sendGR" TIG;
 NET "uBwrt" TIG;
+#NET "LoopbackMode*" TIG;
+#NET "IDReg" TIG;
 
 #NET "HeartBeatFM_P" IOSTANDARD = LVDS_25;
 #NET "HeartBeatFM_N" IOSTANDARD = LVDS_25;

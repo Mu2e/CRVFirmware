@@ -62,6 +62,7 @@ ARCHITECTURE behavior OF EventBuilder_GR_tb IS
          uBinHeader : IN  std_logic;
          uBwrt : IN  std_logic;
          GA : IN  std_logic_vector(1 downto 0);
+			sendGRCnt : IN  std_logic_vector(7 downto 0);
          ExtuBunchCount : IN  std_logic_vector(47 downto 0);
          HeartBtCnt : IN  std_logic_vector(15 downto 0);
          HeartBeatCnt : IN  std_logic_vector(15 downto 0);
@@ -91,6 +92,7 @@ ARCHITECTURE behavior OF EventBuilder_GR_tb IS
    signal uBinHeader : std_logic := '0';
    signal uBwrt : std_logic := '0';
    signal GA : std_logic_vector(1 downto 0) := (others => '0');
+	signal sendGRCnt : std_logic_vector(7 downto 0) := (others => '0');
    signal ExtuBunchCount : std_logic_vector(47 downto 0) := (others => '0');
    signal HeartBtCnt : std_logic_vector(15 downto 0) := (others => '0');
    signal HeartBeatCnt : std_logic_vector(15 downto 0) := (others => '0');
@@ -131,6 +133,7 @@ BEGIN
           uBinHeader => uBinHeader,
           uBwrt => uBwrt,
           GA => GA,
+			 sendGRCnt => sendGRCnt,
           ExtuBunchCount => ExtuBunchCount,
           HeartBtCnt => HeartBtCnt,
           HeartBeatCnt => HeartBeatCnt,
@@ -171,6 +174,19 @@ BEGIN
 		
 
       wait for clk_period*10.34;
+		sendGRCnt <= X"03";
+		wait for clk_period  * 3.2;
+		MarkerDelayed <= "0001";
+		wait for 12.5ns;
+		MarkerDelayed <= "0010";
+		wait for 12.5ns;
+		MarkerDelayed <= "0100";
+		wait for 12.5ns;
+		MarkerDelayed <= "1000";
+		
+      
+      wait for clk_period*40.34;
+		sendGRCnt <= X"01";
 		wait for clk_period  * 3.2;
 		MarkerDelayed <= "0001";
 		wait for 12.5ns;

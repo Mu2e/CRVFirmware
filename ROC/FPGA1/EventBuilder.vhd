@@ -33,6 +33,7 @@ entity EventBuilder is
         uBinHeader      : in  std_logic;
         uBwrt           : in  std_logic;
         GA              : in  std_logic_vector( 1 downto 0);
+		  sendGrCnt       : in  std_logic_vector( 7 downto 0);
 		  -- GR data (fake events)
 		  ExtuBunchCount  : in  std_logic_vector(47 downto 0);
 		  HeartBtCnt      : in  std_logic_vector(15 downto 0);
@@ -54,7 +55,7 @@ architecture rtl of EventBuilder is
     signal current_state, next_state : Event_Builder_Seq;
 
     signal StatOr, Stat0 : std_logic_vector (7 downto 0); 
-    signal FakeCnt       : std_logic_vector (3 downto 0);
+    signal FakeCnt       : std_logic_vector (11 downto 0);
 	 signal FakeCntCalls  : std_logic_vector (7 downto 0);
     signal EventSum, Event0, Event1, Event2, FakeDat: std_logic_vector (15 downto 0); 
     signal uBcheck       : std_logic_vector (31 downto 0);
@@ -93,8 +94,8 @@ begin
                 end if;
             when Fake =>                next_state <= FakeWrite;
             when FakeWrite =>
-                if FakeCnt = X"B"  then next_state <= FakeReset; -- 11 = 4 -1 + 8
-                else                    next_state <= FakeWrite;
+                if FakeCnt = X"00B" + ("0"&sendGrCnt&"000")  then next_state <= FakeReset; -- 11 = 4 -1 + 8
+                else                                next_state <= FakeWrite;
                 end if;
             when FakeReset =>
 				                            next_state <= Idle;   
@@ -268,32 +269,34 @@ begin
         elsif rising_edge(clk) then
             current_state <= next_state;
 
-            if current_state = FakeWrite then 
-				    if FakeCnt < X"B" then debugCnt <= debugCnt;
-					 else                   debugCnt <= debugCnt + 1;
+            if current_state = FakeWrite then
+				    if    FakeCnt < X"00B"                         then debugCnt <= debugCnt; -- header
+					 elsif FakeCnt = X"00B" + ("0"&sendGrCnt&"000") then debugCnt <= debugCnt; -- no inc. in last
+					 else                                                debugCnt <= debugCnt + 1; -- this counts one too much?
+					 
 					 end if;
 				else                       debugCnt <= debugCnt;
 				end if;
 
             if current_state = Fake then
                 --FakeCnt <= X"B"; -- 11 = 8+4-1
-                FakeDat <= X"0008"; -- payload, exclude cnt + 3 x uB number
+                FakeDat <= X"0008" + ("0"&sendGrCnt&"000"); -- payload, exclude cnt + 3 x uB number
 					 FakeCntCalls <= FakeCntCalls + 1;
             elsif current_state = FakeWrite then
                 --FakeCnt <= FakeCnt - 1;
 					 FakeCntCalls <= FakeCntCalls;
                 Case FakeCnt is
-                    when X"0" => FakeDat <= ExtuBunchCount(15 downto 0);
-                    when X"1" => FakeDat <= ExtuBunchCount(31 downto 16);
-                    when X"2" => FakeDat <= ExtuBunchCount(47 downto 32);
-                    when X"3" => FakeDat <= X"cafe";
-                    when X"4" => FakeDat <= HeartBtCnt;   -- EWT counter
-                    when X"5" => FakeDat <= HeartBeatCnt; -- marker counter
-                    when X"6" => FakeDat <= LastWindow;
-                    when X"7" => FakeDat <= Stats;
-                    when X"8" => FakeDat <= InjectionTs;     -- timestamp of injection (from the last window!)
-                    when X"9" => FakeDat <= InjectionWindow; -- time of last injection period
-                    when X"a" => FakeDat <= X"beef";
+                    when X"000" => FakeDat <= ExtuBunchCount(15 downto 0);
+                    when X"001" => FakeDat <= ExtuBunchCount(31 downto 16);
+                    when X"002" => FakeDat <= ExtuBunchCount(47 downto 32);
+                    when X"003" => FakeDat <= X"cafe";
+                    when X"004" => FakeDat <= HeartBtCnt;   -- EWT counter
+                    when X"005" => FakeDat <= HeartBeatCnt; -- marker counter
+                    when X"006" => FakeDat <= LastWindow;
+                    when X"007" => FakeDat <= Stats;
+                    when X"008" => FakeDat <= InjectionTs;     -- timestamp of injection (from the last window!)
+                    when X"009" => FakeDat <= InjectionWindow; -- time of last injection period
+                    when X"00a" => FakeDat <= X"beef";
                     when others => FakeDat <= debugCnt;
                  end Case;	 
 			  
