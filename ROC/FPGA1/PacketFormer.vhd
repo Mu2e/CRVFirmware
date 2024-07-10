@@ -32,6 +32,7 @@ entity PacketFormer is
         GTPTx            : out std_logic_vector(15 downto 0);
         TxCharIsK        : out std_logic_vector( 1 downto 0);
         GTPTxBuff_In      : out std_logic_vector(15 downto 0); -- why not just use GTPTx?
+		  GTPTxBuff_wr_en   : out std_logic;
 		  --Marker           : in  std_logic;
 		  MarkerDelayed    : in  std_logic;
 		  loopbackMarker   : in  std_logic;
@@ -57,6 +58,9 @@ architecture rtl of PacketFormer is
     signal EventBuffErr    : std_logic;
 	 signal GTPTxStage      : std_logic_vector(15 downto 0);
 	 signal TxSeqNo         : std_logic_vector( 2 downto 0);
+	 signal GTPTxBuff_Pipe   : std_logic_vector(15 downto 0);
+	 signal GTPTx_Pipe      : std_logic_vector(15 downto 0);
+    signal TxCharIsK_Pipe  : std_logic_vector(1 downto 0);
 	 --signal MarkerSync      : std_logic;
 begin
 
@@ -154,18 +158,22 @@ begin
             EvTxWdCntTC <= '0';
             Pkt_Timer <= (others => '0');
             GTPTx <= X"BC3C";
+				GTPTx_Pipe <= X"BC3C";
             GTPTxBuff_In <= X"BC3C";
+				GTPTxBuff_Pipe <= X"BC3C";
             GTPTxStage <= X"BC3C";
             TxCRCDat <= (others => '0');
             TxCRCEn <= '0';
             TxCRCRst <= '1';
             TxSeqNo <= "000";
             TxCharIsK <= "11";
+				TxCharIsK_Pipe <= "11";
             DReq_Count <= (others => '0');
             EventBuffErr <= '0';
             EventBuff_RdEn <= '0';
 				DCSBuff_rd_en <= '0';
 				TStmpBuff_rd_en <= '0';
+				GTPTxBuff_wr_en <= '0';
 				--MarkerSync <= '0';
 
         elsif rising_edge(clk) then
@@ -270,10 +278,10 @@ begin
               or (current_state = WrtDCSPkt and FormStatReg = "111")
               or (current_state = WrtGrPkt  and FormStatReg = "111")
               or (current_state = WrtGrPkt2)) -- and FormStatReg = "110"))
-            then GTPTx        <= TxCRC;      
-                 GTPTxBuff_In  <= TxCRC;
-            else GTPTx        <= GTPTxStage; 
-                 GTPTxBuff_In <= GTPTxStage;
+            then GTPTx_Pipe        <= TxCRC;      
+                 GTPTxBuff_Pipe     <= TxCRC;
+            else GTPTx_Pipe        <= GTPTxStage; 
+                 GTPTxBuff_Pipe     <= GTPTxStage;
             end if;
 
             -------------------------------------------------------------------------------
@@ -454,7 +462,7 @@ begin
                 or current_state = WrtDatPkt 
                 --or current_state = WrtGRPkt or current_state = WrtGRPkt2
                 ) and Pkt_Timer = 9)
-                    then TxCharIsK <= "10";
+                    then TxCharIsK_Pipe <= "10";
                     -- Two bytes are data when sending the packet payload
             elsif -- (UsrWRDL(0) = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = GTPWrtAddr(2)) or
                  ((current_state = WrtHdrPkt or current_state = WrtHdrPktTimeout or current_state = WrtCtrlHdrPkt 
@@ -462,9 +470,9 @@ begin
                 --or (	current_state = WrtGRPkt and FormStatReg = "111")
                 --or (	current_state = WrtGRPkt2) -- and FormStatReg = "110") 
                 or current_state = WrtDatPkt) and Pkt_Timer /= 10 and Pkt_Timer /= 9)
-                    then TxCharIsK <= "00";
+                    then TxCharIsK_Pipe <= "00";
             -- Both bytes are K characters when sending pads
-            else         TxCharIsK <= "11";
+            else         TxCharIsK_Pipe <= "11";
             end if;
         
             ---- latch uB status for comparison
@@ -482,6 +490,13 @@ begin
             --    end if;
             --end if;
 
+            if GTPTxBuff_Pipe /= X"BC3C"
+            then GTPTxBuff_wr_en <= '1';
+            else GTPTxBuff_wr_en <= '0';
+            end if;
+				GTPTxBuff_In <= GTPTxBuff_Pipe;
+				GTPTx <= GTPTx_Pipe;
+				TxCharIsK <= TxCharIsK_Pipe;
 
         end if; -- rising edge
     end process state_and_output_process;

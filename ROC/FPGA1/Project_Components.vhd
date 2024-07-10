@@ -320,6 +320,7 @@ component EventBuilder is
         uBinHeader      : in  std_logic;
 		  uBwrt           : in  std_logic;
 		  GA              : in  std_logic_vector (1 downto 0);
+		  sendGrCnt       : in  std_logic_vector (7 downto 0);
 		  -- GR data (fake events)
 		  ExtuBunchCount  : in  std_logic_vector(47 downto 0);
 		  HeartBtCnt      : in  std_logic_vector(15 downto 0);
@@ -331,6 +332,42 @@ component EventBuilder is
 		  FakeNum         : out std_logic_vector( 7 downto 0)
     );
 end component EventBuilder;
+
+component PacketFormer is
+    port (
+        clk              : in  std_logic; 
+        reset            : in  std_logic; -- active high
+        pktFormerSend    : in  std_logic; -- trigers package
+        pktFormerTimeout : in  std_logic; 
+		  FormRst          : in  std_logic; 
+        EventBuff_Out     : in  std_logic_vector(15 downto 0);
+        EventBuff_RdEn    : out std_logic; 
+        TStmpBuff_rd_en   : out std_logic;
+        TStmpBuff_Out     : in  std_logic_vector(15 downto 0);
+		  EventBuff_Empty   : in  std_logic;
+        ActiveReg        : in  std_logic_vector(23 downto 0);
+        DCSBuffRdCnt      : in  std_logic_vector(12 downto 0);
+        DCSBuff_Out       : in  std_logic_vector(15 downto 0);
+        DCSBuff_rd_en     : out std_logic;
+        DRdone           : out std_logic; -- used to clear DR handler  
+        TxCRCEn          : out std_logic;
+        TxCRCRst         : out std_logic;
+		  TxCRCDat         : out std_logic_vector(15 downto 0);
+		  TxCRC            : in  std_logic_vector(15 downto 0);
+        WdCountBuff_WrtEn : out std_logic;
+        GTPTx            : out std_logic_vector(15 downto 0);
+        TxCharIsK        : out std_logic_vector( 1 downto 0);
+        GTPTxBuff_In      : out std_logic_vector(15 downto 0); -- why not just use GTPTx?
+		  GTPTxBuff_wr_en   : out std_logic;
+		  --Marker           : in  std_logic;
+		  MarkerDelayed    : in  std_logic;
+		  loopbackMarker   : in  std_logic;
+        -- settings
+        LoopbackMode     : in  std_logic_vector( 2 downto 0);
+		  uBwrt            : in  std_logic;
+        IDReg            : in  std_logic_vector( 3 downto 0)
+    );
+end component PacketFormer;
 
 component debugMarkerkInputBuffer
    port(

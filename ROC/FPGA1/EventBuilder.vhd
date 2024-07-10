@@ -70,6 +70,14 @@ architecture rtl of EventBuilder is
 	 
 	 -- debug
 	 signal debugCnt : std_logic_vector (15 downto 0);
+
+     -- syncs for clock domain transitions
+     signal InjectionTs_sync1, InjectionTs_sync2 : std_logic_vector (15 downto 0);
+
+     -- latch data that is async at the start of event
+     signal InjectionWindow_latched : std_logic_vector (15 downto 0);
+     signal InjectionTs_latched : std_logic_vector (15 downto 0);
+
 begin
     LinkFIFORdReq   <= LinkFIFORdReq_b; -- no pipeline
 	 EventBuff_Dat    <= EventBuff_Dat_reg;   -- could add a pipeline for EventBuffer
@@ -265,17 +273,30 @@ begin
 				EvBuffWrtGate <= '0';
 				FakeCntCalls <= (others => '0');
 				debugCnt <= (others => '0');
+                InjectionTs_sync1 <= (others => '0');
+                InjectionTs_sync2 <= (others => '0');
+                InjectionWindow_latched <= (others => '0');
+                InjectionTs_latched <= (others => '0');
 
         elsif rising_edge(clk) then
             current_state <= next_state;
 
+            -- synchronizations
+            InjectionTs_sync1 <= InjectionTs;
+            InjectionTs_sync2 <= InjectionTs_sync1;
+
             if current_state = FakeWrite then
 				    if    FakeCnt < X"00B"                         then debugCnt <= debugCnt; -- header
-					 elsif FakeCnt = X"00B" + ("0"&sendGrCnt&"000") then debugCnt <= debugCnt; -- no inc. in last
-					 else                                                debugCnt <= debugCnt + 1; -- this counts one too much?
+					elsif FakeCnt = X"00B" + ("0"&sendGrCnt&"000") then debugCnt <= debugCnt; -- no inc. in last
+					else                                                debugCnt <= debugCnt + 1; -- this counts one too much?
 					 
-					 end if;
-				else                       debugCnt <= debugCnt;
+					end if;
+                    InjectionWindow_latched <= InjectionWindow;
+                    InjectionTs_latched     <= InjectionTs_sync2;
+				else                       
+                                                                       debugCnt <= debugCnt;
+                    InjectionWindow_latched <= InjectionWindow_latched;
+                    InjectionTs_latched <= InjectionTs_latched;
 				end if;
 
             if current_state = Fake then
@@ -294,8 +315,8 @@ begin
                     when X"005" => FakeDat <= HeartBeatCnt; -- marker counter
                     when X"006" => FakeDat <= LastWindow;
                     when X"007" => FakeDat <= Stats;
-                    when X"008" => FakeDat <= InjectionTs;     -- timestamp of injection (from the last window!)
-                    when X"009" => FakeDat <= InjectionWindow; -- time of last injection period
+                    when X"008" => FakeDat <= InjectionWindow_latched; -- timestamp of injection (from the last window!)
+                    when X"009" => FakeDat <= InjectionTs_latched;   -- time of last injection period
                     when X"00a" => FakeDat <= X"beef";
                     when others => FakeDat <= debugCnt;
                  end Case;	 

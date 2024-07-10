@@ -139,7 +139,7 @@ signal HeartBtCnt : std_logic_vector(15 downto 0);      -- counts heart beat pac
 signal WindowTimer : std_logic_vector(15 downto 0);
 signal LastWindow : std_logic_vector(15 downto 0);
 signal InjectionTs : std_logic_vector(15 downto 0);
-signal NimTrigLast : std_logic; -- latch the input to detect input rising edge
+signal NimTrigLast : std_logic_vector(3 downto 0); -- latch the input to detect input rising edge
 
 -- foramt settings
 signal uBinHeader : std_logic; 
@@ -510,6 +510,7 @@ PacketFormerInst : PacketFormer
         GTPTx            => GTPTx(0),
         TxCharIsK        => TxCharIsK(0),
         GTPTxBuff_In      => GTPTxBuff_In,
+		  GTPTxBuff_wr_en   => GTPTxBuff_wr_en,
 		  --Marker           => Marker,
 		  MarkerDelayed    => MarkerDelayed(0),
 		  loopbackMarker   => loopbackMarker,
@@ -954,7 +955,6 @@ begin
 	Stat_DReq <= '0'; AddrReg <= (others =>'0');
 	WdCountBuff_RdEn <= '0';
 	CRCErrCnt <= X"00"; 
-	GTPTxBuff_wr_en <= '0';
 	GTPRstCnter <= (others=>'0'); GTPRstFromCnt <= '0'; GTPTstFromCntEn <= '1';
 	GTPRstArm <= '0';
 	loopbackMarker <= '0';
@@ -1237,10 +1237,10 @@ else WdCountBuff_RdEn <= '0';
 end if;
 
 -- output trace buffer
-if GTPTxStage(0) /= X"BC3C"
-then GTPTxBuff_wr_en <= '1';
-else GTPTxBuff_wr_en <= '0';
-end if;
+--if GTPTxStage(0) /= X"BC3C"
+--then GTPTxBuff_wr_en <= '1';
+--else GTPTxBuff_wr_en <= '0';
+--end if;
 
 if (UsrRDDL(0) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPTxRdAddr) 
    or (GTPTxBuff_DatCnt >= "0" & X"FFE" and GTPTxBuff_wr_en = '1') -- this line makes the fifo behave like a trace buffer
@@ -1974,7 +1974,7 @@ FMTxReq : process(Clk80MHz, CpldRst, GTPRxRst)
 	--MarkerDelayedCnt <= (others => '0');
 	LastWindow <= X"FFFF";
 	InjectionTs <= X"FFFF";
-	NimTrigLast <= '0';
+	NimTrigLast <= (others => '0');
 	MarkerDelayArm <= '0';
 	MarkerLast <= "00";
 	InjectionCnt <= (others => '0');
@@ -2026,8 +2026,10 @@ FMTxReq : process(Clk80MHz, CpldRst, GTPRxRst)
   end if;
   
   -- detect NimTrig transition to hight and store the current time stamp
-  NimTrigLast <= GPI;
-  if GPI = '1' and NimTrigLast = '0'
+  NimTrigLast(0) <= GPI;
+  NimTrigLast(3 downto 1) <= NimTrigLast(2 downto 0);
+  --if GPI = '1' and NimTrigLast = '0'
+  if NimTrigLast = X"3"
     then
       InjectionTs <= WindowTimer;
 		InjectionCnt <= InjectionCnt + 1;
@@ -2917,9 +2919,9 @@ iCD <= X"0" &
 		 --debugTrigMask when debugTrigMaskAdd,
 		 FakeNum & X"0" & "000" & sendGR when sendGRAdd,
 		 DRTimeout when DRTimeoutAdd,
-		 "00" & NimTrigLast & GPI & "000" & NimTrig & InjectionDuty when InjectionDutyAdd,
+		 NimTrigLast & "00" & GPI & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"0064" when DebugVersionAd,
+		 X"0068" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 X"0000" when others;
