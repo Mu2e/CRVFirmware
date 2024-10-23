@@ -57,6 +57,7 @@ architecture rtl of EventBuilder is
     signal StatOr, Stat0 : std_logic_vector (7 downto 0); 
     signal FakeCnt       : std_logic_vector (11 downto 0);
 	 signal FakeCntCalls  : std_logic_vector (7 downto 0);
+	 signal FakeCntCalls_debug  : std_logic_vector (7 downto 0);
     signal EventSum, Event0, Event1, Event2, FakeDat: std_logic_vector (15 downto 0); 
     signal uBcheck       : std_logic_vector (31 downto 0);
     signal uBcheckFlag   : std_logic;
@@ -82,7 +83,8 @@ begin
     LinkFIFORdReq   <= LinkFIFORdReq_b; -- no pipeline
 	 EventBuff_Dat    <= EventBuff_Dat_reg;   -- could add a pipeline for EventBuffer
 	 EventBuff_WrtEn  <= EventBuff_WrtEn_reg; -- could add a pipeline for EventBuffer
-	 FakeNum <= FakeCntCalls;
+	 --FakeNum <= FakeCntCalls;
+	 FakeNum <= FakeCntCalls_debug;
 	 
     
     -- Next state logic (combinational)
@@ -106,7 +108,13 @@ begin
                 else                                next_state <= FakeWrite;
                 end if;
             when FakeReset =>
-				                            next_state <= Idle;   
+				    next_state <= Idle;
+				    --if MarkerDelayed(0 downto 0) /= 0 then
+					 --    next_state <= FakeReset;
+					 --else
+					 --    next_state <= Idle;
+					 --end if;
+					 --                        next_state <= Idle;   
                 --if sendGR = '0' then    next_state <= Idle;
                 --else                    next_state <= FakeReset;
                 --end if;
@@ -271,12 +279,15 @@ begin
             EventBuff_WrtEn_b <= '0';
 				EventBuff_WrtEn_reg <= '0';
 				EvBuffWrtGate <= '0';
-				FakeCntCalls <= (others => '0');
+				--FakeCntCalls <= (others => '0');
+				FakeCntCalls_debug <= (others => '0');
 				debugCnt <= (others => '0');
-                InjectionTs_sync1 <= (others => '0');
-                InjectionTs_sync2 <= (others => '0');
-                InjectionWindow_latched <= (others => '0');
-                InjectionTs_latched <= (others => '0');
+            InjectionTs_sync1 <= (others => '0');
+            InjectionTs_sync2 <= (others => '0');
+            InjectionWindow_latched <= (others => '0');
+            InjectionTs_latched <= (others => '0');
+				---first_injection <= '0';
+				
 
         elsif rising_edge(clk) then
             current_state <= next_state;
@@ -299,13 +310,19 @@ begin
                     InjectionTs_latched <= InjectionTs_latched;
 				end if;
 
+            if current_state = FakeReset then
+					FakeCntCalls_debug <= FakeCntCalls_debug + 1;
+				else
+					FakeCntCalls_debug <= FakeCntCalls_debug;
+				end if;
+
             if current_state = Fake then
                 --FakeCnt <= X"B"; -- 11 = 8+4-1
                 FakeDat <= X"0008" + ("0"&sendGrCnt&"000"); -- payload, exclude cnt + 3 x uB number
-					 FakeCntCalls <= FakeCntCalls + 1;
+					 --FakeCntCalls <= FakeCntCalls + 1;
             elsif current_state = FakeWrite then
                 --FakeCnt <= FakeCnt - 1;
-					 FakeCntCalls <= FakeCntCalls;
+					 --FakeCntCalls <= FakeCntCalls;
                 Case FakeCnt is
                     when X"000" => FakeDat <= ExtuBunchCount(15 downto 0);
                     when X"001" => FakeDat <= ExtuBunchCount(31 downto 16);
@@ -323,6 +340,7 @@ begin
 			  
             else
                 --FakeCnt <= FakeCnt;
+					 --FakeCntCalls <= FakeCntCalls;
                 FakeDat <= (others => '0');
             end if;
 				
@@ -497,6 +515,7 @@ begin
     then EventBuff_WrtEn_b <= '1'; --Debug(6) <= '1';
     else EventBuff_WrtEn_b <= '0';  --Debug(6) <= '0';
     end if;
+	 
 	 	 
 	 -- pipeline for EventBuffer, might help with timing constraints?
 	 EventBuff_Dat_reg    <= EventBuff_Dat_b;   -- could add a pipeline for EventBuffer

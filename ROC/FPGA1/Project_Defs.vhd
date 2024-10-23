@@ -118,6 +118,7 @@ constant DCSPktWdUsedAd  : AddrPtr := "00" & X"51";
 constant DCSBuffCntAd    : AddrPtr := "00" & X"52";
 constant DCSBuffAd       : AddrPtr := "00" & X"53";
 --constant DCSBuffRdAd     : AddrPtr := "00" & X"54";
+constant InjectionLengtFirstAddr : AddrPtr := "00" & X"54";
 constant DCSHeaderAd     : AddrPtr := "00" & X"55";
 constant DCSEvCntAd      : AddrPtr := "00" & X"56";
 constant DCSStatusAd     : AddrPtr := "00" & X"57";

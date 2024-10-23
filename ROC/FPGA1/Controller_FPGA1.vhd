@@ -132,7 +132,7 @@ attribute ASYNC_REG : string;
 attribute ASYNC_REG of MarkerLast : signal is "TRUE"; 
 signal MarkerCnt, MarkerCnt2, MarkerCnt3, MarkerCnt4, MarkerCnt5, LoopbackMarkerCnt : std_logic_vector(7 downto 0); -- counts decoded markers
 signal BnchMarkerLast : std_logic_vector(7 downto 0);
---signal MarkerDelayedCnt : std_logic_vector(7 downto 0); --
+signal MarkerDelayedCnt : std_logic_vector(15 downto 0); --
 signal HeartBeatCnt : std_logic_vector(15 downto 0);    -- counts heartbeats sent out, these are the delayed 
 signal HeartBtCnt : std_logic_vector(15 downto 0);      -- counts heart beat packages from fibers
 -- event window timers
@@ -140,6 +140,9 @@ signal WindowTimer : std_logic_vector(15 downto 0);
 signal LastWindow : std_logic_vector(15 downto 0);
 signal InjectionTs : std_logic_vector(15 downto 0);
 signal NimTrigLast : std_logic_vector(3 downto 0); -- latch the input to detect input rising edge
+signal InjectionCntInWindow : std_logic_vector(3 downto 0);
+signal InjectionTs_first : std_logic_vector(15 downto 0);
+signal LastWindow_first : std_logic_vector(15 downto 0);
 
 -- foramt settings
 signal uBinHeader : std_logic; 
@@ -393,6 +396,7 @@ signal DRTimeout : std_logic_vector (15 downto 0); -- DR ROC timeout, in units o
 signal sendGRCnt : std_logic_vector (7 downto 0); -- number of packages filled with counters that are sent out
 signal FakeNum : std_logic_vector(7 downto 0); -- counts the number of generated fake events
 signal InjectionTimer, InjectionWindow : std_logic_vector(15 downto 0);
+signal InjectionWindow_first : std_logic_vector(15 downto 0);
 signal InjectionCnt : std_logic_vector(7 downto 0);
 signal InjectionDutyCnt, InjectionDuty, InjectionHighCnt : std_logic_vector(7 downto 0);
 
@@ -480,7 +484,7 @@ EventBuilderInst : EventBuilder
 				HeartBeatCnt     => HeartBeatCnt,
 				LastWindow       => LastWindow,
 				Stats            => CRCErrCnt & LosCounter & "000" & PLLStat, -- Status
-				InjectionTs      => InjectionTs,
+				InjectionTs      => InjectionTs, --_first,
 				InjectionWindow  => InjectionWindow,
 				FakeNum          => FakeNum
         );
@@ -701,18 +705,18 @@ EventBuff: FIFO_SC_4Kx16
       full => EventBuff_Full,
 	   empty => EventBuff_Empty);
 		
--- REMOVE ME		
---EventBuffSpy : LinkFIFO
---  PORT MAP (rst => ResetHi or GTPRxRst,
---	 wr_clk => UsrClk2(0),
---    rd_clk => SysClk,
---    din => EventBuff_Dat,
---    wr_en => EventBuff_WrtEn,
---    rd_en => EventBuffSpy_RdEn,
---    dout => EventBuffSpy_Out,
---    full => open,
---    empty => open,
---	 rd_data_count => open);
+-- REMOVE ME AGAIN!		
+EventBuffSpy : LinkFIFO
+  PORT MAP (rst => ResetHi or GTPRxRst,
+	 wr_clk => UsrClk2(0),
+    rd_clk => SysClk,
+    din => EventBuff_Dat,
+    wr_en => EventBuff_WrtEn,
+    rd_en => EventBuffSpy_RdEn,
+    dout => EventBuffSpy_Out,
+    full => open,
+    empty => open,
+	 rd_data_count => open);
 
 WdCountBuff: GTPRxFIFO
   port map (clk => UsrClk2(0),
@@ -1971,7 +1975,8 @@ FMTxReq : process(Clk80MHz, CpldRst, GTPRxRst)
 	MarkerDelayCounter <= (others => '0');
 	HeartBeatCnt <= (others => '0');
 	WindowTimer <= (others => '0');
-	--MarkerDelayedCnt <= (others => '0');
+
+	MarkerDelayedCnt <= (others => '0');
 	LastWindow <= X"FFFF";
 	InjectionTs <= X"FFFF";
 	NimTrigLast <= (others => '0');
@@ -1979,6 +1984,10 @@ FMTxReq : process(Clk80MHz, CpldRst, GTPRxRst)
 	MarkerLast <= "00";
 	InjectionCnt <= (others => '0');
 	InjectionWindow <= (others => '1');
+	InjectionCntInWindow <= (others => '0');
+	InjectionTs_first <= (others => '0');
+   InjectionWindow_first <= (others => '0');
+	
 
  elsif rising_edge(Clk80MHz) then
  
@@ -1993,21 +2002,21 @@ FMTxReq : process(Clk80MHz, CpldRst, GTPRxRst)
  		then 
 		    MarkerDelayCounter <= MarkerDelay; 
 			 MarkerDelayArm     <= '1';
-			 --MarkerDelayedCnt   <= MarkerDelayedCnt;
+			 MarkerDelayedCnt   <= MarkerDelayedCnt;
 	elsif MarkerDelayCounter > 0
 		then 
 		    MarkerDelayCounter <= MarkerDelayCounter - 1; 
 		    MarkerDelayArm     <= MarkerDelayArm;
-			 --MarkerDelayedCnt   <= MarkerDelayedCnt;
+			 MarkerDelayedCnt   <= MarkerDelayedCnt;
 	elsif MarkerDelayCounter = 0 and MarkerDelayed(0) = '0' and MarkerDelayArm = '1'
 		then 
 		    MarkerDelayed(0)  <= '1'; 
 			 MarkerDelayArm <= '0';
-			 --MarkerDelayedCnt <= MarkerDelayedCnt + 1;
+			 MarkerDelayedCnt <= MarkerDelayedCnt + 1;
 	else
 		MarkerDelayed(0)  <= '0'; 
 		MarkerDelayArm <= MarkerDelayArm;
-		--MarkerDelayedCnt   <= MarkerDelayedCnt;
+		MarkerDelayedCnt   <= MarkerDelayedCnt;
   end if;
   MarkerDelayed(3 downto 1) <= MarkerDelayed(2 downto 0);
 
@@ -2017,13 +2026,37 @@ FMTxReq : process(Clk80MHz, CpldRst, GTPRxRst)
 	      HrtBtFMTxEn <= '1'; 
 			HeartBeatCnt <= HeartBeatCnt + 1;
 			WindowTimer <= (others => '0');
+--			InjectionCntInWindow <= (others => '0');
 			LastWindow <= WindowTimer;
   else 
       HrtBtFMTxEn <= '0'; 
 		HeartBeatCnt <= HeartBeatCnt;
 		WindowTimer <= WindowTimer + 1;
 		LastWindow <= LastWindow;
+--		InjectionCntInWindow <= InjectionCntInWindow;
   end if;
+  
+  -- store the first injection pulse 
+  if HrtBtFMReq = '1' or (MarkerSyncEn = '1' and MarkerDelayed(0) = '1')
+      then    InjectionCntInWindow <= (others => '0');
+		        InjectionTs_first <= InjectionTs_first;
+              InjectionWindow_first <= InjectionWindow_first;
+  else
+      if NimTrigLast = X"3" then
+		    InjectionCntInWindow <= InjectionCntInWindow + 1;
+			 if InjectionCntInWindow = 0 then InjectionTs_first <= WindowTimer;
+			                                  InjectionWindow_first <= InjectionTimer;
+			 else
+			                                  InjectionTs_first <= InjectionTs_first;
+														 InjectionWindow_first <= InjectionWindow_first;
+			 end if;
+		else
+		    InjectionCntInWindow <= InjectionCntInWindow;
+		                                     InjectionTs_first <= WindowTimer;
+			                                  InjectionWindow_first <= InjectionTimer;
+		end if;
+  end if;
+  
   
   -- detect NimTrig transition to hight and store the current time stamp
   NimTrigLast(0) <= GPI;
@@ -2035,6 +2068,9 @@ FMTxReq : process(Clk80MHz, CpldRst, GTPRxRst)
 		InjectionCnt <= InjectionCnt + 1;
 		InjectionTimer <= (others => '0');
 		InjectionWindow <= InjectionTimer;
+		--if InjectionCntInWindow  then
+		--else
+		--end if;
 		
   else 
       InjectionTs <= InjectionTs;
@@ -2903,11 +2939,13 @@ iCD <= X"0" &
 		 HeartBeatCnt when HeartBeatCntAddr, -- markers sent out
 		 HeartBtCnt   when HeartBeatCnAddr,  -- EWT from fibers
 		 --MarkerDelayedCnt & MarkerCnt when MarkerCntAddr,
+		 MarkerDelayedCnt when MarkerCntAddr,
 		 --MarkerCnt3 & MarkerCnt2 when MarkerCnt2Addr,
 		 --MarkerCnt4 & MarkerCnt5 when MarkerCnt3Addr,
 		 --Duty0 & Duty1 when DutyAdd,
 		 LastWindow when LastWindowLengthAddr,
 		 InjectionTs when InjectionLengthAddr,
+		 InjectionTs_first when InjectionLengtFirstAddr,
 		 X"00" & InjectionCnt when InjectionCntAdd,
 		 InjectionWindow when InjectionWindowAdd,
 		 Clk80MHzAlignCnt & X"0" & "000" & Clk80MHzAlign when Clk80MHzAdd,
@@ -2921,7 +2959,7 @@ iCD <= X"0" &
 		 DRTimeout when DRTimeoutAdd,
 		 NimTrigLast & "00" & GPI & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"0068" when DebugVersionAd,
+		 X"0070" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 X"0000" when others;

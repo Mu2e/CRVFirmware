@@ -45,8 +45,8 @@ end entity PacketFormer;
 
 architecture rtl of PacketFormer is
     Type Packet_Former_Seq is (Idle,WrtPktCnt,WrtPktCntTimeout,WrtHdrPkt,WrtHdrPktTimeout,WrtCtrlHdrPkt,
-	                            WrtDatPkt,WrtDCSPkt,WrtGRPkt,WrtGRPkt2);
-	                            --Loopback,Loopback2);
+	                            WrtDatPkt,WrtDCSPkt,WrtGRPkt,WrtGRPkt2,
+	                            Loopback,Loopback2);
     signal current_state, next_state : Packet_Former_Seq;
     --signal FormStatRegNext : std_logic_vector(2 downto 0);
     signal FormStatReg     : std_logic_vector(2 downto 0);
@@ -61,12 +61,12 @@ architecture rtl of PacketFormer is
 	 signal GTPTxBuff_Pipe   : std_logic_vector(15 downto 0);
 	 signal GTPTx_Pipe      : std_logic_vector(15 downto 0);
     signal TxCharIsK_Pipe  : std_logic_vector(1 downto 0);
-	 --signal MarkerSync      : std_logic;
+	 signal MarkerSync      : std_logic;
 begin
 
     -- Next state logic (combinational)
     next_state_process: process(current_state, pktFormerSend, pktFormerTimeout, EvTxWdCnt, FormStatReg, 
-	                             FormRst, EventBuffErr, Pkt_Timer)
+	                             FormRst, EventBuffErr, Pkt_Timer, MarkerSync)
 										  -- MarkerSync
     begin
         Case current_state is
@@ -74,7 +74,7 @@ begin
             if    pktFormerSend = '1' and pktFormerTimeout = '0' then next_state <= WrtPktCnt;
             elsif pktFormerSend = '1' and pktFormerTimeout = '1' then next_state <= WrtPktCntTimeout; -- 
             elsif DCSBuffRdCnt > 1                                then next_state <= WrtDCSPkt;
-				--elsif MarkerSync = '1'                               then next_state <= Loopback;
+				elsif MarkerSync = '1'                               then next_state <= Loopback;
             --elsif (LoopbackMode = "1" and Marker = '1') then Packet_Former <= Loopback;
             --elsif (LoopbackMode = 1)                             then next_state <= Loopback;
             --elsif (LoopbackMode = 2 and Marker = '1')            then next_state <= Loopback;
@@ -83,12 +83,12 @@ begin
             else                                                      next_state <= Idle; --Debug(5 downto 3) <= "000";
             end if;
     -- Loopback
-    --    when Loopback =>          next_state <= Loopback2;
-    --    when Loopback2 =>
+        when Loopback =>          next_state <= Loopback2;
+        when Loopback2 =>
     --    --if (LoopbackMode = "0" or Marker = '0') then Packet_Former <= Idle;
-    --    if MarkerSync = '0' then  next_state <= Idle;
-    --    else                      next_state <= next_state;
-    --    end if;
+        if MarkerSync = '0' then  next_state <= Idle;
+        else                      next_state <= next_state;
+        end if;
             
     -- Divide by eight to get the number of packets
         when WrtPktCnt        => next_state <= WrtHdrPkt;         --FormStatRegNext <= "001";  
@@ -174,19 +174,19 @@ begin
 				DCSBuff_rd_en <= '0';
 				TStmpBuff_rd_en <= '0';
 				GTPTxBuff_wr_en <= '0';
-				--MarkerSync <= '0';
+				MarkerSync <= '0';
 
         elsif rising_edge(clk) then
             current_state <= next_state;
             --FormStatReg <= FormStatRegNext;
 				
-				--if      LoopbackMode = 1
-				--    or (LoopbackMode = 2 and Marker = '1') 
-				--    or (LoopbackMode = 3 and MarkerDelayed = '1')
-				--	 or (LoopbackMode = 4 and loopbackMarker = '1')
-				--	     then MarkerSync <= '1';
-				--else         MarkerSync <= '0';
-				--end if;
+				if      LoopbackMode = 1
+				    --or (LoopbackMode = 2 and Marker = '1') 
+				    or (LoopbackMode = 3 and MarkerDelayed = '1')
+					 or (LoopbackMode = 4 and loopbackMarker = '1')
+					     then MarkerSync <= '1';
+				else         MarkerSync <= '0';
+				end if;
 				
 				Case current_state is
 				    when Idle =>             FormStatReg <= "000"; 
@@ -270,7 +270,10 @@ begin
             else                                                                 Pkt_Timer <= Pkt_Timer;
             end if;
 
-            if Pkt_Timer = 0 and (
+            if current_state = Loopback then
+				     GTPTx_Pipe        <= X"1C90";
+					  GTPTxBuff_Pipe     <= X"1C90";
+				elsif Pkt_Timer = 0 and (
                   current_state = WrtHdrPkt 
               or  current_state = WrtHdrPktTimeout 
               or  current_state = WrtCtrlHdrPkt 
@@ -414,7 +417,7 @@ begin
             -- Pad is K28.5 K28.1 pair
             --elsif current_state = Loopback then
             --     GTPTxStage <= X"1C90";
-            else GTPTxStage <= X"BC3C"; TxCRCDat <= X"0000";
+            --else GTPTxStage <= X"BC3C"; TxCRCDat <= X"0000";
             end if;
 
             if (current_state = WrtCtrlHdrPkt and (Pkt_Timer = 8 or Pkt_Timer = 5 
@@ -494,6 +497,7 @@ begin
             then GTPTxBuff_wr_en <= '1';
             else GTPTxBuff_wr_en <= '0';
             end if;
+				
 				GTPTxBuff_In <= GTPTxBuff_Pipe;
 				GTPTx <= GTPTx_Pipe;
 				TxCharIsK <= TxCharIsK_Pipe;
