@@ -108,6 +108,7 @@ signal BnchClk,HeartBeatFM,BnchMarker : std_logic;
 
 -- Synchronous edge detectors of uC read and write strobes
 Signal RDDL,WRDL : std_logic_vector (1 downto 0);
+--signal uCD_reg : std_logic_vector (15 downto 0);
 signal EthWRDL,EthRDDL : std_logic_vector (4 downto 0);
 
 -- Clock and reset signals
@@ -140,7 +141,7 @@ signal WindowTimer : std_logic_vector(15 downto 0);
 signal LastWindow : std_logic_vector(15 downto 0);
 signal InjectionTs : std_logic_vector(15 downto 0);
 signal NimTrigLast : std_logic_vector(3 downto 0); -- latch the input to detect input rising edge
-signal InjectionCntInWindow : std_logic_vector(3 downto 0);
+signal InjectionCntInWindow : std_logic_vector(4 downto 0);
 signal InjectionTs_first : std_logic_vector(15 downto 0);
 signal LastWindow_first : std_logic_vector(15 downto 0);
 
@@ -288,8 +289,10 @@ signal DReqBuff_wr_en,DReqBuff_rd_en,DReqBuff_uCRd, DCSPktBuff_uCRd,
 		 DReqBuff_Full,TrigTx_Sel,DReqBuff_Emtpy,
 		 Dreq_Tx_Req,Dreq_Tx_ReqD,DReq_Tx_Ack,BmOnTrigReq,Stat_DReq : std_logic;
 signal LinkFIFOStatReg,Lower_FM_Bits : std_logic_vector (2 downto 0);  
-signal EventBuffSpy_RdEn : std_logic;
-signal EventBuffSpy_Out : std_logic_vector (15 downto 0);
+--signal EventBuffSpy_RdEn : std_logic;
+--signal EventBuffSpy_Out : std_logic_vector (15 downto 0);
+--signal DCSSpy_RdEn : std_logic;
+--signal DCSSpy_Out : std_logic_vector (15 downto 0);
 
 Type Trig_Tx_State is (Idle,SendTrigHdr,SendPad0,SendPktType,SenduBunch0,SenduBunch1,
 								SenduBunch2,SendPad1,SendPad2,SendPad3,WaitCRC,SendCRC,SetPktType);
@@ -401,6 +404,8 @@ signal InjectionCnt : std_logic_vector(7 downto 0);
 signal InjectionDutyCnt, InjectionDuty, InjectionHighCnt : std_logic_vector(7 downto 0);
 
 
+--signal debug_cnt : std_logic_vector(7 downto 0);
+
 begin
 
 Sys_Pll : SysPll2
@@ -484,7 +489,7 @@ EventBuilderInst : EventBuilder
 				HeartBeatCnt     => HeartBeatCnt,
 				LastWindow       => LastWindow,
 				Stats            => CRCErrCnt & LosCounter & "000" & PLLStat, -- Status
-				InjectionTs      => InjectionTs, --_first,
+				InjectionTs      => InjectionTs_first, -- InjectionTs, --_first,
 				InjectionWindow  => InjectionWindow,
 				FakeNum          => FakeNum
         );
@@ -578,6 +583,8 @@ HrtBtData(20) <= Beam_On;
 HrtBtData(21) <= '0' when ExtuBunchCount(31 downto 20) = 0 else '1';
 HrtBtData(23 downto 22) <= "00";
 -- FM transmitter for boadcasting microbunch numbers to the FEBs
+
+--Clk80MHzFMTx <= Clk80MHzPLL;
 HeartBeatTx : FM_Tx 
 	generic map (Pwidth => 24)
 		 port map(clock => Clk80MHz, 
@@ -586,6 +593,8 @@ HeartBeatTx : FM_Tx
 					 Data => HrtBtData, 
 					 Tx_Out => HrtBtTxOuts);
 HeartBeatFM <= HrtBtTxOuts.FM when ExtTmg = '0' else GPI;
+--GPO(0) <= HeartBeatFM;
+--GPO(1) <= HrtBtTxOuts.FM;
 --Debug(1) <= HrtBtTxOuts.FM;
 --Debug(2) <= HrtBtFMTxEn;
 --Debug(3) <= MarkerDelayed;
@@ -670,6 +679,19 @@ DCSOutBuff : LinkFIFO
 	 rd_data_count => DCSBuffRdCnt);
 	 
 	 DCSPktBuff_rd_en <= DCSPktBuff_uCRd;
+	 
+-- DEBUG ONLY! REMOVE ME
+--DCSOutBuffDebug : LinkFIFO
+--  PORT MAP (rst => GTPRxRst,
+--	 wr_clk => SysClk,
+--    rd_clk => SysClk,
+--    din => DCSBuff_In,
+--    wr_en => DCSBuff_wr_en,
+--    rd_en => DCSSpy_RdEn,
+--    dout => DCSSpy_Out,
+--    full => open, --DCSBuff_Full,
+--    empty => open, --DCSBuff_Emtpy,
+--	 rd_data_count => open); --DCSBuffRdCnt);
 
 
 -- Queue up time stamps for later checking
@@ -706,17 +728,17 @@ EventBuff: FIFO_SC_4Kx16
 	   empty => EventBuff_Empty);
 		
 -- REMOVE ME AGAIN!		
-EventBuffSpy : LinkFIFO
-  PORT MAP (rst => ResetHi or GTPRxRst,
-	 wr_clk => UsrClk2(0),
-    rd_clk => SysClk,
-    din => EventBuff_Dat,
-    wr_en => EventBuff_WrtEn,
-    rd_en => EventBuffSpy_RdEn,
-    dout => EventBuffSpy_Out,
-    full => open,
-    empty => open,
-	 rd_data_count => open);
+--EventBuffSpy : LinkFIFO
+--  PORT MAP (rst => ResetHi or GTPRxRst,
+--	 wr_clk => UsrClk2(0),
+--    rd_clk => SysClk,
+--    din => EventBuff_Dat,
+--    wr_en => EventBuff_WrtEn,
+--    rd_en => EventBuffSpy_RdEn,
+--    dout => EventBuffSpy_Out,
+--    full => open,
+--    empty => open,
+--	 rd_data_count => open);
 
 WdCountBuff: GTPRxFIFO
   port map (clk => UsrClk2(0),
@@ -972,8 +994,16 @@ begin
 	pktFormerTimeout <= '0';
 	pktFormerSend <= '0';
 	DR_Handler <= Idle;
+	--debug_cnt <= (others =>'0');
 
 elsif rising_edge (UsrClk2(0)) then
+
+	-- DEBUG, count how often we try to write to a full buffer
+	--if EventBuff_WrtEn = '1' and EventBuff_Full = '1' then
+	--	debug_cnt <= debug_cnt + 1;
+	--else
+	--	debug_cnt <= debug_cnt;
+	--end if;
 
 	if Rx_IsComma(0) = "00" and ReFrame(0) = '0'
 	then GTPRxBuff_wr_en(0) <= '1';
@@ -1715,7 +1745,8 @@ EthProc : process(EthClk, CpldRst)
 	ZEthCS <= '1'; ZEthWE <= '1'; 
 	ZEthBE <= "11"; EthRDDL <= (others => '0');
 	MarkerBits <= X"0000"; Even_Odd <= '0'; 
-	GPO(0) <= '0'; Marker <= '0'; 
+	GPO(0) <= '0'; 
+	Marker <= '0'; 
 	MarkerCnt <= (others => '0'); -- MarkerCnt2 <= (others => '0');
 	--MarkerCnt3 <= (others => '0'); MarkerCnt4 <= (others => '0'); MarkerCnt5 <= (others => '0');
 	BnchMarkerLast <= (others => '0');
@@ -2036,8 +2067,11 @@ FMTxReq : process(Clk80MHz, CpldRst, GTPRxRst)
 --		InjectionCntInWindow <= InjectionCntInWindow;
   end if;
   
+  
+
+  
   -- store the first injection pulse 
-  if HrtBtFMReq = '1' or (MarkerSyncEn = '1' and MarkerDelayed(0) = '1')
+  if MarkerDelayed(0) = '1'
       then    InjectionCntInWindow <= (others => '0');
 		        InjectionTs_first <= InjectionTs_first;
               InjectionWindow_first <= InjectionWindow_first;
@@ -2052,8 +2086,8 @@ FMTxReq : process(Clk80MHz, CpldRst, GTPRxRst)
 			 end if;
 		else
 		    InjectionCntInWindow <= InjectionCntInWindow;
-		                                     InjectionTs_first <= WindowTimer;
-			                                  InjectionWindow_first <= InjectionTimer;
+		    InjectionTs_first     <= InjectionTs_first;
+			 InjectionWindow_first <= InjectionWindow_first;
 		end if;
   end if;
   
@@ -2113,6 +2147,7 @@ main : process(SysClk, CpldRst)
 
 -- Synchronous edge detectors for various strobes
 	RDDL <= "00"; WRDL <= "00"; 
+	--uCD_reg <= (others => '0');
 
 -- Trigger and spill generator logic
 	FreqReg <= X"00000237"; PhaseAcc <= (others => '0');
@@ -2146,6 +2181,7 @@ main : process(SysClk, CpldRst)
 	DReqBuff_uCRd <= '0'; LinkBusy <= '0'; HrtBtTxInh <= '0';
 	DCSPktBuff_uCRd <= '0'; MarkerDelay <= (others => '0'); 
 	Clk80MHzAlign <= '0';
+	--Clk80MHzSel <= '0';
 	LoopbackMode <= (others => '0');
 	DCSBuff_wr_en <= '0'; DCSBuff_In <= (others => '0');
 	--DCS_Header <= X"8040";
@@ -2154,7 +2190,8 @@ main : process(SysClk, CpldRst)
 	sendGR <= '0';
 	DRTimeout <= X"FFFF"; -- units of 6.4ns, corresponds to 419us
 	sendGRCnt <= (others => '0');
-	EventBuffSpy_RdEn <= '0';
+	--EventBuffSpy_RdEn <= '0';
+	--DCSSpy_RdEn <= '0';
 	
 -- Pll Chip Shifter signals
 	PLLBuffwr_en <= '0'; PLLBuffrd_en <= '0'; PllPDn <= '1';
@@ -2178,6 +2215,7 @@ main : process(SysClk, CpldRst)
 	FEBID_addra <= (others => '0'); FEBID_addrb <= (others => '0');
 	
 	HeartBtCnt <= (others => '0');
+	--addr_reg <= (others =>'0');
 	
  elsif rising_edge (SysClk) then 
 
@@ -2187,6 +2225,13 @@ RDDL(1) <= RDDL(0);
 
 WRDL(0) <= not uCWR and not CpldCS;
 WRDL(1) <= WRDL(0);
+--if (uCWR = '0') and CpldCS = '0' then 
+--	addr_reg <= uCA;
+--	uCD_reg <= uCD;
+--else 
+--	addr_reg <= addr_reg;
+--	uCD_reg <= uCD_reg;
+--end if;
 
 LinkBusy <= LinkFIFOEmpty(0) and LinkFIFOEmpty(1) and LinkFIFOEmpty(2);
 
@@ -2344,8 +2389,12 @@ end if;
 
 -- Enable/Disable 80MHz alignment
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = Clk80MHzAdd
-	then Clk80MHzAlign <= uCD(0);
-	else Clk80MHzAlign <= Clk80MHzAlign;
+	then 
+		Clk80MHzAlign <= uCD(0);
+		--Clk80MHzSel   <= uCD(1);
+	else 
+		Clk80MHzAlign <= Clk80MHzAlign;
+		--Clk80MHzSel   <= Clk80MHzSel;
 end if;
 
 -- Set Loopback mode
@@ -2368,14 +2417,19 @@ end if;
 	
 -- REMOVE ME
 --	Read of the spy request FIFO
-	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = EventBuffSpyAd 
-	then EventBuffSpy_RdEn <= '1';
-	else EventBuffSpy_RdEn <= '0';
-	end if;
+--	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = EventBuffSpyAd 
+--	then EventBuffSpy_RdEn <= '1';
+--	else EventBuffSpy_RdEn <= '0';
+--	end if;
+	
+--	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DCSSpyAd 
+--	then DCSSpy_RdEn <= '1';
+--	else DCSSpy_RdEn <= '0';
+--	end if;
 	
 	
 -- write to the DCS answer FIFO
-	if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DCSBuffAd 
+	if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = DCSBuffAd 
 	then 
 	    DCSBuff_wr_en <= '1';
 		 DCSBuff_In <= uCD(15 downto 0);
@@ -2920,7 +2974,8 @@ iCD <= X"0" &
 		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
 		 "000" & DCSPktRdCnt when DCSPktWdUsedAd,
 		 DCSPktBuff_Out(15 downto 0) when DCSPktBuffAd,
-       EventBuffSpy_Out(15 downto 0) when EventBuffSpyAd,
+       --EventBuffSpy_Out(15 downto 0) when EventBuffSpyAd,
+		 --DCSSpy_Out(15 downto 0) when DCSSpyAd,
 		 ExtuBunchOffset when HrtBtOffsetAd,
 		 --DReq_Count(15 downto 0) when DReqCountLowAd,
 		 --DReq_Count(31 downto 16) when DReqCountHiAd,
@@ -2959,9 +3014,11 @@ iCD <= X"0" &
 		 DRTimeout when DRTimeoutAdd,
 		 NimTrigLast & "00" & GPI & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"0070" when DebugVersionAd,
+		 X"0083" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
+		 DRcnt when DRCntAdd,
+		 --X"00" & debug_cnt when DebugCntAdd,
 		 X"0000" when others;
 
 -- Select between the Orange Tree port and the rest of the registers
