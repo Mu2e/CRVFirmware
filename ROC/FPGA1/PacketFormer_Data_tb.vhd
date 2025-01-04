@@ -68,7 +68,10 @@ ARCHITECTURE behavior OF PacketFormer_Data_tb IS
          GTPTxBuff_In : OUT  std_logic_vector(15 downto 0);
          LoopbackMode : IN  std_logic_vector(2 downto 0);
          uBwrt : IN  std_logic;
-         IDReg : IN  std_logic_vector(3 downto 0)
+         IDReg : IN  std_logic_vector(3 downto 0);
+			--Marker           : in  std_logic;
+		  MarkerDelayed    : in  std_logic;
+		  loopbackMarker   : in  std_logic
         );
     END COMPONENT;
     
@@ -89,6 +92,8 @@ ARCHITECTURE behavior OF PacketFormer_Data_tb IS
    signal LoopbackMode : std_logic_vector(2 downto 0) := (others => '0');
    signal uBwrt : std_logic := '0';
    signal IDReg : std_logic_vector(3 downto 0) := (others => '0');
+	signal MarkerDelayed    : std_logic := '0';
+	signal loopbackMarker   :  std_logic := '0';
 
  	--Outputs
    signal EventBuff_RdEn : std_logic;
@@ -135,7 +140,9 @@ BEGIN
           GTPTxBuff_In => GTPTxBuff_In,
           LoopbackMode => LoopbackMode,
           uBwrt => uBwrt,
-          IDReg => IDReg
+          IDReg => IDReg,
+			 MarkerDelayed => MarkerDelayed,
+			 loopbackMarker => loopbackMarker
         );
 
    -- Clock process definitions
@@ -165,6 +172,12 @@ BEGIN
 		pktFormerTimeout <= '0';
 
       -- insert stimulus here 
+		wait for clk_period*10;
+		LoopbackMode <= "001";
+		wait for clk_period*10;
+		LoopbackMode <= "000";
+		
+		
 
       wait;
    end process;
