@@ -77,7 +77,7 @@ begin
                     align_cnt <= align_cnt;
                 end if;
             else
-                outp_next <= not outp; -- clock
+                outp_next <= not outp_next; -- clock
             end if;
         end if;
     end process;
