@@ -208,7 +208,7 @@ class hit:
         format_string = '<' + 'H' * n_words  # Construct format string of 16 bit words
         words = struct.unpack(format_string, data) # Unpack it
         self.channel = words[0]  # full word[1]: channel number
-        self.time    = words[1]  # full word[2]: channel number
+        self.time    = words[1]  # full word[2]: timestamp
         self.samples = words[2:] # full word[3 and up]: samples
     def print(self):
         """Print hit info"""
