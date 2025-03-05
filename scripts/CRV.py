@@ -652,3 +652,13 @@ class CRV:
         print("rocSent:", rocSent)
         print("febRec:", febRec)
         print("febBuff:", febBuff)
+
+    def febEnableAllChannels(self):
+        self.cmd("LC ADC")
+        self.write('21', 'FFFF', lc=True) # Set all bits to 1
+        
+    def febDisableChannel(self, channel):
+        self.cmd("LC ADC")
+        mask = 0xFFFF & ~(1 << channel)  # Clear the bit
+        mask = format(mask, 'X') # Return uppercase hex without '0x' prefix
+        self.write('21', mask, lc=True)
