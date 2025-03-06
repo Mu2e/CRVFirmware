@@ -653,15 +653,34 @@ class CRV:
         print("febRec:", febRec)
         print("febBuff:", febBuff)
 
-    def febDisableChannels(self, mask=0xFFFF, FPGA=-1):
+    def constructMask(self, channel): 
+        return 0xFFFF & ~(1<<channel) # Clear the bit
+
+
+    def febChannels(self, mask=0xFFFF, FPGA=-1):
         # Enable FEB stuff
         self.cmd("LC ADC")
-        # FPGA registers
-        fgpa_regs = [0x000, 0x400, 0x800, 0xC00]
         # Input mask register
         input_mask_reg = 0x21
+
+        # Reset (make sure old settings don't hang around)
+        def _reset():
+            print("\n---> Resetting FEB FPGA channels")
+            for reg_digit in self.febFPGA.values():
+                reg = int(reg_digit, 16) << 8
+                self.write(
+                    format(reg | input_mask_reg, 'X'),
+                    format(0xFFFF, "X"),
+                    lc=True
+                )        
+        _reset()
+
+        # Set channels
+        print("\n---> Setting FEB FPGA channels")
         if FPGA < 0: # Do them all
-            for reg in fgpa_regs:
+            for reg_digit in self.febFPGA.values():
+                # Convert hex string to int and shift left by 8 bits
+                reg = int(reg_digit, 16) << 8
                 # Write to input mask register
                 self.write(
                     format(reg | input_mask_reg, 'X'),
@@ -669,8 +688,10 @@ class CRV:
                     lc=True
                 )
         else: # Do the specified FPGA
+            reg_digit = self.febFPGA[FPGA] 
+            reg = int(reg_digit, 16) << 8
             self.write(
-                    format(fgpa_regs[FPGA] | input_mask_reg, 'X'),
+                    format(reg | input_mask_reg, 'X'),
                     format(mask, "X"),
                     lc=True
                 )
