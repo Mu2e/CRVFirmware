@@ -653,12 +653,24 @@ class CRV:
         print("febRec:", febRec)
         print("febBuff:", febBuff)
 
-    def febEnableAllChannels(self):
+    def febDisableChannels(self, mask=0xFFFF, FPGA=-1):
+        # Enable FEB stuff
         self.cmd("LC ADC")
-        self.write('21', 'FFFF', lc=True) # Set all bits to 1
-        
-    def febDisableChannel(self, channel):
-        self.cmd("LC ADC")
-        mask = 0xFFFF & ~(1 << channel)  # Clear the bit
-        mask = format(mask, 'X') # Return uppercase hex without '0x' prefix
-        self.write('21', mask, lc=True)
+        # FPGA registers
+        fgpa_regs = [0x000, 0x400, 0x800, 0xC00]
+        # Input mask register
+        input_mask_reg = 0x21
+        if FPGA < 0: # Do them all
+            for reg in fgpa_regs:
+                # Write to input mask register
+                self.write(
+                    format(reg | input_mask_reg, 'X'),
+                    format(mask, "X"),
+                    lc=True
+                )
+        else: # Do the specified FPGA
+            self.write(
+                    format(fgpa_regs[FPGA] | input_mask_reg, 'X'),
+                    format(mask, "X"),
+                    lc=True
+                )
