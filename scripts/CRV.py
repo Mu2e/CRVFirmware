@@ -663,11 +663,15 @@ class CRV:
         # Input mask register
         input_mask_reg = 0x21
 
+        def _get_reg(reg_digit): 
+            # Convert hex string to int and shift left by 8 bits
+            return int(reg_digit, 16) << 8
+
         # Reset (make sure old settings don't hang around)
         def _reset():
             print("\n---> Resetting FEB FPGA channels")
             for reg_digit in self.febFPGA.values():
-                reg = int(reg_digit, 16) << 8
+                reg = _get_reg(reg_digit)
                 self.write(
                     format(reg | input_mask_reg, 'X'),
                     format(0xFFFF, "X"),
@@ -680,7 +684,7 @@ class CRV:
         if FPGA < 0: # Do them all
             for reg_digit in self.febFPGA.values():
                 # Convert hex string to int and shift left by 8 bits
-                reg = int(reg_digit, 16) << 8
+                reg = _get_reg(reg_digit) 
                 # Write to input mask register
                 self.write(
                     format(reg | input_mask_reg, 'X'),
@@ -689,7 +693,7 @@ class CRV:
                 )
         else: # Do the specified FPGA
             reg_digit = self.febFPGA[FPGA] 
-            reg = int(reg_digit, 16) << 8
+            reg = _get_reg(reg_digit)
             self.write(
                     format(reg | input_mask_reg, 'X'),
                     format(mask, "X"),
