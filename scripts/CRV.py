@@ -14,6 +14,7 @@ class CRV:
         self.n_sample = 8
         self.rocFPGA = {1 : "4", 2:"8", 3:"C"}
         self.febFPGA = {0 : "0", 1 : "4", 2 : "8", 3 : "C"}
+        self.inputMaskReg = 0x21
 
     def close(self):
         self.ser.close()
@@ -653,49 +654,52 @@ class CRV:
         print("febRec:", febRec)
         print("febBuff:", febBuff)
 
+    def _getReg(self, regDigit): 
+        # Convert hex string to int and shift left by 8 bits
+        return int(regDigit, 16) << 8
+            
     def constructMask(self, channel): 
         return 0xFFFF & ~(1<<channel) # Clear the bit
 
-
-    def febChannels(self, mask=0xFFFF, FPGA=-1):
+    def febResetChannels(self):
         # Enable FEB stuff
         self.cmd("LC ADC")
-        # Input mask register
-        input_mask_reg = 0x21
+        print("\n---> Resetting FEB FPGA channels")
+        for reg_digit in self.febFPGA.values():
+            reg = self._getReg(reg_digit)
+            self.write(
+                format(reg | self.inputMaskReg, 'X'),
+                format(0xFFFF, "X"),
+                lc=True
+            )    
 
-        def _get_reg(reg_digit): 
-            # Convert hex string to int and shift left by 8 bits
-            return int(reg_digit, 16) << 8
-
-        # Reset (make sure old settings don't hang around)
-        def _reset():
-            print("\n---> Resetting FEB FPGA channels")
-            for reg_digit in self.febFPGA.values():
-                reg = _get_reg(reg_digit)
-                self.write(
-                    format(reg | input_mask_reg, 'X'),
-                    format(0xFFFF, "X"),
-                    lc=True
-                )        
-        _reset()
-
+    def febMaskChannels(self, mask=0xFFFF, FPGA=-1):
         # Set channels
         print("\n---> Setting FEB FPGA channels")
         if FPGA < 0: # Do them all
-            for reg_digit in self.febFPGA.values():
+            for regDigit in self.febFPGA.values():
                 # Convert hex string to int and shift left by 8 bits
-                reg = _get_reg(reg_digit) 
+                reg = self._getReg(regDigit) 
                 # Write to input mask register
                 self.write(
-                    format(reg | input_mask_reg, 'X'),
+                    format(reg | self.inputMaskReg, 'X'),
                     format(mask, "X"),
                     lc=True
                 )
         else: # Do the specified FPGA
-            reg_digit = self.febFPGA[FPGA] 
-            reg = _get_reg(reg_digit)
+            regDigit = self.febFPGA[FPGA] 
+            reg = self._getReg(regDigit)
             self.write(
-                    format(reg | input_mask_reg, 'X'),
+                    format(reg | self.inputMaskReg, 'X'),
                     format(mask, "X"),
                     lc=True
                 )
+
+    def febReadChannelMasks(self):
+        for regDigit in self.febFPGA.values():
+            reg = self._getReg(regDigit) 
+            print(reg)
+            self.read(
+                format(reg | self.inputMaskReg, 'X'),
+                lc=True
+            )
