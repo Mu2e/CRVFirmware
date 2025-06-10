@@ -289,8 +289,8 @@ signal DReqBuff_wr_en,DReqBuff_rd_en,DReqBuff_uCRd, DCSPktBuff_uCRd,
 		 DReqBuff_Full,TrigTx_Sel,DReqBuff_Emtpy,
 		 Dreq_Tx_Req,Dreq_Tx_ReqD,DReq_Tx_Ack,BmOnTrigReq,Stat_DReq : std_logic;
 signal LinkFIFOStatReg,Lower_FM_Bits : std_logic_vector (2 downto 0);  
---signal EventBuffSpy_RdEn : std_logic;
---signal EventBuffSpy_Out : std_logic_vector (15 downto 0);
+signal EventBuffSpy_RdEn : std_logic;
+signal EventBuffSpy_Out : std_logic_vector (15 downto 0);
 --signal DCSSpy_RdEn : std_logic;
 --signal DCSSpy_Out : std_logic_vector (15 downto 0);
 
@@ -728,17 +728,17 @@ EventBuff: FIFO_SC_4Kx16
 	   empty => EventBuff_Empty);
 		
 -- REMOVE ME AGAIN!		
---EventBuffSpy : LinkFIFO
---  PORT MAP (rst => ResetHi or GTPRxRst,
---	 wr_clk => UsrClk2(0),
---    rd_clk => SysClk,
---    din => EventBuff_Dat,
---    wr_en => EventBuff_WrtEn,
---    rd_en => EventBuffSpy_RdEn,
---    dout => EventBuffSpy_Out,
---    full => open,
---    empty => open,
---	 rd_data_count => open);
+EventBuffSpy : LinkFIFO
+  PORT MAP (rst => ResetHi or GTPRxRst,
+	 wr_clk => UsrClk2(0),
+    rd_clk => SysClk,
+    din => EventBuff_Dat,
+    wr_en => EventBuff_WrtEn,
+    rd_en => EventBuffSpy_RdEn,
+    dout => EventBuffSpy_Out,
+    full => open,
+    empty => open,
+	 rd_data_count => open);
 
 WdCountBuff: GTPRxFIFO
   port map (clk => UsrClk2(0),
@@ -2190,7 +2190,7 @@ main : process(SysClk, CpldRst)
 	sendGR <= '0';
 	DRTimeout <= X"FFFF"; -- units of 6.4ns, corresponds to 419us
 	sendGRCnt <= (others => '0');
-	--EventBuffSpy_RdEn <= '0';
+	EventBuffSpy_RdEn <= '0';
 	--DCSSpy_RdEn <= '0';
 	
 -- Pll Chip Shifter signals
@@ -2417,10 +2417,10 @@ end if;
 	
 -- REMOVE ME
 --	Read of the spy request FIFO
---	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = EventBuffSpyAd 
---	then EventBuffSpy_RdEn <= '1';
---	else EventBuffSpy_RdEn <= '0';
---	end if;
+	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = EventBuffSpyAd 
+	then EventBuffSpy_RdEn <= '1';
+	else EventBuffSpy_RdEn <= '0';
+	end if;
 	
 --	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DCSSpyAd 
 --	then DCSSpy_RdEn <= '1';
@@ -2581,6 +2581,11 @@ end if;
 		when X"4" => ExtuBunchCount(47 downto 32) <= HrtBtBuff_Out;
 		When X"3" => ExtuBunchCount <= (ExtuBunchCount + (X"0000" & ExtuBunchOffset));
 	   when others => ExtuBunchCount <= ExtuBunchCount;
+	 end case;
+	 
+	 Case HrtBtRdCnt is
+		when X"1"   => Beam_On <= HrtBtBuff_Out(0);
+	   when others => Beam_On <= Beam_On;
 	 end case;
 
 
@@ -2974,7 +2979,7 @@ iCD <= X"0" &
 		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
 		 "000" & DCSPktRdCnt when DCSPktWdUsedAd,
 		 DCSPktBuff_Out(15 downto 0) when DCSPktBuffAd,
-       --EventBuffSpy_Out(15 downto 0) when EventBuffSpyAd,
+       EventBuffSpy_Out(15 downto 0) when EventBuffSpyAd,
 		 --DCSSpy_Out(15 downto 0) when DCSSpyAd,
 		 ExtuBunchOffset when HrtBtOffsetAd,
 		 --DReq_Count(15 downto 0) when DReqCountLowAd,
@@ -2988,7 +2993,7 @@ iCD <= X"0" &
 		 --DCS_EvCnt when DCSEvCntAd,
 		 --DCS_Status when DCSStatusAd,
 		 GTPRstFromCnt & "0" & GTPTstFromCntEn & GTPRstArm & X"0" &"0" & GTPRstCnter when GTPRstCntAd,
-		 --X"000" & uBdebug2 & uBdebug & uBwrt & uBinHeader when FormatRegAddr,
+		 X"000" & uBdebug2 & uBdebug & uBwrt & uBinHeader when FormatRegAddr,
 		 --uBcheck(31 downto 16) when uBLowRegAddr,
 		 --uBcheck(15 downto  0) when uBHighRegAddr,
 		 HeartBeatCnt when HeartBeatCntAddr, -- markers sent out
@@ -3014,7 +3019,7 @@ iCD <= X"0" &
 		 DRTimeout when DRTimeoutAdd,
 		 NimTrigLast & "00" & GPI & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"0083" when DebugVersionAd,
+		 X"0085" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 DRcnt when DRCntAdd,
