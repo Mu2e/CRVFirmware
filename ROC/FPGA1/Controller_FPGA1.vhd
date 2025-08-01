@@ -283,11 +283,20 @@ signal HrtBtDone,HrtBtTxReq,HrtBtTxAck,HrtBtFMTxEn,TxEnReq,DReqTxEn,LinkBusy : s
 signal HrtBtData : std_logic_vector (23 downto 0);
 signal TrigFMDat : std_logic_vector (15 downto 0);
 
--- Trigger request packet buffer, FIFO status bits
+-- Trigger request packet buffer
 signal DReqBuff_Out : std_logic_vector (15 downto 0);
 signal DReqBuff_wr_en,DReqBuff_rd_en,DReqBuff_uCRd, DCSPktBuff_uCRd,
 		 DReqBuff_Full,TrigTx_Sel,DReqBuff_Emtpy,
 		 Dreq_Tx_Req,Dreq_Tx_ReqD,DReq_Tx_Ack,BmOnTrigReq,Stat_DReq : std_logic;
+
+-- Prefetch request packet buffer
+signal PFReqBuff_Out : std_logic_vector (15 downto 0);
+signal PFReqBuff_wr_en,PFReqBuff_rd_en, 
+		 PFReqBuff_Full,PFReqBuff_Emtpy,
+		 Stat_PFReq : std_logic;
+-- signal PFReqBuff_uCRd,PFTrigTx_Sel,PF_Tx_Req,PF_Tx_ReqD,PF_Tx_Ack: std_logic;
+
+-- FIFO status bits
 signal LinkFIFOStatReg,Lower_FM_Bits : std_logic_vector (2 downto 0);  
 signal EventBuffSpy_RdEn : std_logic;
 signal EventBuffSpy_Out : std_logic_vector (15 downto 0);
@@ -303,7 +312,7 @@ signal Packet_Type : std_logic_vector (3 downto 0);
 
 -- Heart beat FIFO
 signal HrtBtWrtCnt,HrtBtRdCnt,TrigReqWdCnt,HrtBtWdCnt,DCSReqWdCnt : std_logic_vector (3 downto 0);
-signal HrtBtBuffRdCnt,TrgPktRdCnt : std_logic_vector (10 downto 0);
+signal HrtBtBuffRdCnt,TrgPktRdCnt, PFPktRdCnt : std_logic_vector (10 downto 0);
 signal HrtBtBuff_wr_en,HrtBtBuff_rd_en,HrtBtBuff_Full,HrtBtBuff_Emtpy,HrtBtFMReq : std_logic;
 signal HrtBtBuff_Out : std_logic_vector (15 downto 0);
 signal HrtBtMode : std_logic_vector (7 downto 0);
@@ -622,7 +631,7 @@ DReqTxEn <= '1' when TrigTx_Sel = '1' and DReqBuff_Emtpy = '0' and DreqTxOuts.Do
 				  
 -- FIFO for buffering broadcast trigger requests, 
 -- crossing clock domains from UsrClk to Sysclk
-DReqBuff : FIFO_DC_1kx16
+DReqBuff : FIFO_DC_1kx16 
   PORT MAP (rst => GTPRxRst,
     wr_clk => UsrClk2(0),
 	 rd_clk => SysClk,
@@ -635,6 +644,22 @@ DReqBuff : FIFO_DC_1kx16
 	 rd_data_count => TrgPktRdCnt);
 
 	 DReqBuff_rd_en <= DreqTxOuts.Done when TrigTx_Sel = '1' else DReqBuff_uCRd;
+
+-- FIFO for buffering prefetch requests, 
+-- crossing clock domains from UsrClk to Sysclk
+PFBuff : FIFO_DC_1kx16  -- Insert new package here for Prefetch
+  PORT MAP (rst => GTPRxRst,
+    wr_clk => UsrClk2(0),
+	 rd_clk => SysClk,
+    din => GTPRxReg(0),
+    wr_en => PFReqBuff_wr_en, -- Insert new package here for Prefetch
+    rd_en => PFReqBuff_rd_en, -- Insert new package here for Prefetch
+    dout => PFReqBuff_Out, -- Insert new package here for Prefetch
+    full => PFReqBuff_Full, -- Insert new package here for Prefetch
+    empty => PFReqBuff_Emtpy, -- Insert new package here for Prefetch
+	 rd_data_count => PFPktRdCnt);
+
+	 DReqBuff_rd_en <= DreqTxOuts.Done when TrigTx_Sel = '1' else DReqBuff_uCRd; -- Insert new package here for Prefetch
 
 -- FIFO for buffering incoming heartbeats
 -- crossing clock domains from UsrClk to Sysclk
@@ -1092,6 +1117,25 @@ end if;
 	if TrigTx_Sel = '1' and DReqBuff_Emtpy = '0'
 	then Stat_DReq <= '0';
 	else Stat_DReq <= '1';
+	end if;
+
+-- Count down the nine words of the prefetch request packet being received
+	if GTPRxRst = '1' or RxLOS(0)(1) = '1' then TrigReqWdCnt <= X"0";
+	elsif Rx_IsComma(0) = "00" and ReFrame(0) = '0' and Rx_IsCtrl(0) = "10" and GTPRx(0)(4 downto 0) = 2
+	then TrigReqWdCnt <= X"9";
+	elsif Rx_IsComma(0) = "00" and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and TrigReqWdCnt /= 0  
+	then TrigReqWdCnt <= TrigReqWdCnt - 1;
+	else TrigReqWdCnt <= TrigReqWdCnt;
+	end if;
+
+	if Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and TrigReqWdCnt > 0
+	then PFReqBuff_wr_en <= '1';  -- Insert new package here for Prefetch
+	else PFReqBuff_wr_en <= '0';  -- Insert new package here for Prefetch
+	end if;
+
+	if TrigTx_Sel = '1' and PFReqBuff_Emtpy = '0' -- Insert new package here for Prefetch
+	then Stat_PFReq <= '0'; -- Insert new package here for Prefetch
+	else Stat_PFReq <= '1'; -- Insert new package here for Prefetch
 	end if;
 
 -- Count down the nine words of the heart beat packet being received
