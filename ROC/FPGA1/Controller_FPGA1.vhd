@@ -2705,6 +2705,7 @@ end if;
 	
 -- add one here for read of the prefetch trigger request FIFO? 
 -- Need an equivalent of TrigReqBuffAd -> "PFReqBuffAd"
+-- STEP 5 trigger logic
 
 --	Read of the dcs request FIFO
 	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DCSPktBuffAd 
