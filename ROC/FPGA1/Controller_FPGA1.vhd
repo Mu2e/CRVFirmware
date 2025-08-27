@@ -72,7 +72,7 @@ entity ControllerFPGA_1 is port(
 -- Serial inter-chip link Data lines
 	LinkSDat_P,LinkSDat_N : in std_logic_vector(5 downto 0);
 -- FM Transmitters for uBunch and Triggers
-	TrigFM,uBunchLED,TrigLED,
+	TrigFM,PFTrigFM, uBunchLED,TrigLED,
 -- Pll control lines
 	PllSClk,PllSDat,PllLd,PllPDn : buffer std_logic;
    HeartBeatFM_P,HeartBeatFM_N : out  std_logic;
@@ -186,7 +186,7 @@ signal Counter1ms : std_logic_vector (17 downto 0);
 signal Counter1s : std_logic_vector (27 downto 0);
 signal GateCounter, TurnOnTime, TurnOffTime : std_logic_vector (8 downto 0);
 
-signal TrigEn,TstTrigEn,TstTrigEn2,TstTrigCE,TstTrigCE2,Spill_Req,Beam_On : std_logic; 
+signal TrigEn,TstTrigEn,TstTrigCE,Spill_Req,Beam_On : std_logic; 
 
 signal TstPlsEn,TstPlsEnReq,SS_FR,IntTrig,IntTmgEn,TmgCntEn : std_logic;
 signal SpillWidth,InterSpill,InterSpillCount : std_logic_vector (7 downto 0);
@@ -240,7 +240,6 @@ signal DR_Handler : DR_Handler_Seq;
 
 -- PFR_Handler
 signal PFpktFormerTimeout, PFpktFormerSend : std_logic; 
-signal PFRdone : std_logic; -- done flag. hold flag elsewhere.
 signal PFRcnt : std_logic_vector (15 downto 0); -- counter for prefetch timeout
 Type PFR_Handler_Seq is (Idle,StartCounter,Waiting,Send,Timeout);
 signal PFR_Handler : PFR_Handler_Seq; -- State machine for prefetch
@@ -324,7 +323,7 @@ signal PFReqBuff_wr_en,PFReqBuff_rd_en,
 -- microcontroller logic, but not directly tied to address bus uCA. 
 
 
-signal PFReqBuff_uCRd,PFTrigTx_Sel,PFreq_Tx_Req,PFreq_Tx_ReqD,PFReq_Tx_Ack: std_logic;
+signal PFReqBuff_uCRd,PFTrigTx_Sel,PFreq_Tx_Req,PFreq_Tx_ReqD: std_logic;
 
 -- FIFO status bits
 signal LinkFIFOStatReg,Lower_FM_Bits : std_logic_vector (2 downto 0);  
@@ -415,13 +414,13 @@ signal GTPTxBuff_In, GTPTxBuff_Out  : std_logic_vector(15 downto 0);
 signal GTPTxBuff_wr_en, GTPTxBuff_rd_en : std_logic;
 signal GTPTxBuff_DatCnt : std_logic_vector(12 downto 0);
 -- Data request trace buffer
-signal DReqBuffTrace_rd_en : std_logic;
-signal DReqBuffTrace_Out : std_logic_vector (15 downto 0);
-signal DReqBuffTrace_DatCnt : std_logic_vector (10 downto 0);
+--signal DReqBuffTrace_rd_en : std_logic;
+--signal DReqBuffTrace_Out : std_logic_vector (15 downto 0);
+--signal DReqBuffTrace_DatCnt : std_logic_vector (10 downto 0);
 -- Prefetch request trace buffer
-signal PFReqBuffTrace_rd_en : std_logic;
-signal PFReqBuffTrace_Out : std_logic_vector (15 downto 0);
-signal PFReqBuffTrace_DatCnt : std_logic_vector (10 downto 0);
+--signal PFReqBuffTrace_rd_en : std_logic;
+--signal PFReqBuffTrace_Out : std_logic_vector (15 downto 0);
+--signal PFReqBuffTrace_DatCnt : std_logic_vector (10 downto 0);
 -- Input Link FIFO trace
 signal LinkFIFOTraceRdReq : std_logic;
 signal LinkFIFOTraceOut : std_logic_vector (15 downto 0);
@@ -667,18 +666,18 @@ DReqTxEn <= '1' when TrigTx_Sel = '1' and DReqBuff_Emtpy = '0' and DreqTxOuts.Do
 					  else '0';
 
 -- FM transmitter for prefetch requests, used only when sending fake controller data to the GTP link
-PFReqTx : FM_Tx
-	generic map (Pwidth => 16)
-		 port map(clock => SysClk, 
-					 reset => ResetHi,
-					 Enable => PFReqTxEn, -- determines when transmitter is active
-					 Data => PFReqBuff_Out, -- data transmitted (output of data request FIFO)
-					 Tx_Out => PFreqTxOuts);
-TrigFM <= PFreqTxOuts.FM when PFTrigTx_Sel = '1' -- FM sends data request signals
-			 else LinkBusy when PFTrigTx_Sel = '0'; -- sends a link busy signal
-
-PFReqTxEn <= '1' when PFTrigTx_Sel = '1' and PFReqBuff_Emtpy = '0' and PFreqTxOuts.Done = '0' 
-					  else '0';	-- PFReqTx is asserted when buffer is not empty and transmitter is not currently done
+--PFReqTx : FM_Tx
+--	generic map (Pwidth => 16)
+--		 port map(clock => SysClk, 
+--					 reset => ResetHi,
+--					 Enable => PFReqTxEn, -- determines when transmitter is active
+--					 Data => PFReqBuff_Out, -- data transmitted (output of data request FIFO)
+--					 Tx_Out => PFreqTxOuts);
+--PFTrigFM <= PFreqTxOuts.FM when PFTrigTx_Sel = '1' -- FM sends data request signals
+--			 else LinkBusy when PFTrigTx_Sel = '0'; -- sends a link busy signal
+--
+--PFReqTxEn <= '1' when PFTrigTx_Sel = '1' and PFReqBuff_Emtpy = '0' and PFreqTxOuts.Done = '0' 
+--					  else '0';	-- PFReqTx is asserted when buffer is not empty and transmitter is not currently done
 -- ensures data request is sent only if there is data in FIFO and FM Tx is ready					  
 				  
 -- dual-clock FIFO for buffering broadcast trigger requests, 
@@ -900,30 +899,30 @@ GTPTxBuff : GTPRxFIFO
 	 
 -- REMOVE ME!	 
 -- trace buffer of prefetch requests for debug 	 
-PFReqBuffTrace : FIFO_DC_1kx16
-  PORT MAP (rst => GTPRxRst,
-    wr_clk => UsrClk2(0),
-	 rd_clk => SysClk,
-    din => GTPRxReg(0),
-    wr_en => PFReqBuff_wr_en,
-    rd_en => PFReqBuffTrace_rd_en,
-    dout => PFReqBuffTrace_Out,
-    full => open,
-    empty => open,
-	 rd_data_count => PFReqBuffTrace_DatCnt);
+--PFReqBuffTrace : FIFO_DC_1kx16
+--  PORT MAP (rst => GTPRxRst,
+--    wr_clk => UsrClk2(0),
+--	 rd_clk => SysClk,
+--    din => GTPRxReg(0),
+--    wr_en => PFReqBuff_wr_en,
+--    rd_en => PFReqBuffTrace_rd_en,
+--    dout => PFReqBuffTrace_Out,
+--    full => open,
+--    empty => open,
+--	 rd_data_count => PFReqBuffTrace_DatCnt);
 	 
 -- trace buffer of data requests for debug 	 
-DReqBuffTrace : FIFO_DC_1kx16
-  PORT MAP (rst => GTPRxRst,
-    wr_clk => UsrClk2(0),
-	 rd_clk => SysClk,
-    din => GTPRxReg(0),
-    wr_en => DReqBuff_wr_en,
-    rd_en => DReqBuffTrace_rd_en,
-    dout => DReqBuffTrace_Out,
-    full => open,
-    empty => open,
-	 rd_data_count => DReqBuffTrace_DatCnt);
+--DReqBuffTrace : FIFO_DC_1kx16
+--  PORT MAP (rst => GTPRxRst,
+--    wr_clk => UsrClk2(0),
+--	 rd_clk => SysClk,
+--    din => GTPRxReg(0),
+--    wr_en => DReqBuff_wr_en,
+--    rd_en => DReqBuffTrace_rd_en,
+--    dout => DReqBuffTrace_Out,
+--    full => open,
+--    empty => open,
+--	 rd_data_count => DReqBuffTrace_DatCnt);
 	 
 -- trace buffer for link 0
 LinkBuffTrace : LinkFIFO
@@ -1086,7 +1085,6 @@ begin
 	pktFormerTimeout <= '0';
 	pktFormerSend <= '0';
 	DR_Handler <= Idle;
-	PFR_Handler <= Idle;
  	--debug_cnt <= (others =>'0');
 
 elsif rising_edge (UsrClk2(0)) then
@@ -1217,9 +1215,11 @@ end if;
 -- trigger transmit mode (TrigTx_Sel - '1'), set Stat_DReq to 0 meaning it is ready/active
 -- Otherwise it is '1' which is not ready. 
 
-	if PFTrigTx_Sel = '1' and PFReqBuff_Emtpy = '0';
-	else Stat_PFReq <= '1'; 
+	if PFTrigTx_Sel = '1' and PFReqBuff_Emtpy = '0'
+	then Stat_PFReq <= '0';
+	else Stat_PFReq <= '1';
 	end if;
+
 
 -- Count down the nine words of the heart beat packet being received
 	if GTPRxRst = '1' or RxLOS(0)(1) = '1' then HrtBtWrtCnt <= X"0";
@@ -1332,6 +1332,18 @@ if Packet_Parser = Check_Seq_No and GTPRxBuff_Out(0)(7 downto 5) /= RxSeqNo(0)
 
 
 ----Copy port activity bits from the other FPGAs to this register
+-- If a write strobe (WRDL = 1) occurs, and the microcontroller address bus matches the geographic address (uCA(11 downto 10) = GA) and the high address (uCA(9 downto 0) = ActvRegAddrHi):
+--     - ActiveReg gets its high byte updated with the lower 8 bits of the microcontroller data bus (uCD(7 downto 0)), while the lower 16 bits remain unchanged.
+--     - ActiveReg <= uCD(7 downto 0) & ActiveReg(15 downto 0);
+-- Else If a write strobe occurs, and the microcontroller address matches the geographic address and the low address (ActvRegAddrLo):
+--     - The lower 16 bits of ActiveReg are updated with the value from the microcontroller data bus.
+--     -	ActiveReg <= ActiveReg(23 downto 16) & uCD;
+--	Else (none of the above write conditions match):
+--     - ActiveReg retains its current value.
+-- ActiveReg is updated from signals representing activity from 3 other FPGAs, it gets value from 3 8 bit signals
+-- forms 24 bit register. 
+-- ActiveReg written by microcontroller in high byte and low word in trigger transmit mode
+-- otherwise, it is set by activity registeres of other FPGAs
 if TrigTx_Sel = '1' 
    then 
 		if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = ActvRegAddrHi 
@@ -1343,32 +1355,6 @@ if TrigTx_Sel = '1'
    else ActiveReg <= FPGA234_Active(2) & FPGA234_Active(1) & FPGA234_Active(0);
 end if;
 
--- STEP 7?
-
--- Copy port activity bits from other FPGAs to the PF register
--- If a write strobe (WRDL = 1) occurs, and the microcontroller address bus matches the geographic address (uCA(11 downto 10) = GA) and the high address (uCA(9 downto 0) = ActvRegAddrHi):
---     - ActiveReg gets its high byte updated with the lower 8 bits of the microcontroller data bus (uCD(7 downto 0)), while the lower 16 bits remain unchanged.
---     - ActiveReg <= uCD(7 downto 0) & ActiveReg(15 downto 0);
--- Else If a write strobe occurs, and the microcontroller address matches the geographic address and the low address (ActvRegAddrLo):
---     - The lower 16 bits of ActiveReg are updated with the value from the microcontroller data bus.
---     -	ActiveReg <= ActiveReg(23 downto 16) & uCD;
---	Else (none of the above write conditions match):
---     - ActiveReg retains its current value.
--- ActiveReg is updated from signals representing activity from 3 other FPGAs, it gets value from 3 8 bit signals
--- forms 24 bit register. 
-if PFTrigTx_Sel = '1' 
-   then 
-		if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = ActvRegAddrHi 
-		  then ActiveReg <= uCD(7 downto 0) & ActiveReg(15 downto 0);
-	 elsif WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = ActvRegAddrLo 
-		then ActiveReg <= ActiveReg(23 downto 16) & uCD;
-	  else ActiveReg <= ActiveReg;
-	 end if;
-   else ActiveReg <= FPGA234_Active(2) & FPGA234_Active(1) & FPGA234_Active(0);
-end if;
--- ActiveReg written by microcontroller in high byte and low word in trigger transmit mode
--- otherwise, it is set by activity registeres of other FPGAs
-
 --Debug(4) <= EventBuff_Empty;
 
 --Debug(3 downto 1) <= LinkFIFOEmpty;
@@ -1376,6 +1362,30 @@ end if;
 -------------------------------------
 -- TODO Statemachine handling DR 
 -------------------------------------
+---- Waits for a data request trigger, starts a countdown and waits for event data to be available
+---- If data arrives before timeout, it initiates send. If timeout occurs before data is available, 
+---- signals a timeout. Send and timeout actions use pktFormerSend to trigger packet formation.
+---- states: Idle, StartCounter, Waiting, Send, Timeout
+---- Idle: If there are at least 3 timestamp words (TStmpWds >= 3), and the current data request cycle is not done (DRdone = '0'), and there is no DR hold (DRHold = '0'),
+----       then: move to StartCounter
+----       else: stay in Idle
+---- StartCounter: Setup for wait phase and transition to waiting
+---- Waiting
+---- 	- Condition to leave Waiting:
+----        -If event buffer is not empty (EventBuff_Empty = '0'),
+----        - then: move to Send (data is available to respond to DR)
+----        -Else if the counter DRcnt hits zero,
+----        - then: move to Timeout (waited too long for data)
+----        -Else: stay in Waiting (keep waiting for data or timeout)
+----Send
+---- If the DR action is done (DRdone = '1'),
+----     then: move to Idle
+----     else: stay in Send (keep sending)
+---- Timeout:
+----     If the DR action is done (DRdone = '1'),
+----       then: move to Idle
+----       else: stay in Timeout (keep signaling timeout)
+---- Other states return to Idle
 Case DR_Handler is
    when Idle =>
 	    if TStmpWds >= 3 and DRdone = '0' and DRHold = '0' then
@@ -1420,79 +1430,9 @@ else
 	 pktFormerTimeout <= '0';
 end if;
 
--- STEP 4: create PF Handler
--------------------------------------
--- TODO Statemachine handling PFR 
--------------------------------------
--- Waits for a data request trigger, starts a countdown and waits for event data to be available
--- If data arrives before timeout, it initiates send. If timeout occurs before data is available, 
--- signals a timeout. Send and timeout actions use pktFormerSend to trigger packet formation.
--- states: Idle, StartCounter, Waiting, Send, Timeout
--- Idle: If there are at least 3 timestamp words (TStmpWds >= 3), and the current data request cycle is not done (DRdone = '0'), and there is no DR hold (DRHold = '0'),
---       then: move to StartCounter
---       else: stay in Idle
--- StartCounter: Setup for wait phase and transition to waiting
--- Waiting
--- 	- Condition to leave Waiting:
---        -If event buffer is not empty (EventBuff_Empty = '0'),
---        - then: move to Send (data is available to respond to DR)
---        -Else if the counter DRcnt hits zero,
---        - then: move to Timeout (waited too long for data)
---        -Else: stay in Waiting (keep waiting for data or timeout)
---Send
--- If the DR action is done (DRdone = '1'),
---     then: move to Idle
---     else: stay in Send (keep sending)
--- Timeout:
---     If the DR action is done (DRdone = '1'),
---       then: move to Idle
---       else: stay in Timeout (keep signaling timeout)
--- Other states return to Idle
 
-Case PFR_Handler is
-   when Idle =>
-	    if TStmpWds >= 3 and PFRdone = '0' and PFRHold = '0' then
-		     PFR_Handler <= StartCounter;
-		 else
-		     PFR_Handler <= Idle;
-		 end if;
-	when StartCounter =>
-	    PFR_Handler <= Waiting;
-	when Waiting =>
-	    if EventBuff_Empty = '0' then PFR_Handler <= Send; -- data avaiable
-		 elsif PFRcnt = 0         then PFR_Handler <= Timeout;
-		 else                         PFR_Handler <= Waiting;
-		 end if;
-	when Send =>
-	    if PFRdone = '1' then PFR_Handler <= Idle;
-		 else                 PFR_Handler <= Send;
-		 end if;
-	when Timeout =>
-	    if PFRdone = '1' then PFR_Handler <= Idle;
-		 else                 PFR_Handler <= Timeout;
-		 end if;
-	when others => 
-	    PFR_Handler <= Idle;
-end Case;
 
--- STEP 4: set packet forming signals for prefetch
-if PFR_Handler = StartCounter then
-    PFRcnt <= PFRTimeout; -- X"FF"; 
-elsif PFR_Handler = Waiting then
-    PFRcnt <= PFRcnt - 1; -- decrease PFcnt by 1 each clock cycle, 
-else PFRcnt <= PFRcnt; -- return current value
-end if;
 
-if  PFR_Handler = Send then
-    PFpktFormerSend    <= '1'; -- initiate sending packet
-	 PFpktFormerTimeout <= '0'; -- not a timeout
-elsif PFR_Handler = Timeout then
-    PFpktFormerSend    <= '1'; -- initiate sending a timeout packet
-	 PFpktFormerTimeout <= '1'; -- signal that this is a timeout
-else
-    PFpktFormerSend    <= '0'; -- both set to zero
-	 PFpktFormerTimeout <= '0';
-end if;
 ---------------------------------------------------------------------------
 
 -- RDDL and WRDL are vectors for read and write strobes. Create synchronous edge detectors for microcontroller and write stobes
@@ -1573,7 +1513,7 @@ begin
    TxCRCEn(1) <= '0'; RdCRCEn(1) <= '0'; 
 	RxCRCRst(1) <= '0'; RxCRCRstD(1) <= '0'; TxCRCDat(1) <= X"0000";
 	GTPRxBuff_wr_en(1) <= '0'; PRBSCntRst(1) <= '0';
-	En_PRBS(1) <= "000"; DReq_Tx_Ack <= '0'; PFReq_Tx_Ack <= '0';
+	En_PRBS(1) <= "000"; DReq_Tx_Ack <= '0'; 
 	IntTrigSeq <= Idle; Packet_Type <= X"1";
 	HrtBtDone <= '0'; HrtBtTxAck <= '0';
 	
@@ -1624,16 +1564,7 @@ end if;
 	elsif Packet_Type = X"2" then
 	 DReq_Tx_Ack <= '0';
 	end if;
-	
-	-- STEP 5  Trigger logic
--- for PF requeset, set packet type to 3. 
--- Request/Acknowledges to cross clock domains
-	if PFReq_Tx_Ack = '0' and PFreq_Tx_Req = '1' then 
-	 PFReq_Tx_Ack <= '1';
-	elsif Packet_Type = X"3" then
-	 PFReq_Tx_Ack <= '0';
-	end if;
-	
+
 	 HrtBtTxAck <= HrtBtTxReq;
 
 -- State machine for sending trigger requests from internal trigger generator
@@ -2395,7 +2326,7 @@ main : process(SysClk, CpldRst)
 	--Buff_Rst <= '0'; 
 	Seq_Rst <= '0'; 
 	Beam_On <= '0'; TrigEn <= '1'; 
-	TstPlsEn <= '0';  TstPlsEnReq <= '0'; SS_FR <= '0';  TstTrigEn <= '0'; TstTrigEn2 <= '0';
+	TstPlsEn <= '0';  TstPlsEnReq <= '0'; SS_FR <= '0';  TstTrigEn <= '0'; 
 	IntTrig <= '0'; TrigType <= X"0"; 
 	SpillWidth <= X"02"; Spill_Req <= '0'; TstTrigCE <= '0';
 	EventWdCnt <= (others => '0'); InterSpill <= X"04"; BmOnTrigReq <= '0';
@@ -2504,9 +2435,9 @@ then FormHold <= uCD(2);
 -- Choose between internal and TDAQ supplied timing
 	  TrigTx_Sel <= uCD(6);
 	  HrtBtTxInh <= uCD(10);
-	  -- PFTrigTx_sel <= uCD(6) -- Trigger logic?
+	  -- PFTrigTx_sel <= uCD(6) -- Trigger logic? HERE?
 	  DRHold <= uCD(11);
-	  -- PFHold
+	  -- PFHold HERE?
 else FormHold <= FormHold;
 	  ExtTmg <= ExtTmg;
 	  TrigTx_Sel <= TrigTx_Sel;
@@ -2573,47 +2504,7 @@ if TstTrigEn = '0' and WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) =
   then TstTrigEn <= '0';
  else TstTrigEn <= TstTrigEn;
  end if;
- 
--- Enable the transmitting of trigger request packet on GTPTx(1)
-if TstTrigEn2 = '0' and WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
-	and uCD(8) = '1'
-  then TstTrigEn2 <= '1';
--- If the finite length is enabled, stop after the count has expired
- elsif TstTrigEn2 = '1' and ((WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
-	and uCD(8) = '0')
-  or (TstTrigCE2 = '1' and PFReqBrstCounter = 1 and PFreq_Tx_Req = '1' and PFreq_Tx_ReqD = '0'))
-  then TstTrigEn2 <= '0';
- else TstTrigEn2 <= TstTrigEn2;
- end if;
-
--- Ask what is happening here! 
--- Finite trigger burst length enable bit
--- STEP 5 trigger logic. 
-if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
-	and TstTrigCE = '0' and uCD(8) = '1' and uCD(9) = '1'
-  then TstTrigCE <= '1';
--- If the finite length is enabled, stop after the count has expired
- elsif TstTrigCE = '1' and ((WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
-	and uCD(9) = '0')
-    or (TstTrigCE = '1' and DReqBrstCounter = 1 and Dreq_Tx_Req = '1' and Dreq_Tx_ReqD = '0'))
-  then TstTrigCE <= '0';
- else TstTrigCE <= TstTrigCE;
- end if;
- 
- 
- -- Finite trigger burst length enable bit
-if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
-	and TstTrigCE2 = '0' and uCD(8) = '1' and uCD(9) = '1'
-  then TstTrigCE2 <= '1';
--- If the finite length is enabled, stop after the count has expired
- elsif TstTrigCE2 = '1' and ((WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
-	and uCD(9) = '0')
-    or (TstTrigCE2 = '1' and PFReqBrstCounter = 1 and PFreq_Tx_Req = '1' and PFreq_Tx_ReqD = '0'))
-  then TstTrigCE2 <= '0';
- else TstTrigCE2 <= TstTrigCE2;
- end if;
- 
-  
+   
 
 -- Finite trigger burst down counter;
 -- TstTrigEn is being used uniquely to Data Request here. 
@@ -2627,19 +2518,6 @@ if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr
   else DReqBrstCounter <= DReqBrstCounter;
   end if;
 
--- need a finite trigger burst down counter
--- TstTrigEn2 is uniquely used for Prefetch Request
--- Need a register "PFReqBrstCntReg"
-
-
- if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
-	and TstTrigEn2 = '0' and  uCD(8) = '1'
-  then PFReqBrstCounter <= PFReqBrstCntReg;
- elsif PFReqBrstCounter /= 0 and TstTrigEn = '1' and TstTrigCE2 = '1' 
-								and PFreq_Tx_Req = '1' and PFreq_Tx_ReqD = '0'
-  then PFReqBrstCounter <= PFReqBrstCounter - 1;
-  else PFReqBrstCounter <= PFReqBrstCounter;
-  end if;
 
 -- Register used to prescale data requests during beam on
  if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = PreScaleRegAd then 
@@ -2702,10 +2580,13 @@ end if;
 	then DReqBuff_uCRd <= '1';
 	else DReqBuff_uCRd <= '0';
 	end if;
+
+--	Read of the trigger request FIFO 
+	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = PFTRigReqBuffAd 
+	then PFReqBuff_uCRd <= '1';
+	else PFReqBuff_uCRd <= '0';
+	end if;
 	
--- add one here for read of the prefetch trigger request FIFO? 
--- Need an equivalent of TrigReqBuffAd -> "PFReqBuffAd"
--- STEP 5 trigger logic
 
 --	Read of the dcs request FIFO
 	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DCSPktBuffAd 
@@ -2898,13 +2779,13 @@ if HrtBtRdCnt = 5 then HrtBtMode <= HrtBtBuff_Out(7 downto 0);
 else HrtBtMode <= HrtBtMode;
 end if;
 
--- add brstcntreg later for prefetch
+
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = DReqBrstCntAd 
  then DReqBrstCntReg <= uCD;
 else DReqBrstCntReg <= DReqBrstCntReg;
 end if;
 
--- add one here for PF using FPReqBrstCntAd
+
 
 -- uB offset 
  if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtOffsetAd
@@ -3202,12 +3083,17 @@ end if;
 
 --	Read of the trigger request trace buffer
 -- add later for prefetch
-	if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DReqBuffTraceAd ) or 
-	    (DReqBuffTrace_DatCnt >= "011" & X"F0" ) -- this should make this buffer to a trace buffer.
-	then DReqBuffTrace_rd_en <= '1';
-	else DReqBuffTrace_rd_en <= '0';
-	end if;
+--	if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DReqBuffTraceAd ) or 
+--	    (DReqBuffTrace_DatCnt >= "011" & X"F0" ) -- this should make this buffer to a trace buffer.
+--	then DReqBuffTrace_rd_en <= '1';
+--	else DReqBuffTrace_rd_en <= '0';
+--	end if;
 
+--	if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = PFReqBuffTraceAd ) or 
+--	    (PFReqBuffTrace_DatCnt >= "011" & X"F0" ) -- this should make this buffer to a trace buffer.
+--	then PFReqBuffTrace_rd_en <= '1';
+--	else PFReqBuffTrace_rd_en <= '0';
+--	end if;
 
 -- read link FIFO trace
 	if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = LinkFIFOTraceAd ) or 
@@ -3239,14 +3125,15 @@ end process;
 with uCA(9 downto 0) select
 
 iCD <= X"0" & 
-       DRHold & HrtBtTxInh & TstTrigCE & TstTrigEn & 
-		 '0' & TrigTx_Sel & MarkerSyncEn & ExtTmg &
+       DRHold & HrtBtTxInh & TstTrigCE & TstTrigEn & -- PFHold?
+		 '0' & TrigTx_Sel & MarkerSyncEn & ExtTmg & -- PFTrigTx_Sel
 		 '0' & FormHold & TmgCntEn & IntTmgEn when CSRRegAddr,
 		   Rx_IsCtrl(1) & InvalidChar(1) & Rx_IsComma(1) & Reframe(1) & TDisB 
 		 & Rx_IsCtrl(0) & InvalidChar(0) & Rx_IsComma(0) & Reframe(0) & TDisA when GTPCSRAddr,
 		 X"00" & "00" & GTPRxBuff_Full & GTPRxBuff_Emtpy & "00" when GTPFIFOAddr,
 		 X"00" & "000" & PLLStat & "000" & PllPDn when PLLPDnAddr,
 		 DReqBuff_Out(15 downto 0) when TRigReqBuffAd,
+		 PFReqBuff_Out(15 downto 0) when PFTRigReqBuffAd,
 		 X"0" & '0' & TrgPktRdCnt when TRigReqWdUsedAd,
 		 --X"000" & "00" & TrgSrc & TstPlsEn when TrigCtrlAddr,
 		 X"00" & ActiveReg(23 downto 16) when ActvRegAddrHi,
@@ -3302,7 +3189,8 @@ iCD <= X"0" &
 		 --DReq_Count(15 downto 0) when DReqCountLowAd,
 		 --DReq_Count(31 downto 16) when DReqCountHiAd,
 		 GTPTxBuff_Out when GTPTxRdAddr,
-		 DReqBuffTrace_Out when DReqBuffTraceAd, -- add prefetch
+		 --DReqBuffTrace_Out when DReqBuffTraceAd, -- add prefetch
+		 --PFReqBuffTrace_Out when PFReqBuffTraceAd,
 		 LinkFIFOTraceOut when LinkFIFOTraceAd,
 		 DCSBuff_wr_en & DCSBuff_Full & DCSBuff_Emtpy & DCSBuffRdCnt when DCSBuffCntAd,	
          DCSBuff_In when DCSBuffAd,
