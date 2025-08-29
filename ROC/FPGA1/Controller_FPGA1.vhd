@@ -27,7 +27,7 @@
 -- Steps to add PF
 -- 1) signal declarations for PF
 -- 2) instantiate PF request FIFO, setup associated signals
--- 3) Create a state machine for prefetch almost identical to data requests
+-- 3) (NOT NEEDED) Create a state machine for prefetch almost identical to data requests
 -- 4) Counter logic
 -- 5) packet forming logic
 -- 6) trigger logic
@@ -72,7 +72,7 @@ entity ControllerFPGA_1 is port(
 -- Serial inter-chip link Data lines
 	LinkSDat_P,LinkSDat_N : in std_logic_vector(5 downto 0);
 -- FM Transmitters for uBunch and Triggers
-	TrigFM,PFTrigFM, uBunchLED,TrigLED,
+	TrigFM, uBunchLED,TrigLED,
 -- Pll control lines
 	PllSClk,PllSDat,PllLd,PllPDn : buffer std_logic;
    HeartBeatFM_P,HeartBeatFM_N : out  std_logic;
@@ -239,10 +239,10 @@ Type DR_Handler_Seq is (Idle,StartCounter,Waiting,Send,Timeout);
 signal DR_Handler : DR_Handler_Seq;
 
 -- PFR_Handler
-signal PFpktFormerTimeout, PFpktFormerSend : std_logic; 
-signal PFRcnt : std_logic_vector (15 downto 0); -- counter for prefetch timeout
-Type PFR_Handler_Seq is (Idle,StartCounter,Waiting,Send,Timeout);
-signal PFR_Handler : PFR_Handler_Seq; -- State machine for prefetch
+--signal PFpktFormerTimeout, PFpktFormerSend : std_logic; 
+--signal PFRcnt : std_logic_vector (15 downto 0); -- counter for prefetch timeout
+--Type PFR_Handler_Seq is (Idle,StartCounter,Waiting,Send,Timeout);
+--signal PFR_Handler : PFR_Handler_Seq; -- State machine for prefetch
 
 -- Front panel LED Shifter signals
 signal CMDwr_en,CMDrd_en,CMD_Full,CMD_Empty : std_logic;
@@ -302,7 +302,7 @@ signal WdCountBuff_Out : std_logic_vector (15 downto 0);
 signal EnPRBSTst,En_PRBS : Array_2x3;
 signal GTPRxBuff_DatCnt : Array_2x13;
 -- Signals used by the microbunch,trigger FM transmitters
-signal HrtBtTxOuts,DreqTxOuts, PFreqTxOuts : TxOutRec;
+signal HrtBtTxOuts,DreqTxOuts,PFreqTxOuts : TxOutRec;
 signal HrtBtDone,HrtBtTxReq,HrtBtTxAck,HrtBtFMTxEn,TxEnReq,DReqTxEn,PFReqTxEn,LinkBusy : std_logic;
 signal HrtBtData : std_logic_vector (23 downto 0);
 signal TrigFMDat : std_logic_vector (15 downto 0);
@@ -414,13 +414,13 @@ signal GTPTxBuff_In, GTPTxBuff_Out  : std_logic_vector(15 downto 0);
 signal GTPTxBuff_wr_en, GTPTxBuff_rd_en : std_logic;
 signal GTPTxBuff_DatCnt : std_logic_vector(12 downto 0);
 -- Data request trace buffer
---signal DReqBuffTrace_rd_en : std_logic;
---signal DReqBuffTrace_Out : std_logic_vector (15 downto 0);
---signal DReqBuffTrace_DatCnt : std_logic_vector (10 downto 0);
+signal DReqBuffTrace_rd_en : std_logic;
+signal DReqBuffTrace_Out : std_logic_vector (15 downto 0);
+signal DReqBuffTrace_DatCnt : std_logic_vector (10 downto 0);
 -- Prefetch request trace buffer
---signal PFReqBuffTrace_rd_en : std_logic;
---signal PFReqBuffTrace_Out : std_logic_vector (15 downto 0);
---signal PFReqBuffTrace_DatCnt : std_logic_vector (10 downto 0);
+signal PFReqBuffTrace_rd_en : std_logic;
+signal PFReqBuffTrace_Out : std_logic_vector (15 downto 0);
+signal PFReqBuffTrace_DatCnt : std_logic_vector (10 downto 0);
 -- Input Link FIFO trace
 signal LinkFIFOTraceRdReq : std_logic;
 signal LinkFIFOTraceOut : std_logic_vector (15 downto 0);
@@ -899,30 +899,30 @@ GTPTxBuff : GTPRxFIFO
 	 
 -- REMOVE ME!	 
 -- trace buffer of prefetch requests for debug 	 
---PFReqBuffTrace : FIFO_DC_1kx16
---  PORT MAP (rst => GTPRxRst,
---    wr_clk => UsrClk2(0),
---	 rd_clk => SysClk,
---    din => GTPRxReg(0),
---    wr_en => PFReqBuff_wr_en,
---    rd_en => PFReqBuffTrace_rd_en,
---    dout => PFReqBuffTrace_Out,
---    full => open,
---    empty => open,
---	 rd_data_count => PFReqBuffTrace_DatCnt);
+PFReqBuffTrace : FIFO_DC_1kx16
+  PORT MAP (rst => GTPRxRst,
+    wr_clk => UsrClk2(0),
+	 rd_clk => SysClk,
+    din => GTPRxReg(0),
+    wr_en => PFReqBuff_wr_en,
+    rd_en => PFReqBuffTrace_rd_en,
+    dout => PFReqBuffTrace_Out,
+    full => open,
+    empty => open,
+	 rd_data_count => PFReqBuffTrace_DatCnt);
 	 
 -- trace buffer of data requests for debug 	 
---DReqBuffTrace : FIFO_DC_1kx16
---  PORT MAP (rst => GTPRxRst,
---    wr_clk => UsrClk2(0),
---	 rd_clk => SysClk,
---    din => GTPRxReg(0),
---    wr_en => DReqBuff_wr_en,
---    rd_en => DReqBuffTrace_rd_en,
---    dout => DReqBuffTrace_Out,
---    full => open,
---    empty => open,
---	 rd_data_count => DReqBuffTrace_DatCnt);
+DReqBuffTrace : FIFO_DC_1kx16
+  PORT MAP (rst => GTPRxRst,
+    wr_clk => UsrClk2(0),
+	 rd_clk => SysClk,
+    din => GTPRxReg(0),
+    wr_en => DReqBuff_wr_en,
+    rd_en => DReqBuffTrace_rd_en,
+    dout => DReqBuffTrace_Out,
+    full => open,
+    empty => open,
+	 rd_data_count => DReqBuffTrace_DatCnt);
 	 
 -- trace buffer for link 0
 LinkBuffTrace : LinkFIFO
@@ -3083,17 +3083,17 @@ end if;
 
 --	Read of the trigger request trace buffer
 -- add later for prefetch
---	if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DReqBuffTraceAd ) or 
---	    (DReqBuffTrace_DatCnt >= "011" & X"F0" ) -- this should make this buffer to a trace buffer.
---	then DReqBuffTrace_rd_en <= '1';
---	else DReqBuffTrace_rd_en <= '0';
---	end if;
+	if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DReqBuffTraceAd ) or 
+	    (DReqBuffTrace_DatCnt >= "011" & X"F0" ) -- this should make this buffer to a trace buffer.
+	then DReqBuffTrace_rd_en <= '1';
+	else DReqBuffTrace_rd_en <= '0';
+	end if;
 
---	if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = PFReqBuffTraceAd ) or 
---	    (PFReqBuffTrace_DatCnt >= "011" & X"F0" ) -- this should make this buffer to a trace buffer.
---	then PFReqBuffTrace_rd_en <= '1';
---	else PFReqBuffTrace_rd_en <= '0';
---	end if;
+	if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = PFReqBuffTraceAd ) or 
+	    (PFReqBuffTrace_DatCnt >= "011" & X"F0" ) -- this should make this buffer to a trace buffer.
+	then PFReqBuffTrace_rd_en <= '1';
+	else PFReqBuffTrace_rd_en <= '0';
+	end if;
 
 -- read link FIFO trace
 	if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = LinkFIFOTraceAd ) or 
@@ -3189,8 +3189,8 @@ iCD <= X"0" &
 		 --DReq_Count(15 downto 0) when DReqCountLowAd,
 		 --DReq_Count(31 downto 16) when DReqCountHiAd,
 		 GTPTxBuff_Out when GTPTxRdAddr,
-		 --DReqBuffTrace_Out when DReqBuffTraceAd, -- add prefetch
-		 --PFReqBuffTrace_Out when PFReqBuffTraceAd,
+		 DReqBuffTrace_Out when DReqBuffTraceAd, -- add prefetch
+		 PFReqBuffTrace_Out when PFReqBuffTraceAd,
 		 LinkFIFOTraceOut when LinkFIFOTraceAd,
 		 DCSBuff_wr_en & DCSBuff_Full & DCSBuff_Emtpy & DCSBuffRdCnt when DCSBuffCntAd,	
          DCSBuff_In when DCSBuffAd,
