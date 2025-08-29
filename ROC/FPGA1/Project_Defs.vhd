@@ -31,6 +31,7 @@ constant DebugPinAd : AddrPtr := "00" & X"0B";
 constant ElasticStatAd : AddrPtr := "00" & X"0C";
 
 constant TRigReqBuffAd : AddrPtr := "00" & X"0D"; 
+constant PFTRigReqBuffAd : AddrPtr := "00" & X"A2"; 
 constant TRigReqWdUsedAd : AddrPtr := "00" & X"0E"; 
 
 constant DReqBrstCntAd : AddrPtr := "00" & X"0F"; 
@@ -89,6 +90,7 @@ constant FreqRegAdLo : AddrPtr := "00" & X"3B";
 
 -- Data request buffer
 constant DreqBuffStatAd : AddrPtr := "00" & X"3C";
+constant PFreqBuffStatAd : AddrPtr := "00" & X"A1";
 -- Heart Beat request buffer
 constant HrtBtBuffStatAd : AddrPtr := "00" & X"3D";
 constant HrtBtFIFORdAd : AddrPtr := "00" & X"3E";
@@ -166,6 +168,7 @@ constant DReqCountHiAd : AddrPtr       := "00" & X"83";
 --constant TxRxBufferSettingAd : AddrPtr := "00" & X"84";
 constant GTPTxRdAddr : AddrPtr         := "00" & X"85";
 constant DReqBuffTraceAd : AddrPtr     := "00" & X"86";
+constant PFReqBuffTraceAd : AddrPtr     := "00" & X"A0";
 constant LinkFIFOTraceAd : AddrPtr     := "00" & X"87";
 
 
