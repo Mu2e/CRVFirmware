@@ -71,7 +71,7 @@ entity ControllerFPGA_1 is port(
 	ZEthEOF : in std_logic_vector(1 downto 0);
 	ZEthLen : in std_logic;
 -- Back panel LEMOs
-	GPO : buffer std_logic_vector(1 downto 0);
+	GPO : buffer std_logic_vector(1 downto 0); -- GPO(1) output doesn't seem to work!
 	GPI,NimTrig : in std_logic;
 -- RJ45
    OGLEDA, OGLEDB, YLED : out std_logic;
@@ -132,7 +132,7 @@ signal MarkerLast : std_logic_vector(1 downto 0);
 attribute ASYNC_REG : string; 
 attribute ASYNC_REG of MarkerLast : signal is "TRUE"; 
 signal MarkerCnt, MarkerCnt2, MarkerCnt3, MarkerCnt4, MarkerCnt5, LoopbackMarkerCnt : std_logic_vector(7 downto 0); -- counts decoded markers
-signal BnchMarkerLast : std_logic_vector(7 downto 0);
+signal BnchMarkerLast : std_logic_vector(15 downto 0);
 signal MarkerDelayedCnt : std_logic_vector(15 downto 0); --
 signal HeartBeatCnt : std_logic_vector(15 downto 0);    -- counts heartbeats sent out, these are the delayed 
 signal HeartBtCnt : std_logic_vector(15 downto 0);      -- counts heart beat packages from fibers
@@ -179,7 +179,7 @@ signal SuperCycleCount : std_logic_vector (13 downto 0);
 signal IntuBunchCount,ExtuBunchCount : std_logic_vector (47 downto 0);
 signal ExtuBunchOffset : std_logic_vector (15 downto 0);
 -- Counter for counting down heartbeat bursts
-signal HrtBtBrstCntReg,HrtBtBrstCounter  : std_logic_vector (23 downto 0);
+--signal HrtBtBrstCntReg,HrtBtBrstCounter  : std_logic_vector (23 downto 0);
 signal uBunchLEDCnt : std_logic_vector (4 downto 0);
 signal TrigType : std_logic_vector (3 downto 0);
 signal DRFreq : std_logic_vector (31 downto 0);
@@ -594,7 +594,7 @@ HeartBeatTx : FM_Tx
 					 Tx_Out => HrtBtTxOuts);
 HeartBeatFM <= HrtBtTxOuts.FM when ExtTmg = '0' else GPI;
 --GPO(0) <= HeartBeatFM;
---GPO(1) <= HrtBtTxOuts.FM;
+GPO(0) <= MarkerDelayed(0);
 --Debug(1) <= HrtBtTxOuts.FM;
 --Debug(2) <= HrtBtFMTxEn;
 --Debug(3) <= MarkerDelayed;
@@ -1745,7 +1745,7 @@ EthProc : process(EthClk, CpldRst)
 	ZEthCS <= '1'; ZEthWE <= '1'; 
 	ZEthBE <= "11"; EthRDDL <= (others => '0');
 	MarkerBits <= X"0000"; Even_Odd <= '0'; 
-	GPO(0) <= '0'; 
+	GPO(1) <= '0'; 
 	Marker <= '0'; 
 	MarkerCnt <= (others => '0'); -- MarkerCnt2 <= (others => '0');
 	--MarkerCnt3 <= (others => '0'); MarkerCnt4 <= (others => '0'); MarkerCnt5 <= (others => '0');
@@ -1767,6 +1767,7 @@ EthProc : process(EthClk, CpldRst)
 	--else
 	--   debugTrig <= '0';
 	--end if;
+	--GPO(1) <= not GPO(1); -- GPO(1) output doesn't seem to work!
 
 	MarkerBits <= MarkerBits(13 downto 0) & DDRBits;
 	-- old style with punched clock
@@ -1784,7 +1785,7 @@ EthProc : process(EthClk, CpldRst)
 	
 	-- new style, punch or dedicated marker on separate line
 	BnchMarkerLast(0) <= BnchMarker;
-	BnchMarkerLast(7 downto 1) <= BnchMarkerLast(6 downto 0);
+	BnchMarkerLast(15 downto 1) <= BnchMarkerLast(14 downto 0);
 	
 	-- full marker
 	--if BnchMarkerLast = "11101000" or
@@ -1794,14 +1795,19 @@ EthProc : process(EthClk, CpldRst)
 	--   MarkerCnt2 <= MarkerCnt2;
 	--end if;
 	
-	if Marker = '0' and (BnchMarkerLast = "11101000" or
-	   BnchMarkerLast = "10001110") then
+	-- 2025/09/19: switch to new punch style
+	-- 00001111
+	--if Marker = '0' and (BnchMarkerLast = "11101000" or
+	--   BnchMarkerLast = "10001110") then
+	if Marker = '0' and BnchMarkerLast(7 downto 0) = "00001111" then
 	   MarkerCnt <= MarkerCnt + 1;
 		Marker <= '1'; 
-	elsif Marker = '1' and BnchMarkerLast = "11001100" then
+	--elsif Marker = '1' and BnchMarkerLast() = "11001100" then
+	elsif Marker = '1' and BnchMarkerLast(15 downto 8) = "00001111" then
 	   Marker <= '0';
 		MarkerCnt <= MarkerCnt;
 	else
+	   --Marker <= '1'; 
 	   MarkerCnt <= MarkerCnt;
 		Marker <= Marker;
 	end if;
@@ -1905,7 +1911,7 @@ EthProc : process(EthClk, CpldRst)
 
 
    --GPO(1) <= BnchMarker;
-	GPO(1) <= '0';
+	--GPO(1) <= '0';
 
 --	if GPO(1) = '0' and MarkerBits = X"F0C0"
 --	  then GPO(1) <= '1';
@@ -2171,7 +2177,7 @@ main : process(SysClk, CpldRst)
 	Counter100us <= (others => '0');	SpillCount <= (others => '0'); 
 	LEDRst <= '1'; LEDSDat <= "000"; LEDSClk <= "000"; LEDLd <= "000000";
 	uBunchLED <= '0'; uBunchLEDCnt <= (others => '0'); IntTmgEn <= '0';
-   HrtBtBrstCntReg <= (X"001000"); HrtBtBrstCounter <= (others => '0');
+   --HrtBtBrstCntReg <= (X"001000"); --HrtBtBrstCounter <= (others => '0');
 	ExtuBunchOffset <= (others => '0');
 	ExtuBunchCount <= (others => '0'); IntuBunchCount <= (others => '0'); 
 	HrtBtBuff_rd_en <= '0'; HrtBtRdCnt <= X"0"; HrtBtTxReq <= '0';
@@ -2180,7 +2186,7 @@ main : process(SysClk, CpldRst)
 	LEDShiftReg <= (others => '0');	LED_Shift <= Idle;
 	DReqBuff_uCRd <= '0'; LinkBusy <= '0'; HrtBtTxInh <= '0';
 	DCSPktBuff_uCRd <= '0'; MarkerDelay <= (others => '0'); 
-	Clk80MHzAlign <= '0';
+	Clk80MHzAlign <= '1';
 	--Clk80MHzSel <= '0';
 	LoopbackMode <= (others => '0');
 	DCSBuff_wr_en <= '0'; DCSBuff_In <= (others => '0');
@@ -2280,38 +2286,38 @@ else uBinHeader <= uBinHeader;
 end if;
 
 -- Enable the transmitting of heartbeats
-if IntTmgEn = '0' 
-	and WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr and uCD(0) = '1'
-  then IntTmgEn <= '1';
--- If the finite length is enabled, stop after the count has expired
- elsif IntTmgEn = '1' 
-   and ((WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr and uCD(0) = '0')
-    or  (HrtBtBrstCounter = 1 and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)))
-  then IntTmgEn <= '0';
- else IntTmgEn <= IntTmgEn;
- end if;
+--if IntTmgEn = '0' 
+--	and WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr and uCD(0) = '1'
+--  then IntTmgEn <= '1';
+---- If the finite length is enabled, stop after the count has expired
+-- elsif IntTmgEn = '1' 
+--   and ((WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr and uCD(0) = '0')
+--    or  (HrtBtBrstCounter = 1 and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)))
+--  then IntTmgEn <= '0';
+-- else IntTmgEn <= IntTmgEn;
+-- end if;
  
 -- Finite heartbeat transmit sequence length enable bit
-if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
-	and TmgCntEn = '0' and uCD(0) = '1' and uCD(1) = '1'
-  then TmgCntEn <= '1';
--- If the finite length is enabled, stop after the count has expired
- elsif TmgCntEn = '1' and ((WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
-	and uCD(1) = '0')
-    or (HrtBtBrstCounter = 1 and Int_uBunch = 1 
-	 and ((Beam_On = '1' and DRCount = 7) or DRCount = 1)))
-  then TmgCntEn <= '0';
- else TmgCntEn <= TmgCntEn;
- end if;
+--if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
+--	and TmgCntEn = '0' and uCD(0) = '1' and uCD(1) = '1'
+--  then TmgCntEn <= '1';
+---- If the finite length is enabled, stop after the count has expired
+-- elsif TmgCntEn = '1' and ((WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
+--	and uCD(1) = '0')
+--    or (HrtBtBrstCounter = 1 and Int_uBunch = 1 
+--	 and ((Beam_On = '1' and DRCount = 7) or DRCount = 1)))
+--  then TmgCntEn <= '0';
+-- else TmgCntEn <= TmgCntEn;
+-- end if;
 
 -- Finite timing transmission burst down counter;
-if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
-	and TmgCntEn = '0' and uCD(0) = '1' and uCD(1) = '1'
-  then HrtBtBrstCounter <= HrtBtBrstCntReg;
- elsif HrtBtBrstCounter /= 0 and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
-  then HrtBtBrstCounter <= HrtBtBrstCounter - 1;
- else HrtBtBrstCounter <= HrtBtBrstCounter;
- end if;
+--if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
+--	and TmgCntEn = '0' and uCD(0) = '1' and uCD(1) = '1'
+--  then HrtBtBrstCounter <= HrtBtBrstCntReg;
+-- elsif HrtBtBrstCounter /= 0 and Int_uBunch = 1 and ((Beam_On = '1' and DRCount = 7) or DRCount = 143)
+--  then HrtBtBrstCounter <= HrtBtBrstCounter - 1;
+-- else HrtBtBrstCounter <= HrtBtBrstCounter;
+-- end if;
 
 -- Enable the transmitting of trigger request packet on GTPTx(1)
 if TstTrigEn = '0' and WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr 
@@ -3019,7 +3025,7 @@ iCD <= X"0" &
 		 DRTimeout when DRTimeoutAdd,
 		 NimTrigLast & "00" & GPI & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"0085" when DebugVersionAd,
+		 X"008c" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 DRcnt when DRCntAdd,
