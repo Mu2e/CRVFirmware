@@ -9,6 +9,83 @@
 //  Program and Read Ethernet PHY Ports
 //********************************************************
 
+/* Notes:
+   
+   - LVDS = Low Voltage Differential Signaling
+
+   This implements low-level firmware routines for controlling and communicating with Ethernet PHY (Physical Layer) ports connected to the experiment's front-end boards (FEBs).
+
+   1. Ethernet PHY Data Transmission
+   
+   - Functions like ePHY_FIFO_LOAD, ePHY_FIFO_LOAD_CHKSUM, ePHY_FIFO_LOAD_ALL, and their variants handle loading data packets and commands into the PHY transmit FIFOs (First-In-First-Out buffers) for sending to FEBs over the Ethernet PHY ports.
+   - They manage packet headers, command codes, payload sizes, and ensure proper formatting for both diagnostic and normal operation.
+
+   2. Sending Data to FEBs
+   
+   - The SEND_2_FEB function coordinates the process of sending binary data files to FEBs. It prepares the payload, triggers transmission, waits for acknowledgment from the FEBs, and handles error conditions.
+   - It supports sending to single ports or broadcasting to all (up to 24) ports.
+
+   3. Port Assignment and Status
+   
+   - Functions like assignLinkPort set up which physical port to use for communication. They configure pointers and hardware registers that map software structures to actual FPGA hardware ports.
+   - link_ID_Chk checks which ports have active FEBs attached by reading status registers and updating an array of active ports.
+
+   4. Data Pool Request and Reception
+   
+   - PoolDataReqGood and PoolDataReq send requests for data pools from the FEBs and then receive the returned data via LVDS (Low-Voltage Differential Signaling).
+   - These are used for diagnostics and for collecting data from all FEBs in a coordinated fashion.
+
+   5. Packet Construction and Transmission
+   
+   - Several functions (PHY_LOAD_DAQ_K28SEND_BCAST, PHY_LOAD_DAQ_K28SEND_BCAST_MINI, PHY_LOADER_POOL_BCAST, etc.) construct, load, and broadcast packets of various sizes and formats, depending on whether the operation is standard or non-standard, diagnostic, or data acquisition.
+
+   6. MicroBunch (uBunch) Data Handling
+   
+   - Functions like uBunXmitBufLoad and GTP1_Rec_TEST handle the assembly and transmission of "microbunch" requests and data, which are packets structured for testing and for specific DAQ modes.
+
+   7. Low-Level Hardware and Protocol Details
+
+   - The file makes extensive use of external structures, hardware register pointers, and direct memory access, reflecting its use in embedded firmware for an FPGA/uC (microcontroller) system.
+   - Timing, buffer management, error checking, and synchronization are handled at a low level to ensure reliable communication.
+
+
+   [ROC/uC]      --(Request via PHY)-->       [FEB]
+   [ROC/uC] <==(Data via LVDS)==             [FEB]
+   [ROC/uC]      --(Packet via socket/other)--> [DTC]
+   
+   Reading from the data requests = sending a request for data and then reading back the result once the FEBs have responded.
+
+   - Logic spread across several function but most central are PoolDataReqGood(int Sock) and PoolDataReq(int Sock)
+
+
+   STEPS to add prefetches
+
+   STEP 1. Define a new packet type for prefetch requests (PRP)
+   - Add new command type for prefetch
+   - update packet header structures to support prefetch requests
+   
+   STEP 2. Handle prefetch requests at the ROC
+   - add logic to listen for prefetch requests from the DTC (this could be on a socket, serial port, or other interface --> model it off how data requests are handled).
+   
+   STEP 3. Send prefetch command packets to the FEB
+   - When the ROC receives a PRP from the DTC, it should send a prefetch command to the FEB(s).
+   - You can reuse your packet loader functions, e.g., PHY_LOADER_POOL_BCAST() or create a new one for prefetch
+   
+   STEP 4. Buffer the prefetched data at the ROC
+   - After sending the prefetch command, collect the data returned by the FEB and store it in a buffer.
+   - This buffer should be indexed/timestamped so you can match it to a later data request.
+
+   STEP 5. Use the prefetched data when a data request (DRP) arrives from the DTC
+   - When a DRP comes in from the DTC, check if prefetched data for the requested event/window exists.
+   - If present, send the buffered data instead of issuing a new request to the FEB.
+   - If absent, proceed with a normal data request.
+
+   STEP 6. Update Protocol Documentation and State Machine
+   - Document the new PRP packet type and the logic for handling prefetches.
+   - Update any relevant diagrams, state machines, and buffer management logic
+
+   
+ */
 #include "sys_common.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -85,6 +162,12 @@ struct ePHYregS ePHY_HDR_CON= {
                     'H','E','L','P','\r'};      //cmdString--u_CmdBuf[uCmdBufSz44]
 
 struct ePHYubReq ePHY_HDR_uBReq;
+
+typedef struct {
+    DataState state;
+    uint8_t   buffer[64]; // Prefetched data storage
+    uint32_t  last_update;               // Timestamp for state management/timeouts
+} EventWindowState;
 
 
 
@@ -295,6 +378,9 @@ int SEND_2_FEB(int sock, int xports)
 	//done
 	if(errFLAG)
         {
+	  // 4. sending assembled buffers to next stage
+	  // - DTC (Data Transfer Controller) is upstream of the ROC. Once the ROC has assembled a complete data packet from one or more FEBs, it forwards the packet to the DTC.
+	  // - This step is not shown in detail in Mu2e_Ctrl_DAQ_PHY.c (since this file is mainly about ROC-FEB communication), but it typically happens via a network socket or another link, possibly using functions like putBuf(sock, Buf1500,0); where sock is a communication channel to the DTC.
 		sprintf(Buf1500,"CNTRL: SENT =%-d BYTES  CHKSUM=%X,   FEB REC'D PACs=%d (FEB ACK FAILED)\r\n",u_SRAM.DwnLd_sCNT, u_SRAM.DwnLd_sSUM, pacCnt);
         putBuf(sock, Buf1500,0);      
 		sprintf(Buf1500,"CNTRL: Errors may be caused FPGA DAQ Process, Reset board and try aqain\r\n");
@@ -377,10 +463,13 @@ int assignLinkPort(int brdNum, int reset)
 }                
 
 
-
+// 2. Look-up done here
 //Check link for active FEB boards
 //FPGA register holds FEB board status via LVDS Rtn Signal(Clk/Data) being Active
 //This function takes 2uS
+// scans hardware registers and updates the POE_PORTS_ACTIVE[] array to know which ports/FEBs are alive
+// When receiving data, the ROC uses port-specific buffers like stab_Pool[poePrt-1] to store incoming data. This maps the data to the correct FEB.
+
 int link_ID_Chk(int prt)        //old command sent "LCHK" to FEBs
 {
     int pBits;
@@ -453,6 +542,10 @@ int PoolDataReqGood(int Sock)  //old lc_LSTAB
             lvLnk.PoolChkmSec=0;
             return 0;
             }
+
+	//3. Data packet transferred back to the ROC
+	// Data packets from the FEB are sent back via LVDS (Fast Serial) and received by the ROC's FPGA and microcontroller.
+	// The ROC polls the status registers to see if data has arrived (in PoolDataReqGood() and PoolDataReq()):
         //backgnd timer allow enough wait for data to show if FEB busy doing uBunch requests
         //ready for next 1of24 cycle, return later to read next poe port
         //check if data avail, leave old data
@@ -462,9 +555,10 @@ int PoolDataReqGood(int Sock)  //old lc_LSTAB
             if ((d16& IOPs[poePrt].ePHY_BIT)==0)    //0= data available
                 {
                 if(POE_PORTS_ACTIVE[poePrt])        //get data for active ports only
-                    {
+		  {
                     //Move 16bits per count, Incr Dest Reg Only
-                    movStr16_NOICSRC(IOPs[poePrt].FM30_DATp, stab_Pool[poePrt-1], eCMD72_MAX_WRDs174);
+		    //The function movStr16_NOICSRC() copies data from the FPGA’s FIFO buffer into the ROC’s RAM for further processing.
+		    movStr16_NOICSRC(IOPs[poePrt].FM30_DATp, stab_Pool[poePrt-1], eCMD72_MAX_WRDs174);
                     }
                 }
             }
@@ -501,6 +595,9 @@ int PoolDataReq(int Sock)  //old lc_LSTAB
         //*(uSHT*)IOPs[POE09].FM41_PARp= FMRstBit8; //FPGA2 lvds fifo buf and parErr clr              
         //*(uSHT*)IOPs[POE17].FM41_PARp= FMRstBit8; //FPGA2 lvds fifo buf and parErr clr 
 
+	// 1. Data request is generated
+	// Data requests are initiated by the ROC firmware by sending a command packet to the FEB (Front-End Board) via the Ethernet PHY link.
+	// This sends a command ("LSTAB") requesting pooled data from FEBs.
         PHY_LOADER_POOL_BCAST(POE01, 0);        //send command to all ePHY ports
         lvLnk.PoolReqType=1;
         poePrt=1;
@@ -718,6 +815,62 @@ uSHT uBuPacArray10[uBuPacArMax*9]; //uBun Req Packet Storage, max room 10Reqs, e
 //FEB will return data from that 32BitAddrPtr
 //The testing function access is setup by command UB0-UB4
 //
+
+/* Notes:
+   
+   GTP1_Rec_TEST() is a test handler for the GTP (Gigabit Transceiver Protocol) fiber link, which is used for hardware loopback and packet testing in the system. Its main job is to:
+   - Monitor the receive FIFO for available packets.
+   - Extract microbunch request data from those packets.
+   - Prepare and send packets to FEBs for diagnostics or DAQ testing.
+
+   Logic Breakdown
+   1. Wait for PHY Transmit FIFO to be Empty
+   - The loop waits until the physical layer is ready (not busy) for transmission.
+   - It toggles LEDs and scope test points for debugging and hardware visibility.
+ 
+   2. Check Receive FIFO Status
+   - Reads hardware status registers to see if there is any data in the receive FIFOs.
+   - If any FIFO is not empty, it toggles a test point for hardware debugging.
+
+   3. Check for Buffer Overrun
+   - Reads a control/status register to see if there?s a buffer overrun or unexpected data.
+   - If so, flashes LEDs and aborts with return value 1.
+
+   4. Check for Data Availability
+   - Reads the number of words available (k28_in) in the microbunch request buffer.
+   - If the buffer is empty, and in a specific test mode (uBReq.Mode==3), it reloads the buffer by writing to FPGA registers and waits.
+   - If not in test mode, it ends the test.
+
+   5. Handle Buffer Almost Empty Condition
+   - If in test mode and buffer is almost empty, it dumps the remaining words to avoid stale data, resets FIFOs, and sets up the FPGA for continuous run mode.
+
+   6. If at Least One Full Packet Is Available
+   - If there are at least 9 words (one packet) available, it continues:
+   1. Flashes an LED for "packet available".
+   2. Calculates how many packets (up to 2) are available in the buffer.
+   3. Resets the packet former state machine in the FPGA.
+   4. Calls uBunXmitBufLoad to extract the relevant microbunch request data from the FIFO and save it in the buffer.
+
+   7. Prepare and Send Test Packets
+   - Disables interrupts to protect the critical section.
+   - Depending on the packet mode, sends either standard-sized packets (PHY_LOAD_DAQ_K28SEND_BCAST) or smaller, non-standard ones (PHY_LOAD_DAQ_K28SEND_BCAST_MINI) to the designated port.
+   - Re-enables interrupts.
+
+   8. Clean Up
+   - Optionally delays for hardware timing.
+   - Resets the buffer pointer.
+   - Turns off LEDs.
+   - Returns the number of words remaining in the FIFO.
+
+Summary
+Step	                Action
+Wait for FIFO empty	Ensures no transmission is ongoing before handling new packets.
+Check FIFO status	Looks for buffer overrun or non-empty FIFOs, aborts if found.
+Data available?	        If not, reloads or ends test depending on mode.
+Prepare packet	        Extracts request data, resets state machine, sends test packet.
+Clean up	        Delays, resets pointers, turns off LEDs, returns status.
+
+*/
 int GTP1_Rec_TEST()                 //trig requesting
 {
     int k28_in, csr, k28_Reqs, cDat;
@@ -735,6 +888,7 @@ int GTP1_Rec_TEST()                 //trig requesting
         h_TP48_HI
         h_TP48_LO
         };
+
     //assume busy done, could recheck
     //ePHY buffers must be empty before filling request
     rxStat4 = (ePHY_RX_STA_416&0xF);    //ePhy 8 lower bits rec fifo not empty
@@ -751,7 +905,8 @@ int GTP1_Rec_TEST()                 //trig requesting
         {
         if (rxStat4+ rxStat8+ rxStatC)  //look at input fifos
             {
-            LED_RED1  
+
+	      LED_RED1  
             for(int j=0; j<20; j++);
             LEDs_OFF                    //QUICK LED PULSE
             //if(timeout++> 6000)       //big time busy, break out of loop
@@ -765,7 +920,8 @@ int GTP1_Rec_TEST()                 //trig requesting
             }
         }
     //check ubunch request fifo
-    k28_in= GTP0_RQ_CNT0E;              //uBun buf wrd cnt 'RegE'   
+    k28_in= GTP0_RQ_CNT0E;              //uBun buf wrd cnt 'RegE'
+
     if(k28_in==0)
         {    
         if (uBReq.Mode==3)
@@ -783,7 +939,8 @@ int GTP1_Rec_TEST()                 //trig requesting
             //timeout=0;
             uBReq.Flag &=~DAQREQ_2FEB;  //end test  
             }
-        return 0;
+
+	 return 0;
         }
       
     //if k28_in buffer almost empty, if mode3 then retrigger a new request cycle
@@ -802,7 +959,8 @@ int GTP1_Rec_TEST()                 //trig requesting
         //REG16(fpgaBase0+(0xf*2))= 10*10;
         REG16(fpgaBase0)= 0x101;                //continous run mode
       //REG16(fpgaBase0)= 0x301;                //one loop test, ubunch and heartbeat
-        uDelay(200);
+
+	uDelay(200);
         }   
 
     //GTP RX FIFO CSR, buffer word count
@@ -820,8 +978,8 @@ int GTP1_Rec_TEST()                 //trig requesting
         
     //tek mod aug 2018, let daq packets control leds    
     LED_GRN1
-      
-    //fill packet with up to 2 uBunch Request if available
+
+       //fill packet with up to 2 uBunch Request if available
     k28_Reqs= k28_in/9;
     if(k28_Reqs>2)
         k28_Reqs=2;
@@ -836,8 +994,7 @@ int GTP1_Rec_TEST()                 //trig requesting
     
     //save 2 of 9 words req
     uBunXmitBufLoad(uBDatPtr, k28_Reqs);
-     
-    _disable_interrupt_();          //disable uC intr 
+     _disable_interrupt_();          //disable uC intr 
     
     //command UB0 set uBReq.SmPacMode=0 for standard min 64 byte packets
     //command UB4 set uBReq.SmPacMode=1 for non standard min 6 byte packets
@@ -854,8 +1011,9 @@ int GTP1_Rec_TEST()                 //trig requesting
     _enable_interrupt_();          //enable uC intr
 
     
-    h_TP48_LO      
-    //optional delay time
+    h_TP48_LO
+
+      //optional delay time
     uDelay(uBReq.uDly);   
     //reset buf ptr
     uBDatPtr= uBuPacArray10;
@@ -875,14 +1033,26 @@ int GTP1_Rec_TEST()                 //trig requesting
 uSHT uBunIDs[uBunMaxLWRDs2+2];      //store to compare to rtn data
 
 
+
+typedef struct {
+    uint16_t event_lo;
+    uint16_t event_mid;
+    int valid;                // 1 if slot is in use, 0 otherwise
+    uint16_t buffer[9];       // Store the 9-word packet here
+} PrefetchSlot;
+
+static PrefetchSlot prefetch_slots[NUM_PREFETCH] = {0};
+
+
+
+
 //This function access is controller by cmd 'TRIG' and 'TRIG1'
 //At some point this function will enable for normal DAQ data taking
 //Getting here using 'TRIG1' should become the normal
 //
 int GTP1_Rec_Trigs()                //cmd 'TRIG' handler
 {
-    int k28_in, dat16;
-    static int uBunWrd=0, idx=0, uBunReq=0;;
+    int k28_in;
     
     //GTP RX FIFO CSR, buffer word count
     k28_in= GTP0_RQ_CNT0E;          //uBun data req packet buffer word count
@@ -891,49 +1061,49 @@ int GTP1_Rec_Trigs()                //cmd 'TRIG' handler
     if (PhyXmitBsy(HappyBus.PoeBrdCh))
         uDelay(300);    //should never happen, its fast
     
-    while (k28_in)                  //data avail? , assum if any data then full 9 words in fifo
-        {
-        uBunReq++;
-     // dat16= GTP0_REQ_PAC;        //dump 1st k28.d2y word         
-        dat16= GTP0_RQ_PAC0D;       //dump 2nd xFer byte cnt
-        dat16= GTP0_RQ_PAC0D;       //dump 3rd PAC type word
+    while (k28_in >= 9)                  //data avail? , assum if any data then full 9 words in fifo
+      {
+	uint16_t tmp[9];
+	for (int i=0; i<9; i++)
+	  tmp[i] = GTP0_RQ_PAC0D;
+	
+	uint16_t type = tmp[2];  
+	uint16_t event_lo = tmp[3];
+	uint16_t event_mid = tmp[4];
+	
+	if (type == 0x00a1) { // 'PF'
+	  int slot = find_free_prefetch_slot();
+	  if (slot != -1) {
+	    prefetch_slots[slot].event_lo = event_lo;
+	    prefetch_slots[slot].event_mid = event_mid;
+	    prefetch_slots[slot].valid = 1;
+	    // Copy the 9 words
+	    for (int i = 0; i < 9; i++)
+	      prefetch_slots[slot].buffer[i] = tmp[i];
+	    // Forward prefetch to FEB
+	    h_TP48_HI	//scope test point for testing 
+	      PHY_LOAD_DAQ_K28SEND_BCAST(eCMD_DAQ_DY2, HappyBus.PoeBrdCh, tmp, 1);
+	    h_TP48_LO	//scope test point for testing 
+	      }
+	  
+	} else if (type == 0x00a2) { // 'DR'
+	  // Data was prefetched: send from ROC to DTC
+	  int slot = find_prefetch_slot(event_lo, event_mid);
+	  if (slot != -1) {
+	    h_TP48_HI //scope test point for testing
+	      PHY_LOAD_DAQ_K28SEND_BCAST(eCMD_DAQ_DY2, HappyBus.PoeBrdCh, prefetch_slots[slot].buffer, 9); // 9 is number of words in data packet
+	    h_TP48_LO //scope test point for testing  
+	      } else {
+	    // Not prefetched, just forward or handle as usual
+	    h_TP48_HI //scope test point for testing  
+	      PHY_LOAD_DAQ_K28SEND_BCAST(eCMD_DAQ_DY2, HappyBus.PoeBrdCh, tmp, 9);
+	    h_TP48_LO //scope test point for testing  
+	      }
+        }
+      }
+        
 
-        //keep time stamp low word, middle word
-        dat16= GTP0_RQ_PAC0D;       //save uBun Number lower 16 
-        uBuPacArray10[uBunWrd++]= dat16;       
-        uBunIDs[idx++]= dat16;
-        
-        dat16= GTP0_RQ_PAC0D;       //save uBun Number middle 16 
-        uBuPacArray10[uBunWrd++]= dat16;       
-        uBunIDs[idx++]= dat16;
-
-        //dump rest of 8word xfer
-        dat16= GTP0_RQ_PAC0D;       //timestamp high
-        dat16= GTP0_RQ_PAC0D;       //resevered
-        dat16= GTP0_RQ_PAC0D;       //resevered
-        dat16= GTP0_RQ_PAC0D;       //resevered
-        dat16= GTP0_RQ_PAC0D;       //crc
-        
-        //************************************************
-        //******     fill minimun req size        ********
-        //************************************************               
-        if (uBunWrd < (uBunMaxLWRDs2))  //maybe concentrate uB Reqs before sending to FEB
-             return k28_in;
-        
-        h_TP48_HI   //scope test point for testing         
-        if(uBReq.Flag & DAQuB_Trig_OLD)  
-            //TRIG command sets up standard packet mode with min packet size=64+ bytes (flag DAQuB_Trig)
-            PHY_LOAD_DAQ_K28SEND_BCAST(eCMD_DAQ_DY2, HappyBus.PoeBrdCh, uBuPacArray10, uBunReq);     //cmdBuf,Port,echoMode
-        else
-            //TRIG1 command sets up non standard packet mode with min packet size= 6 bytes    (flag DAQuB_TrigNew)
-            PHY_LOAD_DAQ_K28SEND_BCAST_MINI(eCMD_DAQ_DY2, HappyBus.PoeBrdCh, uBuPacArray10, uBunReq);//cmdBuf,Port,echoMode
-        
-        uBunWrd=0;
-        uBunReq=0;
-        idx=0;
-        k28_in= GTP0_RQ_CNT0E;  
-        h_TP48_LO   //scope test point for testing
-        }  
+    k28_in = GTP0_RQ_CNT0E;      
     return k28_in;
 }
 
