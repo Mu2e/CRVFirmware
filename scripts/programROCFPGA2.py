@@ -6,7 +6,7 @@ import sys
 port = sys.argv[2] if len(sys.argv) > 2 else '/dev/ttyUSB1'
 
 ser = serial.Serial(port, 460800, timeout=0.1)
-ser.write(("FL1\r").encode())
+ser.write(("FL2\r").encode())
 for k in range(100):
     a = ser.readline()
     #print(a)
