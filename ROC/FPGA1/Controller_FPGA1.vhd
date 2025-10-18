@@ -594,7 +594,7 @@ HeartBeatTx : FM_Tx
 					 Tx_Out => HrtBtTxOuts);
 HeartBeatFM <= HrtBtTxOuts.FM when ExtTmg = '0' else GPI;
 --GPO(0) <= HeartBeatFM;
-GPO(0) <= MarkerDelayed(0);
+GPO(0) <= Marker; --MarkerDelayed(0);
 --Debug(1) <= HrtBtTxOuts.FM;
 --Debug(2) <= HrtBtFMTxEn;
 --Debug(3) <= MarkerDelayed;
@@ -3025,7 +3025,7 @@ iCD <= X"0" &
 		 DRTimeout when DRTimeoutAdd,
 		 NimTrigLast & "00" & GPI & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"008c" when DebugVersionAd,
+		 X"008f" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 DRcnt when DRCntAdd,
