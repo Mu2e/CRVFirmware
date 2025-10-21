@@ -224,15 +224,15 @@ begin
             --elsif Packet_Former = WrtPktCntTimeout
             --   then EvTxWdCnt <= (others => '0'); -- no payload when timeout
             -- Decrement the word count for each word sent within a data packet
-            elsif EvTxWdCnt /= 0 and current_state = WrtDatPkt and Pkt_Timer > 2 then EvTxWdCnt <= EvTxWdCnt - 1;
-            else                                                                      EvTxWdCnt <= EvTxWdCnt;
+            elsif EvTxWdCnt /= 0 and current_state = WrtDatPkt and Pkt_Timer > 2 and Pkt_Timer /= 11 then EvTxWdCnt <= EvTxWdCnt - 1;
+            else                                                                                          EvTxWdCnt <= EvTxWdCnt;
             end if;
    
             -- Use this word count terminal count to distinguish the last valid word read
             -- from the event buffer FIFO
-            if     EvTxWdCnt = 1 and current_state = WrtDatPkt and Pkt_Timer > 2 then EvTxWdCntTC <= '1';
-            elsif EvTxWdCnt /= 1 and current_state = WrtDatPkt and Pkt_Timer > 2 then EvTxWdCntTC <= '0';
-            else                                                                      EvTxWdCntTC <= EvTxWdCntTC;
+            if     EvTxWdCnt = 1 and current_state = WrtDatPkt and Pkt_Timer > 2 and Pkt_Timer /= 11 then EvTxWdCntTC <= '1';
+            elsif EvTxWdCnt /= 1 and current_state = WrtDatPkt and Pkt_Timer > 2 and Pkt_Timer /= 11 then EvTxWdCntTC <= '0';
+            else                                                                                          EvTxWdCntTC <= EvTxWdCntTC;
             end if;
    
             -- Read of timestamps for use in forming the header packet
@@ -261,18 +261,20 @@ begin
                 )
                                                                              then Pkt_Timer <= Pkt_Timer - 1;
             elsif Pkt_Timer = 0 and (current_state = WrtHdrPkt or current_state = WrtHdrPktTimeout -- WrtHdrPktTimeout not needed if we send only one package
-                or current_state = WrtCtrlHdrPkt or current_state = WrtDatPkt 
+                or current_state = WrtCtrlHdrPkt --or current_state = WrtDatPkt 
                 or current_state = WrtDCSPkt 
                 --or current_state = WrtGRPkt or current_state = WrtGRPkt2
                 )
                                                                             then Pkt_Timer <= X"A";
+				elsif Pkt_Timer = 0 and (current_state = WrtDatPkt)             then Pkt_Timer <= X"B";
+																									 
             elsif current_state = Idle                                      then Pkt_Timer <= X"0";
             else                                                                 Pkt_Timer <= Pkt_Timer;
             end if;
 
             if current_state = Loopback then
-				     GTPTx_Pipe        <= X"1C90";
-					  GTPTxBuff_Pipe     <= X"1C90";
+				     GTPTx_Pipe        <= X"1C9" & IDReg;
+					  GTPTxBuff_Pipe     <= X"1C9" & IDReg;
 				elsif Pkt_Timer = 0 and (
                   current_state = WrtHdrPkt 
               or  current_state = WrtHdrPktTimeout 
@@ -353,7 +355,7 @@ begin
                 end case;
                 elsif current_state = WrtDatPkt then 
                     if    Pkt_Timer = 10 then GTPTxStage <= X"1C" & TxSeqNo & "00110"; TxCRCDat <= X"0000";
-                    elsif Pkt_Timer =  0 then GTPTxStage <= X"BC3C";               TxCRCDat <= X"0000";
+                    elsif (Pkt_Timer =  0 or Pkt_Timer = 11) then GTPTxStage <= X"BC3C";               TxCRCDat <= X"0000";
                     elsif EvTxWdCnt > 0 or EvTxWdCntTC = '1' 
                               then GTPTxStage <= EventBuff_Out;                    TxCRCDat <= EventBuff_Out;
                     else GTPTxStage <= X"0000";                                    TxCRCDat <= X"0000";
@@ -424,7 +426,7 @@ begin
                 or (uBwrt = '1' and (Pkt_Timer = 4 or Pkt_Timer = 3)) -- if uB is written, also read it again
                 ---or Pkt_Timer = 7 or Pkt_Timer = 4 or Pkt_Timer = 3 or Pkt_Timer = 2)
                 ))
-                or (current_state = WrtDatPkt and Pkt_Timer > 2 and EvTxWdCnt > 0)
+                or (current_state = WrtDatPkt and Pkt_Timer > 2 and EvTxWdCnt > 0 and Pkt_Timer /= 11)
                     then                              EventBuff_RdEn <= '1';  --Debug(9) <= '1';
                         if EventBuff_Empty = '0' then EventBuffErr <= '0';
                         else                          EventBuffErr <= '1';
@@ -454,7 +456,7 @@ begin
                 or ( current_state = WrtDCSPkt and FormStatReg = "111")
                 --or ( current_state = WrtGRPkt  and FormStatReg = "111")
                 --or ( current_state = WrtGRPkt2) -- and FormStatReg = "110")
-                or   current_state = WrtDatPkt) and Pkt_Timer /= 0 and Pkt_Timer /= 10)
+                or   current_state = WrtDatPkt) and Pkt_Timer /= 0 and Pkt_Timer /= 10 and Pkt_Timer /= 11)
                     then TxCRCEn <= '1';
             else         TxCRCEn <= '0';
             end if;
@@ -472,7 +474,7 @@ begin
                 or (	current_state = WrtDCSPkt and FormStatReg = "111") -- neded because it starts with Pkt_Timer = 0, with BC3C
                 --or (	current_state = WrtGRPkt and FormStatReg = "111")
                 --or (	current_state = WrtGRPkt2) -- and FormStatReg = "110") 
-                or current_state = WrtDatPkt) and Pkt_Timer /= 10 and Pkt_Timer /= 9)
+                or current_state = WrtDatPkt) and Pkt_Timer /= 10 and Pkt_Timer /= 9 and Pkt_Timer /= 11)
                     then TxCharIsK_Pipe <= "00";
             -- Both bytes are K characters when sending pads
             else         TxCharIsK_Pipe <= "11";
