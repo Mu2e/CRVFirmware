@@ -284,7 +284,7 @@ signal HrtBtData : std_logic_vector (23 downto 0);
 signal TrigFMDat : std_logic_vector (15 downto 0);
 
 -- Trigger request packet buffer, FIFO status bits
-signal DReqBuff_Out : std_logic_vector (15 downto 0);
+signal DReqBuff_Out, DReqBuff_In : std_logic_vector (15 downto 0);
 signal DReqBuff_wr_en,DReqBuff_rd_en,DReqBuff_uCRd, DCSPktBuff_uCRd,
 		 DReqBuff_Full,TrigTx_Sel,DReqBuff_Emtpy,
 		 Dreq_Tx_Req,Dreq_Tx_ReqD,DReq_Tx_Ack,BmOnTrigReq,Stat_DReq : std_logic;
@@ -403,6 +403,13 @@ signal InjectionWindow_first : std_logic_vector(15 downto 0);
 signal InjectionCnt : std_logic_vector(7 downto 0);
 signal InjectionDutyCnt, InjectionDuty, InjectionHighCnt : std_logic_vector(7 downto 0);
 
+-- DR generator to mimic DR from the DTC
+signal DRgenertorTrigger : std_logic;
+signal drgenerator_wr_en : std_logic;
+signal drgenerator_wr_data : std_logic_vector(15 downto 0);
+signal drgenerator_uCD, drgenerator_mid_uCD : std_logic_vector(15 downto 0);
+signal TStmpBuff_In : std_logic_vector(15 downto 0); -- for multiplexing timestamp buffer
+signal drgenerator_ts_wr_en : std_logic;
 
 --signal debug_cnt : std_logic_vector(7 downto 0);
 
@@ -622,12 +629,14 @@ DReqTxEn <= '1' when TrigTx_Sel = '1' and DReqBuff_Emtpy = '0' and DreqTxOuts.Do
 				  
 -- FIFO for buffering broadcast trigger requests, 
 -- crossing clock domains from UsrClk to Sysclk
+
+
 DReqBuff : FIFO_DC_1kx16
   PORT MAP (rst => GTPRxRst,
     wr_clk => UsrClk2(0),
 	 rd_clk => SysClk,
-    din => GTPRxReg(0),
-    wr_en => DReqBuff_wr_en,
+    din => DReqBuff_In, --GTPRxReg(0),
+    wr_en => DReqBuff_wr_en or drgenerator_wr_en,
     rd_en => DReqBuff_rd_en,
     dout => DReqBuff_Out,
     full => DReqBuff_Full,
@@ -635,6 +644,7 @@ DReqBuff : FIFO_DC_1kx16
 	 rd_data_count => TrgPktRdCnt);
 
 	 DReqBuff_rd_en <= DreqTxOuts.Done when TrigTx_Sel = '1' else DReqBuff_uCRd;
+	 DReqBuff_In <= drgenerator_wr_data when drgenerator_wr_en = '1' else GTPRxReg(0);
 
 -- FIFO for buffering incoming heartbeats
 -- crossing clock domains from UsrClk to Sysclk
@@ -698,13 +708,15 @@ DCSOutBuff : LinkFIFO
 TimeStampBuff : TrigPktBuff
   PORT MAP (rst => GTPRxRst,
     clk => UsrClk2(0),
-    din => GTPRxReg(0),
-    wr_en => TStmpBuff_wr_en,
+    din => TStmpBuff_In,
+    wr_en => TStmpBuff_wr_en or drgenerator_ts_wr_en,
     rd_en => TStmpBuff_rd_en,
     dout => TStmpBuff_Out,
     full => TStmpBuff_Full,
     empty => TStmpBuff_Emtpy,
 	 data_count => TStmpWds);
+	 
+TStmpBuff_In <= drgenerator_wr_data when drgenerator_ts_wr_en = '1' else GTPRxReg(0);
 
 -- DP Ram for storing FEB addresses
 FEBIDList : FEBIDListRam
@@ -953,6 +965,22 @@ LinkBuffTrace : LinkFIFO
         TILE0_TXENPRBSTST1_IN           =>      En_PRBS(1)
 );
 
+-- used to generate data packages that can mimic DR from the DTC
+DRpacketGenerator_inst : DRpacketGenerator
+    port map (
+        clk      => UsrClk2(0),
+        rst      => not CpldRst,
+        trigger  => DRgenertorTrigger,
+        busy     => open,
+        id       => IDreg,
+        UB_LOW   => drgenerator_uCD,
+        UB_MID   => drgenerator_mid_uCD,
+        UB_HIGH  => x"0000",
+        wr_en    => drgenerator_wr_en,
+		  ts_wr_en => drgenerator_ts_wr_en,
+        wr_data  => drgenerator_wr_data
+    );
+
 -- GTP logic processes
 
 -- GTP event handling process
@@ -1084,7 +1112,8 @@ end if;
 	else TrigReqWdCnt <= TrigReqWdCnt;
 	end if;
 
-	if Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and TrigReqWdCnt > 0
+	if (Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and TrigReqWdCnt > 0) -- or
+	    --drgenerator_wr_en = '1' -- if writes from the uC
 	then DReqBuff_wr_en <= '1';  --Debug(10) <= '1';
 	else DReqBuff_wr_en <= '0';  --Debug(10) <= '0';
 	end if;
@@ -1247,7 +1276,7 @@ end Case;
 
 if DR_Handler = StartCounter then
     DRcnt <= DRTimeout; -- X"FF";
-elsif DR_Handler = Waiting then
+elsif DR_Handler = Waiting and DRTimeout /= X"FFFF" then
     DRcnt <= DRcnt - 1;
 else DRcnt <= DRcnt;
 end if;
@@ -1601,7 +1630,10 @@ port map (
 -- Extract the eight payload bits from the 10 bit parallel data fron the deserializer
 -- Three lower bits from lane 1 and 5 bits from lane 0
 LinkBuff : LinkFIFO
-  port map (rst => LinkBuffRst, wr_clk => RxOutClk(i), rd_clk => UsrClk2(0), 
+  port map (
+    rst => LinkBuffRst or GTPRxRst, 
+    wr_clk => RxOutClk(i), 
+	 rd_clk => UsrClk2(0), 
     wr_en => LinkFIFOWrReq(i),rd_en => LinkFIFORdReq(i),
     din(15 downto 13) => LinkPDat(i)(1)(7 downto 5),
     din(12 downto 8) => LinkPDat(i)(0)(9 downto 5),
@@ -2194,7 +2226,7 @@ main : process(SysClk, CpldRst)
 	--DCS_Status <= X"0040"; -- cnt [:7], status[6:5], op[4:0] => cnt = 1
 	--DCS_EvCnt  <= X"0010"; -- 8 words, 16 bytes
 	sendGR <= '0';
-	DRTimeout <= X"FFFF"; -- units of 6.4ns, corresponds to 419us
+	DRTimeout <= X"FFFE"; -- units of 6.4ns, corresponds to 419us
 	sendGRCnt <= (others => '0');
 	EventBuffSpy_RdEn <= '0';
 	--DCSSpy_RdEn <= '0';
@@ -2223,6 +2255,10 @@ main : process(SysClk, CpldRst)
 	HeartBtCnt <= (others => '0');
 	--addr_reg <= (others =>'0');
 	
+	DRgenertorTrigger <= '0';
+   drgenerator_uCD <= (others => '0');
+	drgenerator_mid_uCD <= (others => '0');
+	
  elsif rising_edge (SysClk) then 
 
 -- Synchronous edge detectors for read and write strobes
@@ -2247,6 +2283,20 @@ then TstPlsEn <= uCD(0);
 	  TrgSrc <= uCD(1);
 else TstPlsEn <= TstPlsEn;
 	  TrgSrc <= TrgSrc;
+end if;
+
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = DRGeneratorHiAdd then
+	drgenerator_mid_uCD <= uCD;  -- Buffer the uCD data
+else
+	drgenerator_mid_uCD <= drgenerator_mid_uCD;
+end if;
+
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = DRGeneratorAdd then
+	DRgenertorTrigger <= '1';
+	drgenerator_uCD <= uCD;  -- Buffer the uCD data
+else
+	DRgenertorTrigger <= '0';
+	drgenerator_uCD <= drgenerator_uCD;
 end if;
 
 -- Internal beam on trigger generator
@@ -2474,7 +2524,7 @@ end if;
 	end if;
 	
 	if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DRTimeoutAdd 
-	then DRTimeout <= DRTimeout(15 downto 0);
+	then DRTimeout <= uCD(15 downto 0);
 	else DRTimeout <= DRTimeout;
 	end if;
 
@@ -3017,6 +3067,8 @@ iCD <= X"0" &
 		 Clk80MHzAlignCnt & X"0" & "000" & Clk80MHzAlign when Clk80MHzAdd,
 		 X"000" & "0" & LoopbackMode when LoopbackAdd,
 		 X"00" & LoopbackMarkerCnt when LoopbackMarkerCntAdd,
+		 drgenerator_uCD when DRGeneratorAdd,
+		 drgenerator_mid_uCD when DRGeneratorHiAdd,
 		 --debugBuffData when debugBuffAdd,
 		 --debugFull & debugEmpty & "0" & debugRst & "000" & DDRSel & X"00" when debugTrigAdd,
 		 --debugTrigPattern when debugTrigPatternAdd,
@@ -3025,7 +3077,7 @@ iCD <= X"0" &
 		 DRTimeout when DRTimeoutAdd,
 		 NimTrigLast & "00" & GPI & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"008f" when DebugVersionAd,
+		 X"0095" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 DRcnt when DRCntAdd,

@@ -383,4 +383,26 @@ component debugMarkerkInputBuffer
 			  );
 end component;
 
+component DRpacketGenerator is
+    port (
+        clk         : in  std_logic;
+        rst         : in  std_logic;
+        
+        -- Trigger interface
+        trigger     : in  std_logic;
+        busy        : out std_logic;
+        
+        -- Input data
+        id          : in  std_logic_vector(3 downto 0);
+        UB_LOW      : in  std_logic_vector(15 downto 0);
+        UB_MID      : in  std_logic_vector(15 downto 0);
+        UB_HIGH     : in  std_logic_vector(15 downto 0);
+        
+        -- Output to FIFO
+        wr_en       : out std_logic;
+		  ts_wr_en    : out std_logic;
+        wr_data     : out std_logic_vector(15 downto 0)
+    );
+end component;
+
 end Project_Components;

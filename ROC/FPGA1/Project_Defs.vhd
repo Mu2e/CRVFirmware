@@ -130,7 +130,10 @@ constant InjectionWindowAdd  : AddrPtr := "00" & X"5A";
 constant InjectionDutyAdd    : AddrPtr := "00" & X"5B";
 constant EventBuffSpyAd       : AddrPtr := "00" & X"5C";
 constant DRTimeoutAdd        : AddrPtr := "00" & X"5D";
-constant DCSSpyAd            : AddrPtr := "00" & X"5E"; -- remove me again
+constant DRTimeoutHighAdd    : AddrPtr := "00" & X"5E";
+constant DCSSpyAd            : AddrPtr := "00" & X"5F"; -- remove me again
+constant DRGeneratorAdd      : AddrPtr := "00" & X"60";
+constant DRGeneratorHiAdd    : AddrPtr := "00" & X"61";
 
 constant SpillTrigCntAdHi : AddrPtr := "00" & X"66";
 constant SpillTrigCntAdLo : AddrPtr := "00" & X"67";
@@ -175,7 +178,7 @@ constant DebugCntAdd : AddrPtr        := "00" & X"95";
 constant GitHashHiAddr : AddrPtr      := "00" & X"96";
 constant GitHashLoAddr : AddrPtr      := "00" & X"97";
 constant GTPRstCntAd : AddrPtr        := "00" & X"98";
-constant DebugVersionAd : AddrPtr     := "00" & X"99";
+constant DebugVersionAd : AddrPtr     := "00" & X"99"; 
 
 ---------------------- Broadcast addresses ------------------------------
 
