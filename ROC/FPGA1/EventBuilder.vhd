@@ -14,7 +14,7 @@ entity EventBuilder is
         FormRst         : in  std_logic;
         -- LinkFIFOs
         LinkFIFOOut     : in  Array_3x16;
-        LinkFIFORdCnt   : in  Array_3x13;
+        LinkFIFORdCnt   : in  Array_3x14;
         LinkFIFOEmpty   : in  std_logic_vector(2 downto 0);
         LinkFIFORdReq   : out std_logic_vector(2 downto 0);
         -- EventBuffer

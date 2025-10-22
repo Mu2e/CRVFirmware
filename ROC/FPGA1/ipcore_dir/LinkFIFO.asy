@@ -40,6 +40,6 @@ PINATTR PinName empty
 PINATTR Polarity OUT
 LINE Wide 832 656 800 656
 PIN 832 656 RIGHT 36
-PINATTR PinName rd_data_count[12:0]
+PINATTR PinName rd_data_count[13:0]
 PINATTR Polarity OUT
 

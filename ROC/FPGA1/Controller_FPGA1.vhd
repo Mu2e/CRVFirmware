@@ -90,7 +90,7 @@ architecture behavioural of ControllerFPGA_1 is
 Type Array_2x2 is Array(0 to 1) of std_logic_vector (1 downto 0);
 Type Array_2x3 is Array(0 to 1) of std_logic_vector (2 downto 0);
 Type Array_2x10 is Array(0 to 1) of std_logic_vector(9 downto 0);
-Type Array_2x13 is Array(0 to 1) of std_logic_vector (12 downto 0);
+Type Array_2x14 is Array(0 to 1) of std_logic_vector (13 downto 0);
 Type Array_2x16 is Array(0 to 1) of std_logic_vector (15 downto 0);
 
 Type Array_3x3 is Array(0 to 2) of std_logic_vector(2 downto 0);
@@ -205,7 +205,7 @@ signal PhaseAccD : std_logic;
 -- Link receive FIFO signals
 signal LinkFIFOEn,LinkFIFOEnd,LinkFIFORdReq,LinkFIFOWrReq,
 		 LinkFIFOEmpty,LinkFIFOFull : std_logic_vector (2 downto 0);
-signal LinkFIFORdCnt : Array_3x13;
+signal LinkFIFORdCnt : Array_3x14;
 signal LinkRDDL : std_logic_vector (1 downto 0);
 signal LinkFIFOOut : Array_3x16;
 
@@ -273,10 +273,10 @@ signal DCM_Locked : std_logic_vector (1 downto 0);
 signal GTPRxBuff_wr_en,GTPRxBuff_rd_en,GTPRxBuff_full,
 		 GTPRxBuff_Emtpy,PRBSCntRst,PRBSErr : std_logic_vector (1 downto 0);
 signal WdCountBuff_WrtEn,WdCountBuff_RdEn,WdCountBuff_Full,WdCountBuff_Empty : std_logic;
-signal WdCountBuff_DatCnt : std_logic_vector (12 downto 0);
+signal WdCountBuff_DatCnt : std_logic_vector (9 downto 0);
 signal WdCountBuff_Out : std_logic_vector (15 downto 0);
 signal EnPRBSTst,En_PRBS : Array_2x3;
-signal GTPRxBuff_DatCnt : Array_2x13;
+signal GTPRxBuff_DatCnt : Array_2x10;
 -- Signals used by the microbunch,trigger FM transmitters
 signal HrtBtTxOuts,DreqTxOuts : TxOutRec;
 signal HrtBtDone,HrtBtTxReq,HrtBtTxAck,HrtBtFMTxEn,TxEnReq,DReqTxEn,LinkBusy : std_logic;
@@ -303,7 +303,7 @@ signal Packet_Type : std_logic_vector (3 downto 0);
 
 -- Heart beat FIFO
 signal HrtBtWrtCnt,HrtBtRdCnt,TrigReqWdCnt,HrtBtWdCnt,DCSReqWdCnt : std_logic_vector (3 downto 0);
-signal HrtBtBuffRdCnt,TrgPktRdCnt : std_logic_vector (10 downto 0);
+signal HrtBtBuffRdCnt,TrgPktRdCnt : std_logic_vector (9 downto 0);
 signal HrtBtBuff_wr_en,HrtBtBuff_rd_en,HrtBtBuff_Full,HrtBtBuff_Emtpy,HrtBtFMReq : std_logic;
 signal HrtBtBuff_Out : std_logic_vector (15 downto 0);
 signal HrtBtMode : std_logic_vector (7 downto 0);
@@ -314,7 +314,7 @@ signal TStmpWds : std_logic_vector (8 downto 0);
 
 -- DCS request FIFO
 signal DCSPktBuff_wr_en,DCSPktBuff_rd_en,DCSPktBuff_Full,DCSPktBuff_Emtpy : std_logic;
-signal DCSPktRdCnt : std_logic_vector (12 downto 0);
+signal DCSPktRdCnt : std_logic_vector (9 downto 0);
 signal DCSPktBuff_Out : std_logic_vector (15 downto 0);
 --signal DCSTxBuffWds : std_logic_vector (8 downto 0);
 
@@ -372,7 +372,7 @@ signal CRCErrCnt  : std_logic_vector (7 downto 0);
 -- Tx trace buffer
 signal GTPTxBuff_In, GTPTxBuff_Out  : std_logic_vector(15 downto 0);
 signal GTPTxBuff_wr_en, GTPTxBuff_rd_en : std_logic;
-signal GTPTxBuff_DatCnt : std_logic_vector(12 downto 0);
+signal GTPTxBuff_DatCnt : std_logic_vector(9 downto 0);
 -- Data request trace buffer
 signal DReqBuffTrace_rd_en : std_logic;
 signal DReqBuffTrace_Out : std_logic_vector (15 downto 0);
@@ -631,7 +631,8 @@ DReqTxEn <= '1' when TrigTx_Sel = '1' and DReqBuff_Emtpy = '0' and DreqTxOuts.Do
 -- crossing clock domains from UsrClk to Sysclk
 
 
-DReqBuff : FIFO_DC_1kx16
+--DReqBuff : FIFO_DC_1kx16
+DReqBuff : FIFO_DC_64x16
   PORT MAP (rst => GTPRxRst,
     wr_clk => UsrClk2(0),
 	 rd_clk => SysClk,
@@ -641,14 +642,16 @@ DReqBuff : FIFO_DC_1kx16
     dout => DReqBuff_Out,
     full => DReqBuff_Full,
     empty => DReqBuff_Emtpy,
-	 rd_data_count => TrgPktRdCnt);
+    rd_data_count => TrgPktRdCnt);
+    --rd_data_count => TrgPktRdCnt(5 downto 0));
 
 	 DReqBuff_rd_en <= DreqTxOuts.Done when TrigTx_Sel = '1' else DReqBuff_uCRd;
 	 DReqBuff_In <= drgenerator_wr_data when drgenerator_wr_en = '1' else GTPRxReg(0);
 
 -- FIFO for buffering incoming heartbeats
 -- crossing clock domains from UsrClk to Sysclk
-HrtBtBuff : FIFO_DC_1kx16
+--HrtBtBuff : FIFO_DC_1kx16
+HrtBtBuff: FIFO_DC_64x16
   PORT MAP (rst => GTPRxRst,
     wr_clk => UsrClk2(0),
 	 rd_clk => SysClk,
@@ -658,10 +661,13 @@ HrtBtBuff : FIFO_DC_1kx16
     dout => HrtBtBuff_Out,
     full => HrtBtBuff_Full,
     empty => HrtBtBuff_Emtpy,
-	 rd_data_count => HrtBtBuffRdCnt);
+    rd_data_count => HrtBtBuffRdCnt);
+    --rd_data_count => HrtBtBuffRdCnt(5 downto 0));
 
 -- FIFO for buffering status requests
-DCSPktBuff : LinkFIFO
+--DCSPktBuff : FIFO_DC_64x16
+--DCSPktBuff : FIFO_DC_1kx16
+DCSPktBuff: FIFO_DC_64x16
   PORT MAP (rst => GTPRxRst,
 	 wr_clk => UsrClk2(0),
     rd_clk => SysClk,
@@ -671,12 +677,14 @@ DCSPktBuff : LinkFIFO
     dout => DCSPktBuff_Out,
     full => DCSPktBuff_Full,
     empty => DCSPktBuff_Emtpy,
-	 rd_data_count => DCSPktRdCnt);
+    rd_data_count => DCSPktRdCnt);
+    -- rd_data_count => DCSPktRdCnt(5 downto 0));
 	 
 	 DCSPktBuff_rd_en <= DCSPktBuff_uCRd;
 
 -- FIFO for DCS answers
-DCSOutBuff : LinkFIFO
+DCSOutBuff : FIFO_DC_64x16
+--DCSOutBuff : FIFO_DC_1kx16
   PORT MAP (rst => GTPRxRst,
 	 wr_clk => SysClk,
     rd_clk => UsrClk2(0),
@@ -686,7 +694,9 @@ DCSOutBuff : LinkFIFO
     dout => DCSBuff_Out,
     full => DCSBuff_Full,
     empty => DCSBuff_Emtpy,
-	 rd_data_count => DCSBuffRdCnt);
+    --rd_data_count => DCSBuffRdCnt(10 downto 0));
+    rd_data_count => DCSBuffRdCnt(9 downto 0));
+	 DCSBuffRdCnt(12 downto 10) <= (others => '0');
 	 
 	 DCSPktBuff_rd_en <= DCSPktBuff_uCRd;
 	 
@@ -752,7 +762,8 @@ EventBuffSpy : LinkFIFO
     empty => open,
 	 rd_data_count => open);
 
-WdCountBuff: GTPRxFIFO
+--WdCountBuff: TrigPktBuff
+ WdCountBuff: GTPRxFIFO
   port map (clk => UsrClk2(0),
 		rst => GTPRxRst,
 		wr_en => WdCountBuff_WrtEn,
@@ -761,7 +772,8 @@ WdCountBuff: GTPRxFIFO
       dout => WdCountBuff_Out,
       full => WdCountBuff_Full,
 	   empty => WdCountBuff_Empty,
-		data_count => WdCountBuff_DatCnt);
+	   data_count => WdCountBuff_DatCnt);
+		-- data_count => WdCountBuff_DatCnt(8 downto 0));
 
 -- Generate two sets of logic for the two GTP sections
 GenGTP_Pairs : for i in 0 to 1 generate
@@ -788,7 +800,8 @@ GTPRxBuffs : GTPRxFIFO
     dout => GTPRxBuff_Out(i),
     full => GTPRxBuff_Full(i),
     empty => GTPRxBuff_Emtpy(i),
-	 data_count => GTPRxBuff_DatCnt(i));
+    data_count => GTPRxBuff_DatCnt(i));
+    -- data_count => GTPRxBuff_DatCnt(i)(9 downto 0));
 
 -- To connect the GTPClkOut to the TxUSRClk and RxUSRClk you need a BUFIO2 
 -- and a DCM, as an alternative to the IBUFF2 called for in the doc, since 
@@ -828,11 +841,13 @@ GTPTxBuff : GTPRxFIFO
     dout => GTPTxBuff_Out,              -- to uC
     full => open,                       -- not used
     empty => open,                      -- not used 
-	 data_count => GTPTxBuff_DatCnt);    -- needed for tace buffer behavior
+    data_count => GTPTxBuff_DatCnt);
+    --data_count => GTPTxBuff_DatCnt(9 downto 0));    -- needed for tace buffer behavior
 	 
 -- REMOVE ME!	 
 -- trace buffer of data requests for debug 	 
 DReqBuffTrace : FIFO_DC_1kx16
+--DReqBuffTrace: FIFO_DC_64x16
   PORT MAP (rst => GTPRxRst,
     wr_clk => UsrClk2(0),
 	 rd_clk => SysClk,
@@ -846,16 +861,16 @@ DReqBuffTrace : FIFO_DC_1kx16
 	 
 	 
 -- trace buffer for link 0
-LinkBuffTrace : LinkFIFO
-  port map (rst => LinkBuffRst, wr_clk => RxOutClk(0), rd_clk => SysClk, 
-    wr_en => LinkFIFOWrReq(0),rd_en => LinkFIFOTraceRdReq,
-    din(15 downto 13) => LinkPDat(0)(1)(7 downto 5),
-    din(12 downto 8) => LinkPDat(0)(0)(9 downto 5),
-    din( 7 downto 5) => LinkPDat(0)(1)(2 downto 0),
-    din( 4 downto 0) => LinkPDat(0)(0)(4 downto 0),
-    dout => LinkFIFOTraceOut, empty => open,
-	 full => open,
-	 rd_data_count => LinkFIFOTraceRdCnt);
+--LinkBuffTrace : LinkFIFO
+--  port map (rst => LinkBuffRst, wr_clk => RxOutClk(0), rd_clk => SysClk, 
+--    wr_en => LinkFIFOWrReq(0),rd_en => LinkFIFOTraceRdReq,
+--    din(15 downto 13) => LinkPDat(0)(1)(7 downto 5),
+--    din(12 downto 8) => LinkPDat(0)(0)(9 downto 5),
+--    din( 7 downto 5) => LinkPDat(0)(1)(2 downto 0),
+--    din( 4 downto 0) => LinkPDat(0)(0)(4 downto 0),
+--    dout => LinkFIFOTraceOut, empty => open,
+--	 full => open,
+--	 rd_data_count => LinkFIFOTraceRdCnt);
 
 
 ----------------------------- The GTP Wrapper -----------------------------
@@ -1093,7 +1108,7 @@ end if;
 --end if;
 
 if (UsrRDDL(0) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPRdAddr0) 
-   or (GTPRxBuff_DatCnt(0) >= '0' & X"FFE" and GTPRxBuff_wr_en(0) = '1') -- this line makes the fifo behave like a trace buffer
+   or (GTPRxBuff_DatCnt(0) >= "01" & X"FE" and GTPRxBuff_wr_en(0) = '1') -- this line makes the fifo behave like a trace buffer
 then GTPRxBuff_rd_en(0) <= '1';
 else GTPRxBuff_rd_en(0) <= '0'; 
 end if;
@@ -1306,7 +1321,7 @@ end if;
 --end if;
 
 if (UsrRDDL(0) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPTxRdAddr) 
-   or (GTPTxBuff_DatCnt >= "0" & X"FFE" and GTPTxBuff_wr_en = '1') -- this line makes the fifo behave like a trace buffer
+   or (GTPTxBuff_DatCnt >= "01" & X"FE" and GTPTxBuff_wr_en = '1') -- this line makes the fifo behave like a trace buffer
 then GTPTxBuff_rd_en <= '1';
 else GTPTxBuff_rd_en <= '0'; 
 end if;
@@ -1381,7 +1396,7 @@ elsif rising_edge (UsrClk2(1)) then
 
 -- Use the data count to make the FIFO behave like a trace buffer.
 if (UsrRDDL(1) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPRdAddr1)
-	or (GTPRxBuff_DatCnt(1) >= '0' & X"FFE" and GTPRxBuff_wr_en(1) = '1')
+	or (GTPRxBuff_DatCnt(1) >= "01" & X"FFE" and GTPRxBuff_wr_en(1) = '1')
 then GTPRxBuff_rd_en(1) <= '1';
 else GTPRxBuff_rd_en(1) <= '0'; 
 end if;
@@ -2987,7 +3002,7 @@ iCD <= X"0" &
 		 X"00" & "00" & GTPRxBuff_Full & GTPRxBuff_Emtpy & "00" when GTPFIFOAddr,
 		 X"00" & "000" & PLLStat & "000" & PllPDn when PLLPDnAddr,
 		 DReqBuff_Out(15 downto 0) when TRigReqBuffAd,
-		 X"0" & '0' & TrgPktRdCnt when TRigReqWdUsedAd,
+		 X"0" & "00" & TrgPktRdCnt when TRigReqWdUsedAd,
 		 --X"000" & "00" & TrgSrc & TstPlsEn when TrigCtrlAddr,
 		 X"00" & ActiveReg(23 downto 16) when ActvRegAddrHi,
 		 ActiveReg(15 downto 0) when ActvRegAddrLo,
@@ -3007,15 +3022,15 @@ iCD <= X"0" &
 		 GTPRxBuff_Out(0) when GTPRdAddr0,
 		 --GTPRxBuff_Out(1) when GTPRdAddr1,
 		 WdCountBuff_Out when EvWdCntBuffAd,
-		 WdCountBuff_Full & WdCountBuff_Empty & '0' & WdCountBuff_DatCnt when WdCntBuffStatAd,
+		 WdCountBuff_Full & WdCountBuff_Empty & "0000" & WdCountBuff_DatCnt when WdCntBuffStatAd,
 		 --TxCRC(0) when CRCRdAddr(0),
 		 --TxCRC(1) when CRCRdAddr(1),
 		 --RxCRC(0) when CRCRdAddr(2),
 		 --RxCRC(1) when CRCRdAddr(3),
 		 --"00" & EvTxWdCnt when EvTxWdCntAd,
-		 "000" & LinkFIFORdCnt(0) when LinkWdCnt0Ad,
-		 "000" & LinkFIFORdCnt(1) when LinkWdCnt1Ad,
-		 "000" & LinkFIFORdCnt(2) when LinkWdCnt2Ad,
+		 "00" & LinkFIFORdCnt(0) when LinkWdCnt0Ad,
+		 "00" & LinkFIFORdCnt(1) when LinkWdCnt1Ad,
+		 "00" & LinkFIFORdCnt(2) when LinkWdCnt2Ad,
 		 X"000" & "00" & EventBuff_Full & EventBuff_empty when EvBuffStatAd,
 		 '0' & GtpRxBuffStat(1) & '0' & GtpRxBuffCnt(1) 
 	  & '0' & GtpRxBuffStat(0) & '0' & GtpRxBuffCnt(0) when ElasticStatAd,
@@ -3028,12 +3043,12 @@ iCD <= X"0" &
 		 --FreqReg(31 downto 16) when FreqRegAdHi,
 		 --FreqReg(15 downto 0) when FreqRegAdLo,
 		 --MarkerBits when MarkerBitsAd,
-		 DReqBuff_Emtpy & "0000" & TrgPktRdCnt when DreqBuffStatAd,
-		 HrtBtBuff_Emtpy & "0000" & HrtBtBuffRdCnt when HrtBtBuffStatAd,
+		 DReqBuff_Emtpy & "000" & "00" & TrgPktRdCnt when DreqBuffStatAd,
+		 HrtBtBuff_Emtpy & "000" & "00" & HrtBtBuffRdCnt when HrtBtBuffStatAd,
 		 HrtBtBuff_Out when HrtBtFIFORdAd,
 		 X"00" & MarkerDelay when MarkerDelayAd,
 		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
-		 "000" & DCSPktRdCnt when DCSPktWdUsedAd,
+		 X"0" & "00" & DCSPktRdCnt when DCSPktWdUsedAd,
 		 DCSPktBuff_Out(15 downto 0) when DCSPktBuffAd,
        EventBuffSpy_Out(15 downto 0) when EventBuffSpyAd,
 		 --DCSSpy_Out(15 downto 0) when DCSSpyAd,
@@ -3077,7 +3092,7 @@ iCD <= X"0" &
 		 DRTimeout when DRTimeoutAdd,
 		 NimTrigLast & "00" & GPI & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"0095" when DebugVersionAd,
+		 X"0097" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 DRcnt when DRCntAdd,

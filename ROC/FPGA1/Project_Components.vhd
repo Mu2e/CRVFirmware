@@ -49,7 +49,17 @@ component FIFO_DC_1kx16
     din : in std_logic_vector(15 downto 0);
     dout : out std_logic_vector(15 downto 0);
     full,empty : out std_logic;
-    rd_data_count : out std_logic_vector(10 downto 0));
+    --rd_data_count : out std_logic_vector(4 downto 0));
+	 rd_data_count : out std_logic_vector(10 downto 0));
+end component;
+
+component FIFO_DC_64x16
+  port ( rst,wr_clk,rd_clk,wr_en,rd_en : in std_logic;
+    din : in std_logic_vector(15 downto 0);
+    dout : out std_logic_vector(15 downto 0);
+    full,empty : out std_logic;
+    --rd_data_count : out std_logic_vector(5 downto 0));
+	 rd_data_count : out std_logic_vector(9 downto 0));
 end component;
 
 component GTPRxFIFO
@@ -57,7 +67,8 @@ component GTPRxFIFO
     din : in std_logic_vector(15 downto 0);
     dout : out std_logic_vector(15 downto 0);
     full,empty : out std_logic;
-    data_count : out std_logic_vector(12 downto 0));
+    --data_count : out std_logic_vector(12 downto 0));
+	 data_count : out std_logic_vector(9 downto 0));
 end component;
 
 component GTPTxFIFO
@@ -75,7 +86,7 @@ component LinkFIFO
     din : in std_logic_vector(15 downto 0);
     dout : out std_logic_vector(15 downto 0);
     full,empty : out STD_LOGIC;
-    rd_data_count : out std_logic_vector(12 downto 0));
+    rd_data_count : out std_logic_vector(13 downto 0));
 end component;
 
 -- FIFO for queueing data form the microcontroller for setting the LEDs
@@ -301,7 +312,7 @@ component EventBuilder is
         FormRst         : in  std_logic;
         -- LinkFIFOs
         LinkFIFOOut     : in  Array_3x16;
-        LinkFIFORdCnt   : in  Array_3x13;
+        LinkFIFORdCnt   : in  Array_3x14;
         LinkFIFOEmpty   : in  std_logic_vector(2 downto 0);
         LinkFIFORdReq   : out std_logic_vector(2 downto 0);
         -- EventBuffer
