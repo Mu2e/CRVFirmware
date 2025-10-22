@@ -142,6 +142,7 @@ signal EventWdCnt,EventStat : std_logic_vector (15 downto 0);
 signal uBunch : std_logic_vector(31 downto 0);
 signal PortWdCounter : Array_8x16;
 signal EventRdy,FirstActive : std_logic;
+signal PhyActivityCounter: Array_8x16;
 
 Type Write_Seq_FSM is (Idle,ChkWrtBuff,SndCmd,WtCmdMtpy,CheckActive0,IncrPort0,
 							  Rd_WdCount,Rd_uBunchHi,Rd_uBunchLo,Rd_Stat,IncrPort1,
@@ -151,10 +152,10 @@ signal DDR_Write_Seq : Write_Seq_FSM;
 
 -- Signals used by SDRAM readout sequencer
 Type Read_Seq_FSM is (Idle,Wait0,SetAddr,CheckEmpty,FirstCmd,CheckRdBuff0,
-							  RdWdCount,CheckRdBuff1,RdDataHi,RdDataLo);
+							  RdWdCount,CheckWdCount,PrepareWordCnt,CheckRdBuff1,RdDataHi,RdDataLo);
 signal DDR_Read_Seq : Read_Seq_FSM;
 signal WaitCount : std_logic_vector(5 downto 0);
-signal EvWdCount : std_logic_vector(13 downto 0);
+signal EvWdCount : std_logic_vector(15 downto 0);
 signal ReadCount,DDRRdStat,TxBlkCount : std_logic_vector(2 downto 0);
 -- Count of event pending for readout
 
@@ -244,6 +245,24 @@ signal LinkTxFull,LinkTxEmpty,LinkTxWrReq,LinkTxRDReq,TxValid,LinkTxTraceWrReq :
 signal LinkTxTraceRDReq : std_logic;
 signal TxFIFOTrace_Out : std_logic_vector(8 downto 0);
 signal LinkTxTrace_Cnt : std_logic_vector(12 downto 0);
+
+-- SC: signals to handle overflows
+signal tx_overflow : std_logic; -- flag indcating if we are sending an event with overflow
+signal tx_overflow_cnt : std_logic_vector(15 downto 0); -- overflow counter for diagnostics
+--signal tx_word_cnt : std_logic_vector(15 downto 0);
+signal word_number : std_logic_vector(1 downto 0); -- shift register used to identify the first (word count) and second (status) words
+signal EvWdCountTot : std_logic_vector(15 downto 0); -- latches the total EvWdCount used to send out (for the statemachine we start at +1)
+-- TX MAX WORDS
+-- we can at least try to cut at hit boundaries
+-- the header is 4 words: count, status, uB-low, ub-high
+-- each hit currently has 11 words
+-- So we want to cut somewhere at 4 + N x 11 with integer N
+-- N=1: 11*1 + 4 = 15 = 0x000f, for debugging, testing
+-- N=744: 11*744 + 4 = 8188 = 0x1ffc
+constant MAX_TX_WORDS : std_logic_vector(15 downto 0) := X"1ffc";-- X"2000";
+constant UB_MISMATCH_STATUS_BIT : std_logic_vector(7 downto 0) := X"10";
+constant OVERFLOW_STATUS_BIT : std_logic_vector(7 downto 0) := X"20";
+
 
 begin
 
@@ -420,23 +439,23 @@ SPITx_Buff : PhyTxBuff
 
 -- FM Receivers for getting data request packets and heartbeat data from
 -- the top level FPGA
-DReqFMRx : FM_Rx
-	generic MAP(Pwidth => 16)
-	port map(SysClk => SysClk, RxClk => RxFMClk, 
-				reset => ResetHi,
-				Rx_In => RxIn(0),
-				Data => RxDat(0), 
-				Rx_Out => RxOut(0));
-RxIn(0).FM <= DReqFM when DRegSrc = '1' else '0';
+--DReqFMRx : FM_Rx
+--	generic MAP(Pwidth => 16)
+--	port map(SysClk => SysClk, RxClk => RxFMClk, 
+--				reset => ResetHi,
+--				Rx_In => RxIn(0),
+--				Data => RxDat(0), 
+--				Rx_Out => RxOut(0));
+--RxIn(0).FM <= DReqFM when DRegSrc = '1' else '0';
 
 -- Trigger request buffer
-DatReqBuff: SCFifo_512x16
-  PORT MAP ( rst => GTPRxRst, clk => SysClk,
-    din => RxDat(0),
-	 wr_en => RxOut(0).Done, rd_en => DatReqBuff_rdreq,
-    dout => DatReqBuff_Out, 
-	 full => DatReqBuff_Full, empty => DatReqBuff_Empty,
-	 data_count => DatReqBuff_Count);
+--DatReqBuff: SCFifo_512x16
+--  PORT MAP ( rst => GTPRxRst, clk => SysClk,
+--    din => RxDat(0),
+--	 wr_en => RxOut(0).Done, rd_en => DatReqBuff_rdreq,
+--    dout => DatReqBuff_Out, 
+--	 full => DatReqBuff_Full, empty => DatReqBuff_Empty,
+--	 data_count => DatReqBuff_Count);
 
 GTPRxRst <= '1' when CpldRst = '0' 
   	or (CpldCS = '0' and uCWR = '0' and uCA(11 downto 10) = "00" and uCA(9 downto 0) = GTPFIFOAddr and uCD(0) = '1') else '0';
@@ -523,8 +542,17 @@ begin
 	 iCRS(i) <= '0'; iRxDV(i) <= "00"; 
 	 RdCRCEn(i) <= '0'; RxCRCRst(i) <= '1';
 	 StartCount(i) <= "000";
+	 PhyActivityCounter(i) <= (others => '0');
 
  elsif rising_edge(RxFMClk) then
+ 
+-- PhyActivityCounter
+   if PhyRxBuff_wreq(i) = '1' then 
+	    PhyActivityCounter(i) <= PhyActivityCounter(i) + 1;
+	else
+		 PhyActivityCounter(i) <= PhyActivityCounter(i);
+	end if;
+	     
 
 -- Synchronous edge detector for 25MHz PhyRx clock
 	RxClkDL(i)(0) <= RxClk(i);
@@ -604,6 +632,8 @@ end if;
  end if; -- CpldRst
 
 end process PhyRx_Proc;
+
+
 
 end generate;
 --Debug(2) <= PhyRxBuff_wreq(1);
@@ -907,6 +937,11 @@ main : process(SysClk, CpldRst)
 	DReqFMDL <= X"0"; LinkFIFOStat <= '0';
 	LinkStatEn <= '1';
 	LinkTxFullCnt <= X"00";
+	tx_overflow <= '0';
+	tx_overflow_cnt <= (others => '0');
+	--tx_word_cnt <= (others => '0');
+	word_number <= (others => '0');
+	EvWdCountTot <= (others => '0');
 --Debug(10 downto 8) <= (others => '0'); 
 
 elsif rising_edge (SysClk) then 
@@ -1018,14 +1053,14 @@ elsif TrigWdCount = 8 or TrigWdCntRst = '1' then TrigWdCount <= X"0";
 else TrigWdCount <= TrigWdCount;
 end if;
 
-if TrigWdCount = 1 and DatReqBuff_Out(7 downto 4) = 2
- then TrigReqCount <= TrigReqCount + 1;
-elsif TrigReqCount /= 0 
-		and (DDR_Read_Seq = RdDataHi or DDR_Read_Seq = RdDataLo) and EvWdCount = 0 
- then TrigReqCount <= TrigReqCount - 1;
-elsif TrigWdCntRst = '1' then TrigReqCount <= X"00";
-else TrigReqCount <= TrigReqCount;
-end if;
+--if TrigWdCount = 1 and DatReqBuff_Out(7 downto 4) = 2
+-- then TrigReqCount <= TrigReqCount + 1;
+--elsif TrigReqCount /= 0 
+--		and (DDR_Read_Seq = RdDataHi or DDR_Read_Seq = RdDataLo) and EvWdCount = 0 
+-- then TrigReqCount <= TrigReqCount - 1;
+--elsif TrigWdCntRst = '1' then TrigReqCount <= X"00";
+--else TrigReqCount <= TrigReqCount;
+--end if;
 
 if WRDL = 1 and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = CSRRegAddr)
 					or (uCA(9 downto 0) = CSRBroadCastAd))
@@ -1157,7 +1192,7 @@ end if;
 
 -------------------------------- DDR Macro Interfaces -------------------------------
 
--- Read_Seq_FSM is (Idle,Wait0,SetAddr,CheckEmpty,FirstCmd,CheckRdBuff0,RdWdCount,
+-- Read_Seq_FSM is (Idle,Wait0,SetAddr,CheckEmpty,FirstCmd,CheckRdBuff0,RdWdCount,CheckWdCount,PrepareWordCnt,
 -- CheckRdBuff1,RdDataHi,RdDataLo
 case DDR_Read_Seq is
 	When Idle => DDRRdStat <= "000"; --Debug(10 downto 8) <= "000";
@@ -1191,10 +1226,14 @@ case DDR_Read_Seq is
 			else DDR_Read_Seq <= CheckRdBuff0;
 			end if;
 	When RdWdCount => DDRRdStat <= "100"; --Debug(10 downto 8) <= "100";
-				  if RdHi_LoSel = '0'
-				 then DDR_Read_Seq <= RdDataHi;
-			    else DDR_Read_Seq <= RdDataLo;
-				end if;
+	    DDR_Read_Seq <= CheckWdCount;
+	When CheckWdCount => DDRRdStat <= "100";
+	    DDR_Read_Seq <= PrepareWordCnt;
+	When PrepareWordCnt => DDRRdStat <= "100";
+			if RdHi_LoSel = '0'
+			then DDR_Read_Seq <= RdDataHi;
+			else DDR_Read_Seq <= RdDataLo;
+			end if;
 	When CheckRdBuff1 => DDRRdStat <= "101"; --Debug(10 downto 8) <= "101";
 		if SDrd_empty = '0' then DDR_Read_Seq <= RdDataHi;
 		else DDR_Read_Seq <= CheckRdBuff1;
@@ -1235,13 +1274,26 @@ end case;
  end if;
 Debug(1) <= DReqFM;
 
-	if DDR_Read_Seq = RdWdCount and RdHi_LoSel = '0' then EvWdCount <= SDRdDat(29 downto 16) + 1;
-elsif DDR_Read_Seq = RdWdCount and RdHi_LoSel = '1' then EvWdCount <= SDRdDat(13 downto 0) + 1;
+	if DDR_Read_Seq = RdWdCount and RdHi_LoSel = '0' then EvWdCount <= SDRdDat(31 downto 16) + 1;
+elsif DDR_Read_Seq = RdWdCount and RdHi_LoSel = '1' then EvWdCount <= SDRdDat(15 downto 0) + 1;
+elsif DDR_Read_Seq = CheckWdCount and EvWdCount > MAX_TX_WORDS then EvWdCount <= MAX_TX_WORDS + 1;
 elsif EvWdCount /= 0 and (DDR_Read_Seq = RdDataHi or (DDR_Read_Seq = RdDataLo and SDrd_en = '1'))
    then EvWdCount <= EvWdCount - 1;
 	elsif DDRRd_en = '0' then EvWdCount <= (others => '0');
 else EvWdCount <= EvWdCount;
 end if;
+
+if DDR_Read_Seq = PrepareWordCnt and EvWdCount > MAX_TX_WORDS then 
+    tx_overflow <= '1';
+	 tx_overflow_cnt <= tx_overflow_cnt + 1;
+elsif DDR_Read_Seq = PrepareWordCnt and EvWdCount <= MAX_TX_WORDS then 
+    tx_overflow <= '0';
+	 tx_overflow_cnt <= tx_overflow_cnt;
+else 
+    tx_overflow <= tx_overflow;
+	 tx_overflow_cnt <= tx_overflow_cnt;
+end if;
+
 
 -- DDR Read address register
 -- Microcontroller access upper
@@ -1357,13 +1409,53 @@ end if;
 
 --if DDR_Write_Seq = Idle then Debug(2) <= '1'; else  Debug(2) <= '0'; end if;
 
+-- Track word position
+if DDR_Read_Seq = PrepareWordCnt then 
+    --tx_word_cnt <= (others => '0');  -- Reset at start of event
+	 word_number <= "01";
+elsif EvWdCount /= 0 and (DDR_Read_Seq = RdDataHi or (DDR_Read_Seq = RdDataLo and SDrd_en = '1')) 
+    then 
+	 -- tx_word_cnt <= tx_word_cnt + 1;
+	 word_number(0) <= '0';
+	 word_number(1 downto 1) <= word_number(0 downto 0);
+else 
+    --tx_word_cnt <= tx_word_cnt;
+	 word_number <= word_number;
+end if;
+
+if DDR_Read_Seq = PrepareWordCnt then
+    EvWdCountTot <= EvWdCount - 1; -- EvWdCountTot goes to the header, the +1 is needed for state machine
+else
+    EvWdCountTot <= EvWdCountTot;
+end if;
+
 -- Serial link transmit data
-   if Link_Stat_Req = '0' and DDR_Read_Seq = RdDataHi 
-		then LinkFIFO_Dat(17 downto 9) <= '1' & SDRdDat(31 downto 24);
-			   LinkFIFO_Dat(8 downto 0) <= '1' & SDRdDat(23 downto 16);
-elsif Link_Stat_Req = '0' and DDR_Read_Seq = RdDataLo 
-	then LinkFIFO_Dat(17 downto 9) <= '1' & SDRdDat(15 downto 8);
-		   LinkFIFO_Dat(8 downto 0) <= '1' & SDRdDat(7 downto 0);
+if Link_Stat_Req = '0' and DDR_Read_Seq = RdDataHi then
+    --if tx_word_cnt = 1 and tx_overflow = '1' then
+	 if word_number(0) = '1' then
+	     LinkFIFO_Dat(17 downto 9) <= '1' & EvWdCountTot(15 downto 8);
+        LinkFIFO_Dat(8 downto 0)  <= '1' & EvWdCountTot( 7 downto 0);	 
+	 elsif word_number(1) = '1' and tx_overflow = '1' then
+        LinkFIFO_Dat(17 downto 9) <= '1' & SDRdDat(31 downto 24);
+        LinkFIFO_Dat(8 downto 0) <= '1' & (SDRdDat(23 downto 16) or OVERFLOW_STATUS_BIT); 
+		  --LinkFIFO_Dat(8 downto 0) <= '1' & OVERFLOW_STATUS_BIT; 
+	 else
+        LinkFIFO_Dat(17 downto 9) <= '1' & SDRdDat(31 downto 24);
+        LinkFIFO_Dat(8 downto 0) <= '1' & SDRdDat(23 downto 16);
+	 end if;
+elsif Link_Stat_Req = '0' and DDR_Read_Seq = RdDataLo then 
+    --if tx_word_cnt = 1 and tx_overflow = '1' then
+	 if word_number(0) = '1' then
+	     LinkFIFO_Dat(17 downto 9) <= '1' & EvWdCountTot(15 downto 8);
+        LinkFIFO_Dat(8 downto 0)  <= '1' & EvWdCountTot( 7 downto 0);
+	 elsif word_number(1) = '1' and tx_overflow = '1' then
+        LinkFIFO_Dat(17 downto 9) <= '1' & SDRdDat(15 downto 8);
+		  LinkFIFO_Dat(8 downto 0) <= '1' & (SDRdDat(7 downto 0) or OVERFLOW_STATUS_BIT);
+		  --LinkFIFO_Dat(8 downto 0) <= '1' & OVERFLOW_STATUS_BIT;
+    else
+	     LinkFIFO_Dat(17 downto 9) <= '1' & SDRdDat(15 downto 8);
+		  LinkFIFO_Dat(8 downto 0) <= '1' & SDRdDat(7 downto 0);
+    end if;
 elsif Link_Stat_Req = '1' then LinkFIFO_Dat <= '0' & X"00" & '0' & Rx_active;
 else LinkFIFO_Dat(17 downto 9) <= '1' & uCD(15 downto 8);
 	   LinkFIFO_Dat(8 downto 0) <= '1' & uCD(7 downto 0);
@@ -1525,11 +1617,17 @@ end if;
 
 -- "OR" the status bits from the FEBs and compare the first microbunch to any additional microbunches.
 if DDR_Write_Seq = Idle then EventStat(7 downto 0) <= (others => '0'); 
-elsif	DDR_Write_Seq = Rd_Stat then EventStat(7 downto 0) <= EventStat(7 downto 0) or PhyRxBuff_Out(PortNo)(7 downto 0);
+elsif	DDR_Write_Seq = Rd_Stat then
+    -- OR each EventStat bit with the corresponding 4-bit group
+    EventStat(0) <= EventStat(0) or PhyRxBuff_Out(PortNo)(3)  or PhyRxBuff_Out(PortNo)(2)  or PhyRxBuff_Out(PortNo)(1)  or PhyRxBuff_Out(PortNo)(0);
+	 EventStat(1) <= EventStat(1) or PhyRxBuff_Out(PortNo)(7)  or PhyRxBuff_Out(PortNo)(6)  or PhyRxBuff_Out(PortNo)(5)  or PhyRxBuff_Out(PortNo)(4);
+	 EventStat(2) <= EventStat(2) or PhyRxBuff_Out(PortNo)(11) or PhyRxBuff_Out(PortNo)(10) or PhyRxBuff_Out(PortNo)(9)  or PhyRxBuff_Out(PortNo)(8);
+	 EventStat(3) <= EventStat(3) or PhyRxBuff_Out(PortNo)(15) or PhyRxBuff_Out(PortNo)(14) or PhyRxBuff_Out(PortNo)(13) or PhyRxBuff_Out(PortNo)(12);
+    EventStat(7 downto 4) <= EventStat(7 downto 4); -- Keep upper bits unchanged
 elsif FirstActive = '0' then
 	 if (DDR_Write_Seq = Rd_uBunchHi and uBunch(31 downto 16) /= PhyRxBuff_Out(PortNo))
 	 or (DDR_Write_Seq = Rd_uBunchLo and uBunch(15 downto 0) /= PhyRxBuff_Out(PortNo))
-	  then  EventStat(7 downto 0) <= EventStat(7 downto 0) or X"01"; 
+	  then  EventStat(7 downto 0) <= EventStat(7 downto 0) or UB_MISMATCH_STATUS_BIT; 
 	 end if;
 else EventStat(7 downto 0) <= EventStat(7 downto 0);
 end if;
@@ -1788,6 +1886,14 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 Rx_CRC_Out(6)(15 downto 0)  when RdCRCAddr(13),
 		 Rx_CRC_Out(7)(31 downto 16) when RdCRCAddr(14),
 		 Rx_CRC_Out(7)(15 downto 0)  when RdCRCAddr(15),
+		 PhyActivityCounter(0) when PHYActivityCntAdd(0),
+		 PhyActivityCounter(1) when PHYActivityCntAdd(1),
+		 PhyActivityCounter(2) when PHYActivityCntAdd(2),
+		 PhyActivityCounter(3) when PHYActivityCntAdd(3),
+		 PhyActivityCounter(4) when PHYActivityCntAdd(4),
+		 PhyActivityCounter(5) when PHYActivityCntAdd(5),
+		 PhyActivityCounter(6) when PHYActivityCntAdd(6),
+		 PhyActivityCounter(7) when PHYActivityCntAdd(7),
 		 X"00" & CRCErr_Reg when CRCErrAddr,
 		 X"0" & "00" & RxOut(1).Parity_Err & RxOut(0).Parity_Err & PErrStat when FMRxErrAddr,
 		 X"000" & '0' & MDIORd & ChainSel when SMICtrlAddr,
@@ -1802,7 +1908,9 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 SDRdPtr(15 downto 0) when SDRdPtrAddrLo,
        "0000000" & TxFIFOTrace_Out when LinkTxTraceAd,	
 		 LinkTxFullCnt & "00" & LinkTxFull & LinkTxEmpty & 
-				           "000" & LinkStatEn when LinkCtrlAd,		 
+				           "000" & LinkStatEn when LinkCtrlAd,		
+		 tx_overflow_cnt when OverflowCntAd,
+       X"0009" when DebugVersion,							  
 		 X"0000" when others;
 
 uCD <= iCD when uCRd = '0' and CpldCS = '0' and uCA(11 downto 10) = GA 
