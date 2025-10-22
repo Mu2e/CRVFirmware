@@ -11,9 +11,10 @@ class CRV:
         self.ser = serial.Serial(port, 460800, timeout=0.2)
         self.verbose = verbose
         self.page_size = 0x400
-        self.n_sample = 10
+        self.n_sample = 8
         self.rocFPGA = {1 : "4", 2:"8", 3:"C"}
         self.febFPGA = {0 : "0", 1 : "4", 2 : "8", 3 : "C"}
+        self.inputMaskReg = 0x21
 
     def close(self):
         self.ser.close()
@@ -210,6 +211,9 @@ class CRV:
             for n_ in range(n):
                 print(data[n_*20   :n_*20+10])
                 print(data[n_*20+10:n_*20+20])
+
+    def rocTx(self,n=1):
+        return self.readOutTrace(n=2*n)
 
     def getTriggers(self, n=1):
         if self.verbose:
@@ -559,7 +563,17 @@ class CRV:
         self.rocSetup(tdaq=True, tdaq_timing=True, uB_offset="a")
         self.rocDdrReset() 
 
-    def setup(self, n_sample=8, tdaq=True, tdaq_timing=True, gains=[0], nfpga=1, nafe=2, ports=["1"], uB_offset="a", highGain=True):
+    def setupGr(self, gr="1"):
+        self.rocSetup(tdaq=True, tdaq_timing=True, uB_offset="0")
+        self.rocDdrReset()
+        self.write("401","0")
+        self.write("58", gr)
+        self.write("45","1")
+        #self.write("45","1") # enable the 80MHz clock alignment
+        self.write("0a","0") # set the ROC ID, needs to match DTC channel
+        self.write("4","2")  # switch off event builder from data
+
+    def setup(self, n_sample=8, tdaq=True, tdaq_timing=True, gr=True, gains=[0], nfpga=1, nafe=2, ports=["1"], uB_offset="0", highGain=False):
         self.rocSetup(tdaq=tdaq, tdaq_timing=tdaq_timing, uB_offset=uB_offset)
         self.rocDdrReset()
         for np, port in enumerate(ports):
@@ -571,7 +585,8 @@ class CRV:
                         print("DEBUG", afe, fpga)
                         self.febAFEHighGain(gains[np],afe=afe,fpga=fpga)
         self.write("401","0") # switch off the active numbers
-        self.write("58","1")
+        if gr:
+            self.write("58","1")
 
     def markerBits(self):
         data = self.read("77", lc=False)
@@ -630,3 +645,61 @@ class CRV:
        self.cmd("LC ADC")
        raw = self.ser.read(self.ser.in_waiting)
        return raw
+
+    def lastUBs(self):
+        rocSent  = self.read("70")
+        febRec   = self.read("65", lc=True)
+        febBuff  = self.read("67", lc=True)
+        print("rocSent:", rocSent)
+        print("febRec:", febRec)
+        print("febBuff:", febBuff)
+
+    def _getReg(self, regDigit): 
+        # Convert hex string to int and shift left by 8 bits
+        return int(regDigit, 16) << 8
+            
+    def constructMask(self, channel): 
+        return 0xFFFF & ~(1<<channel) # Clear the bit
+
+    def febResetChannels(self):
+        # Enable FEB stuff
+        self.cmd("LC ADC")
+        print("\n---> Resetting FEB FPGA channels")
+        for reg_digit in self.febFPGA.values():
+            reg = self._getReg(reg_digit)
+            self.write(
+                format(reg | self.inputMaskReg, 'X'),
+                format(0xFFFF, "X"),
+                lc=True
+            )    
+
+    def febMaskChannels(self, mask=0xFFFF, FPGA=-1):
+        # Set channels
+        print("\n---> Setting FEB FPGA channels")
+        if FPGA < 0: # Do them all
+            for regDigit in self.febFPGA.values():
+                # Convert hex string to int and shift left by 8 bits
+                reg = self._getReg(regDigit) 
+                # Write to input mask register
+                self.write(
+                    format(reg | self.inputMaskReg, 'X'),
+                    format(mask, "X"),
+                    lc=True
+                )
+        else: # Do the specified FPGA
+            regDigit = self.febFPGA[FPGA] 
+            reg = self._getReg(regDigit)
+            self.write(
+                    format(reg | self.inputMaskReg, 'X'),
+                    format(mask, "X"),
+                    lc=True
+                )
+
+    def febReadChannelMasks(self):
+        for regDigit in self.febFPGA.values():
+            reg = self._getReg(regDigit) 
+            print(reg)
+            self.read(
+                format(reg | self.inputMaskReg, 'X'),
+                lc=True
+            )

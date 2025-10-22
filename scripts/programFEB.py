@@ -1,11 +1,7 @@
 # coding: utf-8
 import serial
 import time
-import sys
-
-port = sys.argv[2] if len(sys.argv) > 2 else '/dev/ttyUSB1'
-
-ser = serial.Serial(port, 460800, timeout=0.1)
+ser = serial.Serial('/dev/ttyUSB1', 460800, timeout=0.1)
 ser.write(("FL1\r").encode())
 for k in range(100):
     a = ser.readline()
