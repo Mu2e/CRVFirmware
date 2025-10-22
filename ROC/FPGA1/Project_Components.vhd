@@ -53,7 +53,16 @@ component FIFO_DC_1kx16
 	 rd_data_count : out std_logic_vector(10 downto 0));
 end component;
 
-component FIFO_DC_64x16
+component FIFO_DC_4kx16
+  port ( rst,wr_clk,rd_clk,wr_en,rd_en : in std_logic;
+    din : in std_logic_vector(15 downto 0);
+    dout : out std_logic_vector(15 downto 0);
+    full,empty : out std_logic;
+    --rd_data_count : out std_logic_vector(4 downto 0));
+	 rd_data_count : out std_logic_vector(12 downto 0));
+end component;
+
+component FIFO_DC_64x16 -- is actually 512x16
   port ( rst,wr_clk,rd_clk,wr_en,rd_en : in std_logic;
     din : in std_logic_vector(15 downto 0);
     dout : out std_logic_vector(15 downto 0);

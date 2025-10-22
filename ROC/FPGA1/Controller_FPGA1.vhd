@@ -132,6 +132,7 @@ signal MarkerLast : std_logic_vector(1 downto 0);
 attribute ASYNC_REG : string; 
 attribute ASYNC_REG of MarkerLast : signal is "TRUE"; 
 signal MarkerCnt, MarkerCnt2, MarkerCnt3, MarkerCnt4, MarkerCnt5, LoopbackMarkerCnt : std_logic_vector(7 downto 0); -- counts decoded markers
+--signal loopbackMarker_detected : std_logic;
 signal BnchMarkerLast : std_logic_vector(15 downto 0);
 signal MarkerDelayedCnt : std_logic_vector(15 downto 0); --
 signal HeartBeatCnt : std_logic_vector(15 downto 0);    -- counts heartbeats sent out, these are the delayed 
@@ -314,7 +315,7 @@ signal TStmpWds : std_logic_vector (8 downto 0);
 
 -- DCS request FIFO
 signal DCSPktBuff_wr_en,DCSPktBuff_rd_en,DCSPktBuff_Full,DCSPktBuff_Emtpy : std_logic;
-signal DCSPktRdCnt : std_logic_vector (9 downto 0);
+signal DCSPktRdCnt : std_logic_vector (12 downto 0);
 signal DCSPktBuff_Out : std_logic_vector (15 downto 0);
 --signal DCSTxBuffWds : std_logic_vector (8 downto 0);
 
@@ -667,7 +668,8 @@ HrtBtBuff: FIFO_DC_64x16
 -- FIFO for buffering status requests
 --DCSPktBuff : FIFO_DC_64x16
 --DCSPktBuff : FIFO_DC_1kx16
-DCSPktBuff: FIFO_DC_64x16
+-- SC: need 4k for FEB configuration. DTC sends writes quite fast (no feedback) so the memory can fill up)
+DCSPktBuff: FIFO_DC_4kx16
   PORT MAP (rst => GTPRxRst,
 	 wr_clk => UsrClk2(0),
     rd_clk => SysClk,
@@ -750,7 +752,7 @@ EventBuff: FIFO_SC_4Kx16
 	   empty => EventBuff_Empty);
 		
 -- REMOVE ME AGAIN!		
-EventBuffSpy : LinkFIFO
+EventBuffSpy : FIFO_DC_4Kx16
   PORT MAP (rst => ResetHi or GTPRxRst,
 	 wr_clk => UsrClk2(0),
     rd_clk => SysClk,
@@ -1028,6 +1030,7 @@ begin
 	GTPRstArm <= '0';
 	loopbackMarker <= '0';
 	loopbackMarkerCnt <= (others =>'0');
+	--loopbackMarker_detected <= '0';
 	debugTrigPattern <= X"FFFF";
 	debugTrigMask <= X"00FF";
 	debugRst <= '1'; -- active high
@@ -1171,9 +1174,14 @@ end if;
 	if Rx_IsComma(0) = "00" and ReFrame(0) = '0' and GTPRxReg(0) = X"1C12"
 	    then 
 		    loopbackMarker <= '1';
-			 loopbackMarkerCnt <= loopbackMarkerCnt + 1;
+			 --loopbackMarkerCnt <= loopbackMarkerCnt + 1;
 	else   loopbackMarker <= '0'; 
-	       loopbackMarkerCnt <= loopbackMarkerCnt;
+	       --loopbackMarkerCnt <= loopbackMarkerCnt;
+	end if;
+	if loopbackMarker = '1' then
+	    loopbackMarkerCnt <= loopbackMarkerCnt + 1;
+	else
+	    loopbackMarkerCnt <= loopbackMarkerCnt;
 	end if;
 
 
@@ -3048,7 +3056,7 @@ iCD <= X"0" &
 		 HrtBtBuff_Out when HrtBtFIFORdAd,
 		 X"00" & MarkerDelay when MarkerDelayAd,
 		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
-		 X"0" & "00" & DCSPktRdCnt when DCSPktWdUsedAd,
+		 "000" & DCSPktRdCnt when DCSPktWdUsedAd,
 		 DCSPktBuff_Out(15 downto 0) when DCSPktBuffAd,
        EventBuffSpy_Out(15 downto 0) when EventBuffSpyAd,
 		 --DCSSpy_Out(15 downto 0) when DCSSpyAd,
@@ -3092,7 +3100,7 @@ iCD <= X"0" &
 		 DRTimeout when DRTimeoutAdd,
 		 NimTrigLast & "00" & GPI & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"0097" when DebugVersionAd,
+		 X"0099" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 DRcnt when DRCntAdd,
