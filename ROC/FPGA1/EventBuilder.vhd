@@ -14,7 +14,7 @@ entity EventBuilder is
         FormRst         : in  std_logic;
         -- LinkFIFOs
         LinkFIFOOut     : in  Array_3x16;
-        LinkFIFORdCnt   : in  Array_3x13;
+        LinkFIFORdCnt   : in  Array_3x14;
         LinkFIFOEmpty   : in  std_logic_vector(2 downto 0);
         LinkFIFORdReq   : out std_logic_vector(2 downto 0);
         -- EventBuffer
@@ -352,11 +352,11 @@ begin
 		    if current_state = Idle then EventSum <= (others => '0');
             -- Account for removing the word count and status words from the data
             elsif current_state = RdInWdCnt0 then 
-                if uBinHeader = '0' then EventSum <= LinkFIFOOut(0) - 2; else EventSum <= LinkFIFOOut(0) - 4; end if;
+                if uBinHeader = '0' then EventSum <= EventSum + LinkFIFOOut(0) - 2; else EventSum <= EventSum + LinkFIFOOut(0) - 4; end if;
             elsif current_state = RdInWdCnt1 then 
-                if uBinHeader = '0' then EventSum <= LinkFIFOOut(1) - 2; else EventSum <= LinkFIFOOut(1) - 4; end if;
+                if uBinHeader = '0' then EventSum <= EventSum + LinkFIFOOut(1) - 2; else EventSum <= EventSum + LinkFIFOOut(1) - 4; end if;
             elsif current_state = RdInWdCnt2 then 
-                if uBinHeader = '0' then EventSum <= LinkFIFOOut(2) - 2; else EventSum <= LinkFIFOOut(2) - 4; end if;
+                if uBinHeader = '0' then EventSum <= EventSum + LinkFIFOOut(2) - 2; else EventSum <= EventSum + LinkFIFOOut(2) - 4; end if;
             else EventSum <= EventSum;
             end if;
             

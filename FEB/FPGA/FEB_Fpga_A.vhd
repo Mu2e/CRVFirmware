@@ -336,6 +336,8 @@ signal TempEn : std_logic;
 signal TempCtrl : std_logic_vector(3 downto 0);
 signal One_Wire_Out : std_logic_vector(15 downto 0);
 
+signal onSpillCnt, offSpillCnt : std_logic_vector(15 downto 0);
+
 -- Simon 
 
 signal FRSimonSync : Array_2x3;
@@ -465,6 +467,7 @@ FMRx1 : FM_Rx
 				Data => Rx1Dat, 
 				Rx_Out => RxOut);
 RxIn.FM <= GPI0; 
+--GPO <= GPI0; -- DEBUG
 
 -- FIFO for queueing serial data destined for AFEs and DACs
 CmdFifo : Cmd_FIFO
@@ -754,7 +757,7 @@ begin
 
 elsif rising_edge (RxOutClk(i)) then
 
-	Debug(9+i) <= ADCSmplGate(i);
+--	Debug(9+i) <= ADCSmplGate(i);
 -- Synchronous edge detector for uC write strobe w.r.t. deserializer output clock
 	iWrtDL(i)(0) <= not CpldCS and not uCWR;
 	iWrtDL(i)(1) <= iWrtDL(i)(0);
@@ -1005,11 +1008,11 @@ Case SlipCntReg(i)(2 downto 1) is
 	when others => FRStat(i) <= '0';
 end Case;
 
-if FRDat(i) = 0 then 
-	Debug(5+i) <= '1';
- else
-	Debug(5+i) <= '0';
-end if;	
+--if FRDat(i) = 0 then 
+--	Debug(5+i) <= '1';
+-- else
+--	Debug(5+i) <= '0';
+--end if;	
 
 end if;
 
@@ -1238,7 +1241,12 @@ main : process(SysClk, CpldRst)
 	EvBuffWrt <= '0'; EvBuffRd <= '0'; EvBuffDat <= (others => '0'); PageRdReq <= '0';
 	DRAMRdBuffDat <= (others => '0'); DDRWrtCount <= (others => '0'); PageRdStat <= '0';
 	PageWdCount <= (others => '0'); DRAMRdBuffWrt <= '0'; DRAMRdBuffRd <= '0';
-	EvBuffStat_rden <= '0'; RdDone <= '0'; GPOCount <= "000"; GPO <= '0'; 
+	EvBuffStat_rden <= '0'; RdDone <= '0'; GPOCount <= "000"; 
+	GPO <= '0'; 
+	
+	--
+	onSpillCnt <= (others => '0');
+	offSpillCnt <= (others => '0');
 	
 elsif rising_edge (SysClk) then 
 
@@ -1315,8 +1323,8 @@ else SlfTrgEn <= SlfTrgEn;
 	  TmgSrcSel <= TmgSrcSel;
 end if;
 
-if Strt_req = '1' then AFEClk <= '0'; Debug(8) <= '0';
- else AFEClk <= not AFEClk; Debug(8) <= not Debug(8);
+if Strt_req = '1' then AFEClk <= '0'; --Debug(8) <= '0';
+ else AFEClk <= not AFEClk; --Debug(8) <= not Debug(8);
 end if;
 
 ----------------------- Flash gate logic ----------------------
@@ -1337,6 +1345,22 @@ elsif SlfTrgEn = '1' and RxOut.Done = '1' and Rx1Dat(20) = '0'
 	then BeamOn <= '0';
 else BeamOn <= BeamOn;
 end if;
+
+--Window Counters
+if RxOut.Done = '1' then 
+	if Rx1Dat(20) = '1' then
+		onSpillCnt <= onSpillCnt + 1;
+		offSpillCnt <= offSpillCnt;
+		
+	else
+		offSpillCnt <= offSpillCnt + 1;
+		onSpillCnt <= onSpillCnt;
+	end if;
+else
+   onSpillCnt <= onSpillCnt;
+	offSpillCnt <= offSpillCnt;
+end if;
+
 
 -- "Turn on" in this case means reducing the SiPM voltage, "turn off"
 -- means restoring to its nominal value
@@ -1377,10 +1401,15 @@ else GPOCount <= GPOCount;
 end if;
 
 -- Trig Out or SpillGate on the GPO LEMO.
-   if TrigReq = '1' then GPO <= '1';
-elsif GPOCount = 1 then GPO <= '0';
-else GPO <= GPO;
-end if;
+-- ENABLE ME AGAIN!
+--if GPOSel = '0' then
+	if TrigReq = '1' then GPO <= '1';
+	elsif GPOCount = 1 then GPO <= '0';
+	else GPO <= GPO;
+	end if;
+--else
+--  GPO <= not GPO;
+--end if;
 
 -- Buff reset will clear the FM receiver parity error (if any)
 if WRDL = 1 and uCD(7) = '1' 
@@ -1408,10 +1437,16 @@ if RxOut.Done = '1' and Rx1Dat(21) = '1' and Rx1Dat(19 downto 0) = X"00000" and 
 else uBunch <= uBunch; uBunchGuard <= uBunchGuard;
 end if;
 
-Debug(1) <= RxOut.Done;
-Debug(2) <= Rx1Dat(21);
-Debug(3) <= uBunchWrt;
-Debug(4) <= uBunchGuard;
+--Debug(1) <= GPO;
+--Debug(2) <= SqWav;
+--Debug(3) <= TrgSrc and PhDtct;
+--Debug(4) <= RefIn;
+
+Debug <= "0000000000";
+-- Debug(1) <= RxOut.Done;
+-- Debug(2) <= Rx1Dat(21);
+-- Debug(3) <= uBunchWrt;
+-- Debug(4) <= uBunchGuard;
 
 -- Write uBunch number at the uBunch beginning
 if RxOut.Done = '1' and SlfTrgEn = '1' then uBunchWrt <= '1';
@@ -2207,10 +2242,16 @@ end if;
       else TestCount <= TestCount;
 end if;
 
+	-- GPO Selection
+	if uWRDL = 1 and  uCA(11 downto 10) = GA and uCA(9 downto 0) = GPOSelAd 
+		then GPOSel <= uCD(0);
+		else GPOSel <= GPOSel;
+	end if;
+
 -- Use this to cross clock domains
 FR_OK <= FRStat;
 --Debug(4) <= FRStat(0);
-Debug(7) <= FRStat(1);
+--Debug(7) <= FRStat(1);
 
 -- (Idle,SendPDn,SendPEn,SendRst,WaitFR,CheckFR,ChkSlipCnt,SendSlipReq);
 case AlignSeq is
@@ -2619,7 +2660,7 @@ iCD <= X"000" & "00" & AFEPDn when CSRRegAddr,
 		 X"0" & '0' & HistAddrb(1) when HistPtrAd1,
 		 Hist_Outb(0) when HistRd0Ad,
 		 Hist_Outb(1) when HistRd1Ad,
-		 GA & "00" & X"001" when DebugVersionAd,
+		 GA & "00" & X"0a0" when DebugVersionAd,
 		 X"0" & std_logic_vector(Ped_Reg(0)(0)) when PedRegAddr(0)(0),
 		 X"0" & std_logic_vector(Ped_Reg(0)(1)) when PedRegAddr(0)(1),
 		 X"0" & std_logic_vector(Ped_Reg(0)(2)) when PedRegAddr(0)(2),
@@ -2664,6 +2705,9 @@ iCD <= X"000" & "00" & AFEPDn when CSRRegAddr,
 		 uBunchBuffOut(31 downto 16) when uBBuffHiAd,
 		 DDRAddrOut(15 downto  0)    when uBBuffAdLoAd,
 		 DDRAddrOut(31 downto 16)    when uBBuffAdHiAd,
+		 onSpillCnt when onSpillCntAd,
+		 offSpillCnt when offSpillCntAd,
+		 X"000" & "000" & GPOSel when GPOSelAd,
 		 X"0000" when others;
 
 -- Select between DAC readback and the rest of the registers

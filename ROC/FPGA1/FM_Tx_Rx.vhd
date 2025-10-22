@@ -12,7 +12,7 @@ use ieee.std_logic_unsigned.all;
 use work.Project_Defs.all;
 
 entity FM_Tx is
-	generic (Pwidth : positive);
+	generic (Pwidth : positive := 24);
 		 port(clock,reset,Enable : in std_logic;
 				Data : in std_logic_vector(Pwidth - 1 downto 0);
 				Tx_Out : buffer TxOutRec);

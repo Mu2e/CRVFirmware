@@ -22,7 +22,7 @@
 --    devices, or systems.  Use in such applications are expressly            --
 --    prohibited.                                                             --
 --                                                                            --
---    (c) Copyright 1995-2017 Xilinx, Inc.                                    --
+--    (c) Copyright 1995-2025 Xilinx, Inc.                                    --
 --    All rights reserved.                                                    --
 --------------------------------------------------------------------------------
 
@@ -66,7 +66,7 @@ COMPONENT LinkFIFO
     dout : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
     full : OUT STD_LOGIC;
     empty : OUT STD_LOGIC;
-    rd_data_count : OUT STD_LOGIC_VECTOR(12 DOWNTO 0)
+    rd_data_count : OUT STD_LOGIC_VECTOR(13 DOWNTO 0)
   );
 END COMPONENT;
 -- COMP_TAG_END ------ End COMPONENT Declaration ------------

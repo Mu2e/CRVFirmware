@@ -49,7 +49,26 @@ component FIFO_DC_1kx16
     din : in std_logic_vector(15 downto 0);
     dout : out std_logic_vector(15 downto 0);
     full,empty : out std_logic;
-    rd_data_count : out std_logic_vector(10 downto 0));
+    --rd_data_count : out std_logic_vector(4 downto 0));
+	 rd_data_count : out std_logic_vector(10 downto 0));
+end component;
+
+component FIFO_DC_4kx16
+  port ( rst,wr_clk,rd_clk,wr_en,rd_en : in std_logic;
+    din : in std_logic_vector(15 downto 0);
+    dout : out std_logic_vector(15 downto 0);
+    full,empty : out std_logic;
+    --rd_data_count : out std_logic_vector(4 downto 0));
+	 rd_data_count : out std_logic_vector(12 downto 0));
+end component;
+
+component FIFO_DC_64x16 -- is actually 512x16
+  port ( rst,wr_clk,rd_clk,wr_en,rd_en : in std_logic;
+    din : in std_logic_vector(15 downto 0);
+    dout : out std_logic_vector(15 downto 0);
+    full,empty : out std_logic;
+    --rd_data_count : out std_logic_vector(5 downto 0));
+	 rd_data_count : out std_logic_vector(9 downto 0));
 end component;
 
 component GTPRxFIFO
@@ -57,7 +76,8 @@ component GTPRxFIFO
     din : in std_logic_vector(15 downto 0);
     dout : out std_logic_vector(15 downto 0);
     full,empty : out std_logic;
-    data_count : out std_logic_vector(12 downto 0));
+    --data_count : out std_logic_vector(12 downto 0));
+	 data_count : out std_logic_vector(9 downto 0));
 end component;
 
 component GTPTxFIFO
@@ -75,7 +95,7 @@ component LinkFIFO
     din : in std_logic_vector(15 downto 0);
     dout : out std_logic_vector(15 downto 0);
     full,empty : out STD_LOGIC;
-    rd_data_count : out std_logic_vector(12 downto 0));
+    rd_data_count : out std_logic_vector(13 downto 0));
 end component;
 
 -- FIFO for queueing data form the microcontroller for setting the LEDs
@@ -301,7 +321,7 @@ component EventBuilder is
         FormRst         : in  std_logic;
         -- LinkFIFOs
         LinkFIFOOut     : in  Array_3x16;
-        LinkFIFORdCnt   : in  Array_3x13;
+        LinkFIFORdCnt   : in  Array_3x14;
         LinkFIFOEmpty   : in  std_logic_vector(2 downto 0);
         LinkFIFORdReq   : out std_logic_vector(2 downto 0);
         -- EventBuffer
@@ -381,6 +401,28 @@ component debugMarkerkInputBuffer
 			  rd_full  : out std_logic;
 			  rd_empty : out std_logic
 			  );
+end component;
+
+component DRpacketGenerator is
+    port (
+        clk         : in  std_logic;
+        rst         : in  std_logic;
+        
+        -- Trigger interface
+        trigger     : in  std_logic;
+        busy        : out std_logic;
+        
+        -- Input data
+        id          : in  std_logic_vector(3 downto 0);
+        UB_LOW      : in  std_logic_vector(15 downto 0);
+        UB_MID      : in  std_logic_vector(15 downto 0);
+        UB_HIGH     : in  std_logic_vector(15 downto 0);
+        
+        -- Output to FIFO
+        wr_en       : out std_logic;
+		  ts_wr_en    : out std_logic;
+        wr_data     : out std_logic_vector(15 downto 0)
+    );
 end component;
 
 end Project_Components;

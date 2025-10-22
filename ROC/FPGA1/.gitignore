@@ -48,3 +48,17 @@ ipcore_dir/*
 _xmsgs
 xst
 xlnx_auto_0_xdb
+_impact.cmd
+*.exe
+*.wdb
+*.bkp
+*.wcfg
+planAhead*
+*.xsl
+*.cmd
+*.xmsgs
+isim/*
+netgen/*
+pa.*.tcl
+xilinxsim.ini
+.Xil
