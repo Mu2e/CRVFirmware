@@ -260,8 +260,8 @@ signal EvWdCountTot : std_logic_vector(15 downto 0); -- latches the total EvWdCo
 -- N=1: 11*1 + 4 = 15 = 0x000f, for debugging, testing
 -- N=744: 11*744 + 4 = 8188 = 0x1ffc
 constant MAX_TX_WORDS : std_logic_vector(15 downto 0) := X"1ffc";-- X"2000";
-constant UB_MISMATCH_STATUS_BIT : std_logic_vector(7 downto 0) := X"10";
-constant OVERFLOW_STATUS_BIT : std_logic_vector(7 downto 0) := X"20";
+-- constant UB_MISMATCH_STATUS_BIT : std_logic_vector(7 downto 0) := X"10";
+constant OVERFLOW_STATUS_BIT : std_logic_vector(15 downto 0) := X"1000"; -- bit 12
 
 
 begin
@@ -1436,8 +1436,8 @@ if Link_Stat_Req = '0' and DDR_Read_Seq = RdDataHi then
 	     LinkFIFO_Dat(17 downto 9) <= '1' & EvWdCountTot(15 downto 8);
         LinkFIFO_Dat(8 downto 0)  <= '1' & EvWdCountTot( 7 downto 0);	 
 	 elsif word_number(1) = '1' and tx_overflow = '1' then
-        LinkFIFO_Dat(17 downto 9) <= '1' & SDRdDat(31 downto 24);
-        LinkFIFO_Dat(8 downto 0) <= '1' & (SDRdDat(23 downto 16) or OVERFLOW_STATUS_BIT); 
+        LinkFIFO_Dat(17 downto 9) <= '1' & (SDRdDat(31 downto 24) or OVERFLOW_STATUS_BIT(15 downto 8));
+        LinkFIFO_Dat(8 downto 0) <= '1' &  (SDRdDat(23 downto 16) or OVERFLOW_STATUS_BIT( 7 downto 0));
 		  --LinkFIFO_Dat(8 downto 0) <= '1' & OVERFLOW_STATUS_BIT; 
 	 else
         LinkFIFO_Dat(17 downto 9) <= '1' & SDRdDat(31 downto 24);
@@ -1449,8 +1449,8 @@ elsif Link_Stat_Req = '0' and DDR_Read_Seq = RdDataLo then
 	     LinkFIFO_Dat(17 downto 9) <= '1' & EvWdCountTot(15 downto 8);
         LinkFIFO_Dat(8 downto 0)  <= '1' & EvWdCountTot( 7 downto 0);
 	 elsif word_number(1) = '1' and tx_overflow = '1' then
-        LinkFIFO_Dat(17 downto 9) <= '1' & SDRdDat(15 downto 8);
-		  LinkFIFO_Dat(8 downto 0) <= '1' & (SDRdDat(7 downto 0) or OVERFLOW_STATUS_BIT);
+        LinkFIFO_Dat(17 downto 9) <= '1' & (SDRdDat(15 downto 8) or OVERFLOW_STATUS_BIT(15 downto 8));
+		  LinkFIFO_Dat(8 downto 0) <= '1' &   (SDRdDat(7 downto 0) or OVERFLOW_STATUS_BIT( 7 downto 0));
 		  --LinkFIFO_Dat(8 downto 0) <= '1' & OVERFLOW_STATUS_BIT;
     else
 	     LinkFIFO_Dat(17 downto 9) <= '1' & SDRdDat(15 downto 8);
@@ -1616,22 +1616,32 @@ end if;
 	end if;
 
 -- "OR" the status bits from the FEBs and compare the first microbunch to any additional microbunches.
-if DDR_Write_Seq = Idle then EventStat(7 downto 0) <= (others => '0'); 
+-- EventStat
+-- bit 0 to 7: indicate error on port
+-- bit 8 to 10: what error(s)
+-- bit 11: uB mismatch between ports
+
+if DDR_Write_Seq = Idle then EventStat <= (others => '0'); 
 elsif	DDR_Write_Seq = Rd_Stat then
     -- OR each EventStat bit with the corresponding 4-bit group
-    EventStat(0) <= EventStat(0) or PhyRxBuff_Out(PortNo)(3)  or PhyRxBuff_Out(PortNo)(2)  or PhyRxBuff_Out(PortNo)(1)  or PhyRxBuff_Out(PortNo)(0);
-	 EventStat(1) <= EventStat(1) or PhyRxBuff_Out(PortNo)(7)  or PhyRxBuff_Out(PortNo)(6)  or PhyRxBuff_Out(PortNo)(5)  or PhyRxBuff_Out(PortNo)(4);
-	 EventStat(2) <= EventStat(2) or PhyRxBuff_Out(PortNo)(11) or PhyRxBuff_Out(PortNo)(10) or PhyRxBuff_Out(PortNo)(9)  or PhyRxBuff_Out(PortNo)(8);
-	 EventStat(3) <= EventStat(3) or PhyRxBuff_Out(PortNo)(15) or PhyRxBuff_Out(PortNo)(14) or PhyRxBuff_Out(PortNo)(13) or PhyRxBuff_Out(PortNo)(12);
-    EventStat(7 downto 4) <= EventStat(7 downto 4); -- Keep upper bits unchanged
+	 EventStat(PortNo) <= PhyRxBuff_Out(PortNo)(0)  or PhyRxBuff_Out(PortNo)(1)  or PhyRxBuff_Out(PortNo)(2)  or PhyRxBuff_Out(PortNo)(3) or
+	                      PhyRxBuff_Out(PortNo)(4)  or PhyRxBuff_Out(PortNo)(5)  or PhyRxBuff_Out(PortNo)(6)  or PhyRxBuff_Out(PortNo)(7) or
+                         PhyRxBuff_Out(PortNo)(8)  or PhyRxBuff_Out(PortNo)(9)  or PhyRxBuff_Out(PortNo)(10) or PhyRxBuff_Out(PortNo)(11) or
+                         PhyRxBuff_Out(PortNo)(12) or PhyRxBuff_Out(PortNo)(13) or PhyRxBuff_Out(PortNo)(14) or PhyRxBuff_Out(PortNo)(15);								 
+	 EventStat(8)  <= EventStat(8) or PhyRxBuff_Out(PortNo)(3)  or PhyRxBuff_Out(PortNo)(2)  or PhyRxBuff_Out(PortNo)(1)  or PhyRxBuff_Out(PortNo)(0);
+	 EventStat(9)  <= EventStat(9) or PhyRxBuff_Out(PortNo)(7)  or PhyRxBuff_Out(PortNo)(6)  or PhyRxBuff_Out(PortNo)(5)  or PhyRxBuff_Out(PortNo)(4)
+	                              or PhyRxBuff_Out(PortNo)(11) or PhyRxBuff_Out(PortNo)(10) or PhyRxBuff_Out(PortNo)(9)  or PhyRxBuff_Out(PortNo)(8);
+	 EventStat(10) <= EventStat(10) or PhyRxBuff_Out(PortNo)(15) or PhyRxBuff_Out(PortNo)(14) or PhyRxBuff_Out(PortNo)(13) or PhyRxBuff_Out(PortNo)(12);
+    EventStat(15 downto 11) <= EventStat(15 downto 11); -- Keep upper bits unchanged
 elsif FirstActive = '0' then
 	 if (DDR_Write_Seq = Rd_uBunchHi and uBunch(31 downto 16) /= PhyRxBuff_Out(PortNo))
 	 or (DDR_Write_Seq = Rd_uBunchLo and uBunch(15 downto 0) /= PhyRxBuff_Out(PortNo))
-	  then  EventStat(7 downto 0) <= EventStat(7 downto 0) or UB_MISMATCH_STATUS_BIT; 
+	  then  -- EventStat(7 downto 0) <= EventStat(7 downto 0) or UB_MISMATCH_STATUS_BIT; 
+	      EventStat(11) <= EventStat(11) or '1';
 	 end if;
-else EventStat(7 downto 0) <= EventStat(7 downto 0);
+else EventStat(15 downto 0) <= EventStat(15 downto 0);
 end if;
-EventStat(15 downto 8) <= Rx_active;
+--EventStat(15 downto 8) <= Rx_active;
 
 -- Toggle between upper and lower words during writes to the DDR
     if (WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = SDRamWrtPtrLoAd)
@@ -1910,7 +1920,7 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 LinkTxFullCnt & "00" & LinkTxFull & LinkTxEmpty & 
 				           "000" & LinkStatEn when LinkCtrlAd,		
 		 tx_overflow_cnt when OverflowCntAd,
-       X"0009" when DebugVersion,							  
+       X"000c" when DebugVersion,							  
 		 X"0000" when others;
 
 uCD <= iCD when uCRd = '0' and CpldCS = '0' and uCA(11 downto 10) = GA 
