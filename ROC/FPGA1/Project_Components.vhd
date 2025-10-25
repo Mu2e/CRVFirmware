@@ -324,6 +324,7 @@ component EventBuilder is
         LinkFIFORdCnt   : in  Array_3x14;
         LinkFIFOEmpty   : in  std_logic_vector(2 downto 0);
         LinkFIFORdReq   : out std_logic_vector(2 downto 0);
+		  LinkFIFORst     : out std_logic;
         -- EventBuffer
         EventBuff_Dat    : out std_logic_vector (15 downto 0);
         EventBuff_WrtEn  : out std_logic;

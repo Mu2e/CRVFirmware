@@ -17,6 +17,7 @@ entity EventBuilder is
         LinkFIFORdCnt   : in  Array_3x14;
         LinkFIFOEmpty   : in  std_logic_vector(2 downto 0);
         LinkFIFORdReq   : out std_logic_vector(2 downto 0);
+		  LinkFIFORst     : out std_logic;
         -- EventBuffer
         EventBuff_Dat    : out std_logic_vector (15 downto 0);
         EventBuff_WrtEn  : out std_logic;
@@ -47,14 +48,15 @@ entity EventBuilder is
 end entity EventBuilder;
 
 architecture rtl of EventBuilder is
-    Type Event_Builder_Seq is (Idle,RdInWdCnt0,RdInWdCnt1,RdInWdCnt2,SumWdCnt,WrtWdCnt,WrtWdCnt0,WrtWdCnt1,WrtWdCnt2,RdStat0,
-    RdStat1,RdStat2,WrtStat,WrtUbLow,WrtUbHigh,WaitEvent,ReadFIFO,ReadFIFO0,ReadFIFO1,ReadFIFO2,
+    Type Event_Builder_Seq is (Idle,RdInWdCnt0,RdInWdCnt1,RdInWdCnt2,SumWdCnt,CheckWdCnt,WrtWdCnt,--,WrtWdCnt0,WrtWdCnt1,WrtWdCnt2,
+	 RdStat0,RdStat1,RdStat2,WrtStat,WrtStat2,WrtUbLow,WrtUbHigh,WaitEvent,ReadFIFO,ReadFIFO0,ReadFIFO1,ReadFIFO2,
      RdUb0low,RdUb0high,RdUb1low,RdUb1high,RdUb2low,RdUb2high, RduB,
      VerifyUb0low,VerifyUb0high,VerifyUb1low,VerifyUb1high,VerifyUb2low,VerifyUb2high,
      Fake,FakeWrite,FakeReset);
     signal current_state, next_state : Event_Builder_Seq;
 
-    signal StatOr, Stat0 : std_logic_vector (7 downto 0); 
+    -- signal StatOr, Stat0 : std_logic_vector (7 downto 0); 
+	 signal StatNew       : std_logic_vector (31 downto 0);
     signal FakeCnt       : std_logic_vector (11 downto 0);
 	 signal FakeCntCalls  : std_logic_vector (7 downto 0);
 	 signal FakeCntCalls_debug  : std_logic_vector (7 downto 0);
@@ -78,6 +80,17 @@ architecture rtl of EventBuilder is
      -- latch data that is async at the start of event
      signal InjectionWindow_latched : std_logic_vector (15 downto 0);
      signal InjectionTs_latched : std_logic_vector (15 downto 0);
+	  
+	  signal truncate : std_logic; -- flag indicating DAQ limit data truncation
+	  signal WordsWrittenTotal : std_logic_vector(15 downto 0);
+	  -- DAQ is limited to 2^11 packets, there is one header packet so
+	  -- that is 2^11*8-1 = 16384-8 words
+	  -- we want to keep full hits (11 words) as they are so 
+	  -- 1487 x 11 = 16357 words (0x3fe5)
+	  constant MAX_EVENT_SUM : std_logic_vector(15 downto 0) := X"3fe5"; --X"0021"; -- X"3fe5"; -- see above, needs to be <= 2^11*8
+	  constant HEADER_WORDS : std_logic_vector(15 downto 0) := X"0005"; -- 5 "header" words
+	  signal abort: std_logic;
+	  
 
 begin
     LinkFIFORdReq   <= LinkFIFORdReq_b; -- no pipeline
@@ -145,6 +158,8 @@ begin
                                                               next_state <= SumWdCnt;
         -- Subtract 2 from each link word count FIFO to account for the word count and status words
             when SumWdCnt => --Debug(10 downto 7) <= X"5"; 
+				                                                  next_state <= CheckWdCnt;
+				when CheckWdCnt =>
                                                               next_state <= WrtWdCnt;
         -- Write the controller word count	
             when WrtWdCnt => --Debug(10 downto 7) <= X"6"; 
@@ -206,9 +221,12 @@ begin
                  end if;
         
             when WrtStat => 
-                if uBwrt = '1' then next_state <= WrtUbLow;
-                else                next_state <= ReadFIFO;
-                end if;
+					 next_state <= WrtStat2;
+				when WrtStat2 =>
+				    next_state <= WrtUbLow;
+                --if uBwrt = '1' then next_state <= WrtUbLow;
+                --else                next_state <= ReadFIFO;
+                --end if;
             
             when WrtUbLow => 
                 next_state <= WrtUbHigh;
@@ -233,7 +251,7 @@ begin
                                                                            then next_state <= ReadFIFO2;
                     else                                                        next_state <= Idle;
                     end if;
-                elsif FormRst = '1'                                        then next_state <= Idle;
+                elsif (FormRst = '1' or abort = '1')                             then next_state <= Idle;
                 else                                                             next_state <= ReadFIFO0;
                 end if;
             when ReadFIFO1 => --Debug(10 downto 7) <= X"C";
@@ -242,12 +260,12 @@ begin
                     if FIFOCount(2) /= 0  and ActiveReg(23 downto 16) /= 0  then next_state <= ReadFIFO2;
                     else                                                         next_state <= Idle;
                     end if;
-                elsif FormRst = '1' then                                         next_state <= Idle; 
+                elsif (FormRst = '1' or abort = '1') then                        next_state <= Idle; 
                 else                                                             next_state <= ReadFIFO1;
                 end if;
             when ReadFIFO2 => --Debug(10 downto 7) <= X"D";
                 if FIFOCount(2) = 1 or FIFOCount(2) = 0                     then next_state <= Idle;
-                elsif FormRst = '1'                                        then  next_state <= Idle; 
+                elsif (FormRst = '1' or abort = '1')                        then  next_state <= Idle; 
                 else                                                             next_state <= ReadFIFO2;
                 end if;
             when others => --Debug(10 downto 7) <= X"E";
@@ -269,8 +287,9 @@ begin
 				--EventBuff_Dat     <= (others => '0');
             EventBuff_Dat_b <= (others => '0');
 				EventBuff_Dat_reg <= (others => '0');
-            StatOr <= (others => '0');
-            Stat0 <= (others => '0');
+            -- StatOr <= (others => '0');
+            -- Stat0 <= (others => '0');
+				StatNew <= (others => '0');
             uBcheck <= (others => '0');
             uBcheckFlag <= '0';
             FIFOCount <= (others => (others => '0'));
@@ -286,6 +305,9 @@ begin
             InjectionTs_sync2 <= (others => '0');
             InjectionWindow_latched <= (others => '0');
             InjectionTs_latched <= (others => '0');
+				truncate <= '0';
+				WordsWrittenTotal <= (others => '0');
+				abort <= '0';
 				---first_injection <= '0';
 				
 
@@ -357,8 +379,22 @@ begin
                 if uBinHeader = '0' then EventSum <= EventSum + LinkFIFOOut(1) - 2; else EventSum <= EventSum + LinkFIFOOut(1) - 4; end if;
             elsif current_state = RdInWdCnt2 then 
                 if uBinHeader = '0' then EventSum <= EventSum + LinkFIFOOut(2) - 2; else EventSum <= EventSum + LinkFIFOOut(2) - 4; end if;
-            else EventSum <= EventSum;
+            elsif current_state = CheckWdCnt then
+				    if EventSum > MAX_EVENT_SUM then EventSum <= MAX_EVENT_SUM; else EventSum <= EventSum; end if;
+				else EventSum <= EventSum;
             end if;
+				
+				if current_state = Idle then
+                 truncate <= '0';
+				elsif current_state = CheckWdCnt then
+				    if EventSum > MAX_EVENT_SUM then 
+					     truncate <= '1';
+					 else
+					     truncate <= '0';
+					 end if;
+				else
+				    truncate <= truncate;
+				end if;
             
         -- storte the number of events from the first two FPGAs
             if    current_state = Idle       then Event0 <= (others => '0');
@@ -377,10 +413,12 @@ begin
             -- Select the data source for the event buffer FIFO
             if current_state = WrtWdCnt     then EventBuff_Dat_b <= EventSum;
             --elsif Event_Builder = WrtStat	then EventBuff_Dat <= uBcheckFlag & Stat0(6 downto 0) & StatOR;
-            elsif current_state = WrtStat   then EventBuff_Dat_b <= "0" & Stat0(6 downto 0) & StatOR;
-            elsif current_state = WrtWdCnt0 then EventBuff_Dat_b <= Event0;
-            elsif current_state = WrtWdCnt1 then EventBuff_Dat_b <= Event1;
-            elsif current_state = WrtWdCnt2 then EventBuff_Dat_b <= Event2;
+            --elsif current_state = WrtStat   then EventBuff_Dat_b <= "0" & Stat0(6 downto 0) & StatOR;
+				elsif current_state = WrtStat   then EventBuff_Dat_b <=  StatNew(31) & (uBcheckFlag or StatNew(30)) & StatNew(29 downto 16);
+				elsif current_state = WrtStat2  then EventBuff_Dat_b <= StatNew(15 downto  0);
+            --elsif current_state = WrtWdCnt0 then EventBuff_Dat_b <= Event0;
+            --elsif current_state = WrtWdCnt1 then EventBuff_Dat_b <= Event1;
+            --elsif current_state = WrtWdCnt2 then EventBuff_Dat_b <= Event2;
             elsif current_state = WrtUbLow  then EventBuff_Dat_b <= uBcheck(15 downto 0);
             elsif current_state = WrtUbHigh then EventBuff_Dat_b <= uBcheck(31 downto 16);
             elsif LinkFIFORdReq_b(0) = '1'  then EventBuff_Dat_b <= LinkFIFOOut(0);
@@ -391,16 +429,50 @@ begin
             end if;
         
             -- Do an "or" of the FEB error words for the cotroller error word
-           if current_state = RdStat0 then 
-                        StatOr <= StatOr or LinkFIFOOut(0)(7 downto 0);
-                        Stat0  <=           LinkFIFOOut(0)(7 downto 0);
+				-- New Format 10/23/2025
+				-- 0-23: which FEB reports any problem
+				-- 24: any feb uBunch Number mismatch
+				-- 25: any feb buffer issue (Empty at Readout Begin, DEAD BEEF match error, 
+				-- 26: any feb overflow (OverRun Not Empty at Readout End, and future overflow flags)
+				-- 27: group 1 issue
+				-- 28: group 2 issue
+				-- 29: group 3 issue
+				-- 30: any group uB match error
+				-- 31: any group truncation
+				
+			  if current_state = WrtWdCnt then
+			               StatNew <= truncate & "000" & x"0000000"; -- reset!
+           elsif current_state = RdStat0 then 
+                        -- StatOr <= StatOr or LinkFIFOOut(0)(7 downto 0);
+                        -- Stat0  <=           LinkFIFOOut(0)(7 downto 0);
+								StatNew( 7 downto 0)  <= LinkFIFOOut(0)(7 downto 0); -- Link0, ports
+								StatNew(23 downto 8)  <= StatNew(23 downto 8);
+								StatNew(26 downto 24) <= LinkFIFOOut(0)(10 downto 8); -- Link0, issue type
+								StatNew(27)           <= LinkFIFOOut(0)(12) or LinkFIFOOut(0)(11); -- Link0, ROC
+								StatNew(29 downto 28) <= StatNew(29 downto 28);
+								StatNew(31 downto 30) <= LinkFIFOOut(0)(12 downto 11); -- Link0, issue type
             elsif current_state = RdStat1 then 
-                        StatOr <= StatOr or LinkFIFOOut(1)(7 downto 0);
-                        Stat0 <= Stat0;
+                        --StatOr <= StatOr or LinkFIFOOut(1)(7 downto 0);
+                        --Stat0 <= Stat0;
+								StatNew( 7 downto 0)  <= StatNew( 7 downto 0);
+								StatNew(15 downto 8)  <= LinkFIFOOut(1)(7 downto 0); -- Link1, ports
+								StatNew(23 downto 16) <= StatNew(23 downto 16);
+								StatNew(26 downto 24) <= StatNew(26 downto 24) or LinkFIFOOut(1)(10 downto 8); -- Link1, issue type
+								StatNew(27)           <= StatNew(27);
+								StatNew(28)           <= LinkFIFOOut(1)(12) or LinkFIFOOut(1)(11); -- Link1, ROC
+								StatNew(29)           <= StatNew(29);
+								StatNew(31 downto 30) <= StatNew(31 downto 30) or LinkFIFOOut(1)(12 downto 11); -- Link1, issue type
             elsif current_state = RdStat2 then 
-                        StatOr <= StatOr or LinkFIFOOut(2)(7 downto 0);
-                        Stat0 <= Stat0;
-        else StatOr <= StatOr; Stat0 <= Stat0;
+                        --StatOr <= StatOr or LinkFIFOOut(2)(7 downto 0);
+                        --Stat0 <= Stat0;
+								StatNew(15 downto 0)  <= StatNew(15 downto 0);
+								StatNew(23 downto 16) <= LinkFIFOOut(2)(7 downto 0); -- Link2, ports
+								StatNew(26 downto 24) <= StatNew(26 downto 24) or LinkFIFOOut(2)(10 downto 8); -- Link2, issue type
+								StatNew(28 downto 27) <= StatNew(28 downto 27);
+								StatNew(29)           <= LinkFIFOOut(2)(12) or LinkFIFOOut(2)(11); -- Link2, ROC
+								StatNew(31 downto 30) <= StatNew(31 downto 30) or LinkFIFOOut(2)(12 downto 11); -- Link2, issue type
+        else --StatOr <= StatOr; Stat0 <= Stat0; 
+		       StatNew <= StatNew;
         end if;
 
         -- read uB numbers from input buffers
@@ -503,23 +575,39 @@ begin
     else LinkFIFORdReq_b(2) <= '0'; 
     end if;
 
-    if current_state = Idle       then EvBuffWrtGate <= '0';
-    elsif current_state = WrtStat then EvBuffWrtGate <= '1';
+    if current_state = Idle        then EvBuffWrtGate <= '0';
+    elsif current_state = WrtStat2 then EvBuffWrtGate <= '1';
     else                               EvBuffWrtGate <= EvBuffWrtGate;
     end if;
 
-    if current_state = WrtWdCnt or current_state = WrtWdCnt0 or current_state = WrtWdCnt1 or current_state = WrtWdCnt2
-       or current_state = WrtStat or current_state = WrtUbLow or current_state = WrtUbHigh
+    if current_state = Idle then
+        WordsWrittenTotal <= (others => '0');
+    elsif EventBuff_WrtEn_b = '1' then
+        WordsWrittenTotal <= WordsWrittenTotal + 1;
+    else
+        WordsWrittenTotal <= WordsWrittenTotal;
+    end if;
+
+    if (current_state = WrtWdCnt -- or current_state = WrtWdCnt0 or current_state = WrtWdCnt1 or current_state = WrtWdCnt2
+       or current_state = WrtStat or current_state = WrtStat2 or current_state = WrtUbLow or current_state = WrtUbHigh
        or (LinkFIFORdReq_b /= 0 and EvBuffWrtGate = '1')
-       or current_state = FakeWrite
+       or current_state = FakeWrite)
+		 and (WordsWrittenTotal < (EventSum + HEADER_WORDS - 1))
     then EventBuff_WrtEn_b <= '1'; --Debug(6) <= '1';
     else EventBuff_WrtEn_b <= '0';  --Debug(6) <= '0';
+    end if;
+	 
+	 if WordsWrittenTotal >= (EventSum + HEADER_WORDS - 1) and EvBuffWrtGate = '1' then
+        abort <= '1';
+    else
+        abort <= '0';
     end if;
 	 
 	 	 
 	 -- pipeline for EventBuffer, might help with timing constraints?
 	 EventBuff_Dat_reg    <= EventBuff_Dat_b;   -- could add a pipeline for EventBuffer
 	 EventBuff_WrtEn_reg  <= EventBuff_WrtEn_b; -- could add a pipeline for EventBuffer
+	 LinkFIFORst <= abort;
 
 
 end if; -- rising edge

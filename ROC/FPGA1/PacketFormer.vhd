@@ -339,17 +339,26 @@ begin
             elsif current_state = WrtCtrlHdrPkt then
                 Case Pkt_Timer is
                     When X"A" => GTPTxStage <= X"1C" & TxSeqNo & "00110";          TxCRCDat <= X"0000";
-                    When X"9" => GTPTxStage <= X"00" & X"6" & IDReg;               TxCRCDat <= X"00" & X"6" & IDReg; 
+                    When X"9" => GTPTxStage <= EventBuff_Out + 8;                   TxCRCDat <= EventBuff_Out + 8;
                     -- Add the words in the controller header packet to the total word count
-                    When X"8" => GTPTxStage <= EventBuff_Out + 8;                  TxCRCDat <= EventBuff_Out + 8;
+                    When X"8" => GTPTxStage <= DReq_Count(15 downto 0);            TxCRCDat <= DReq_Count(15 downto 0);
                     When X"7" => GTPTxStage <= X"00" & ActiveReg(23 downto 16);    TxCRCDat <= X"00" & ActiveReg(23 downto 16);
                     When X"6" => GTPTxStage <= ActiveReg(15 downto 0);             TxCRCDat <= ActiveReg(15 downto 0);
-                    When X"5" => GTPTxStage <= DReq_Count(15 downto 0);            TxCRCDat <= DReq_Count(15 downto 0);
-                    When X"4" => GTPTxStage <= EventBuff_Out;                      TxCRCDat <= EventBuff_Out; -- EventBuff_Out; -- word count 0
-                    --When X"3" => GTPTxStage(0) <= uBcheckRef(31 downto 16); TxCRCDat(0) <= uBcheckRef(31 downto 16); -- EventBuff_Out; -- word count 1
-                    --When X"2" => GTPTxStage(0) <= uBcheckRef(15 downto  0); TxCRCDat(0) <= uBcheckRef(15 downto  0); -- EventBuff_Out; -- word count 2
-                    When X"3" => GTPTxStage <= EventBuff_Out;                      TxCRCDat <= EventBuff_Out; -- EventBuff_Out; -- word count 1
-                    When X"2" => GTPTxStage <= EventBuff_Out;                      TxCRCDat <= EventBuff_Out; -- EventBuff_Out; -- word count 2
+                    When X"5" => GTPTxStage <= EventBuff_Out;                       TxCRCDat <= EventBuff_Out; -- Stat High
+                    When X"4" => GTPTxStage <= EventBuff_Out;                       TxCRCDat <= EventBuff_Out; -- Stat Low
+                    When X"3" => GTPTxStage <= EventBuff_Out;                       TxCRCDat <= EventBuff_Out; -- uB High
+                    When X"2" => GTPTxStage <= EventBuff_Out;                       TxCRCDat <= EventBuff_Out; -- ub Low
+                    --When X"9" => GTPTxStage <= X"00" & X"6" & IDReg;               TxCRCDat <= X"00" & X"6" & IDReg; 
+                    ---- Add the words in the controller header packet to the total word count
+                    --When X"8" => GTPTxStage <= EventBuff_Out + 8;                  TxCRCDat <= EventBuff_Out + 8;
+                    --When X"7" => GTPTxStage <= X"00" & ActiveReg(23 downto 16);    TxCRCDat <= X"00" & ActiveReg(23 downto 16);
+                    --When X"6" => GTPTxStage <= ActiveReg(15 downto 0);             TxCRCDat <= ActiveReg(15 downto 0);
+                    --When X"5" => GTPTxStage <= DReq_Count(15 downto 0);            TxCRCDat <= DReq_Count(15 downto 0);
+                    --When X"4" => GTPTxStage <= EventBuff_Out;                      TxCRCDat <= EventBuff_Out; -- EventBuff_Out; -- word count 0
+                    ----When X"3" => GTPTxStage(0) <= uBcheckRef(31 downto 16); TxCRCDat(0) <= uBcheckRef(31 downto 16); -- EventBuff_Out; -- word count 1
+                    ----When X"2" => GTPTxStage(0) <= uBcheckRef(15 downto  0); TxCRCDat(0) <= uBcheckRef(15 downto  0); -- EventBuff_Out; -- word count 2
+                    --When X"3" => GTPTxStage <= EventBuff_Out;                      TxCRCDat <= EventBuff_Out; -- EventBuff_Out; -- word count 1
+                    --When X"2" => GTPTxStage <= EventBuff_Out;                      TxCRCDat <= EventBuff_Out; -- EventBuff_Out; -- word count 2
                     When X"0" => GTPTxStage <= X"BC3C";                            TxCRCDat <= X"0000";
                     When others => GTPTxStage <= X"0000";                          TxCRCDat <= X"0000";
                 end case;
@@ -421,11 +430,16 @@ begin
             --     GTPTxStage <= X"1C90";
             --else GTPTxStage <= X"BC3C"; TxCRCDat <= X"0000";
             end if;
-
-            if (current_state = WrtCtrlHdrPkt and (Pkt_Timer = 8 or Pkt_Timer = 5 
-                or (uBwrt = '1' and (Pkt_Timer = 4 or Pkt_Timer = 3)) -- if uB is written, also read it again
+            -- This is confusing, here some comments!
+				-- if we assing a read in clock N
+				-- it is active in clock N-1
+				-- so the new data is ready in N-2
+				-- so reading at clk5 results in new data in clk3
+            if (current_state = WrtCtrlHdrPkt and (Pkt_Timer = 9 or Pkt_Timer = 5 or Pkt_Timer = 6
+                -- or (uBwrt = '1' and (Pkt_Timer = 4 or Pkt_Timer = 3))) -- if uB is written, also read it again
+					 or Pkt_Timer = 4 or Pkt_Timer = 3)
                 ---or Pkt_Timer = 7 or Pkt_Timer = 4 or Pkt_Timer = 3 or Pkt_Timer = 2)
-                ))
+                )
                 or (current_state = WrtDatPkt and Pkt_Timer > 2 and EvTxWdCnt > 0 and Pkt_Timer /= 11)
                     then                              EventBuff_RdEn <= '1';  --Debug(9) <= '1';
                         if EventBuff_Empty = '0' then EventBuffErr <= '0';
