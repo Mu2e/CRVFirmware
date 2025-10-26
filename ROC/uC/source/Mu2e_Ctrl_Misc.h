@@ -38,4 +38,12 @@ int     GTP1_Rec_Trigs();
 #define S29JL064J_SECTOR0 (0x0)         //Actual S29JL064J ADR=0x0 @Sector 0
 #define S29JL064J_SECTOR40 (0x220000/2) //Actual S29JL064J ADR=0x110000 @Sector 41   
 
+//adding storage for FEB image file to be downloaded via ROC to FEBs
+//
+int     SendFile_SrcSector71(int prt, int poePrt, int count, u_16Bit cksum, u_32Bit imageSz);
+
+#define SectAddr71  (0x400000/2)        //Actual S29JL064J Word ADR=0x200000 "RFI 400000 to display" (upper BackUp image)                           
+#define FileSectCntH   70               //each sector is 64K Byte
+#define S29JL064J_SECTOR71 (SectAddr71) //Actual S29JL064J ADR=0x110000 @Sector 41  "RFI 220000 to display" 
+
 #endif

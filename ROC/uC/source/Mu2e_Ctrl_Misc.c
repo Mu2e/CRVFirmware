@@ -466,7 +466,7 @@ int loadFLASH(int ADDR, int prt)
         //if (DONE0 == 1)           //1=config done. (C2) GIOA1
         //    break;
         
-        if (g_Cnt > 900000)
+        if (g_Cnt > 3000000)        //was 900000 using upper flash to store FEB image file thats 2.1MByte
             {
             sprintf(tBuf,"loadFLASH: Load: Load Failed, Rec'd byte cnt= %d, CkSum= %X\r\n",g_Cnt,cSum&0xffff);
             putBuf(prt, tBuf,0);
@@ -485,7 +485,18 @@ int loadFLASH(int ADDR, int prt)
     sprintf(tBuf,"loadFLASH: End Load Flash,  Rec'd byte cnt= %d, CkSum= %X\r\n",g_Cnt,cSum&0xffff);
     putBuf(prt, tBuf,0);
     mDelay(100);
-    if(ADDR==0)
+    
+    if (ADDR==SectAddr71)
+        {
+        FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_3_COUNT, (uint8_t*)&g_Cnt,4);    //write 4 bytes FRAM Offset 0x600+
+        FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_3_CSUM, (uint8_t*)&cSum,4);      //write 4 bytes FRAM Offset 0x600+
+        FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
+        var32= DWNLD_VALID;
+        FRAM_WR(DWNLD_3_VALID, (uint8_t*)&var32,4);    //write 4 bytes
+        }
+    else if(ADDR==0)
         {
         FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
         FRAM_WR(DWNLD_1_COUNT, (uint8_t*)&g_Cnt,4);    //write 4 bytes
@@ -1412,7 +1423,274 @@ int loadFLASH_SOCK(int prt, char* eBufB_Sock, int fpga)  //rec data file, pgm fl
 //*****************************************************************************************
 //*****************************************************************************************
 
+//flash load from USB port using binary data file
 
+int eraseFLASH_Sector71(int secCount, int start, int port)
+
+{
+
+    sPTR saddr;
+
+    int sector=0, cnt=0, var32;
+
+    //flash low (Busy), the device erasing or programming 
+
+    if (FLASH_RDY==0)       //Ready/Busy... low (Busy)     
+
+      return 1;             //busy then exit
+
+    sprintf(tBuf,"S29JL064J: Erasing %d Sectors\r\n",secCount);
+
+    putBuf(port, tBuf,0);
+
+    uDelay(500);
+
+    sprintf(tBuf,"S29JL064J: First Sector Addr= %8X\r\n",(snvPTR)flashBase+ start);
+
+    putBuf(port, tBuf,0);
+
+   
+
+    //flash set unprotect mode, (V6) HET1_5
+
+    FLASH_WP_HI
+
+    uDelay(100);     
+
+    saddr= (snvPTR)flashBase+ start;
+
+    //send all erase commands 1st
+
+    while (1)
+
+        {
+
+        //erase sector code sequence
+
+        *(snvPTR) (flashBase+adr555)= 0xAA;
+
+        *(snvPTR) (flashBase+adr2aa)= 0x55;
+
+        *(snvPTR) (flashBase+adr555)= 0x80;
+
+        *(snvPTR) (flashBase+adr555)= 0xAA;
+
+        *(snvPTR) (flashBase+adr2aa)= 0x55;
+
+        *saddr= 0x30;               //erase command 
+
+        saddr +=0x8000/2;           //next sector
+
+       
+
+        //wait for erase to finish, whole chip takes ~70 seconds
+
+        uDelay(300);
+
+        while(FLASH_RDY==0)
+
+            {
+
+            uDelay(100);
+
+            }
+
+        putBuf(port, ".",1);
+
+        if (sector++ > secCount)
+
+            break;
+
+        }
+
+   
+
+    //flash set to protect mode, (V6) HET1_5
+
+    FLASH_WP_LO 
+
+    //NULL cnt var
+
+    //clear FRAM status on last FLASH load
+
+    FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
+
+    FRAM_WR(DWNLD_3_COUNT, (uint8_t*)&cnt,4);    //write 4 bytes
+
+    FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
+
+    FRAM_WR(DWNLD_3_CSUM, (uint8_t*)&cSum,4);      //write 4 bytes
+
+    FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
+
+    var32= DWNLD_VALID;
+
+    FRAM_WR(DWNLD_3_VALID, (uint8_t*)&var32,4);    //write 4 bytes
+
+    
+
+    sprintf(tBuf,"\r\nS29JL064J: Final Sector Addr= %8X\r\n",saddr);
+
+    putBuf(port, tBuf,0);
+
+    return 0;
+
+}
+
+//*****************************************************************************************
+//******************    ROC to FEB FPGA Binary File vis Sockets       *********************
+//*****************************************************************************************
+//
+#include "ZestETM1_SOCKET.h"
+struct ePHY_BinFile ePHY_Bin;
+
+//Socket Version
+extern struct   HappyBusReg HappyBus;       //cmdlen, brdNumb, cmdtype, cntrecd, active, prt, timer, stat, ptrD,ptrS;
+#define BYTCNT250      250                  //128 bytes expected (this is an 8bit command variable)
+
+//adding storage for FEB image file to be downloaded via ROC to FEBs
+//SizeInSectors, Sec8 up 64KByte sectors (total bytes 390000(H) Bytes)
+
+#define SectAddr71w  (0x400000)             //Actual S29JL064J Word ADR=0x200000 "RFI 400000 to display" (upper BackUp image)                           
+#define ePayLdBinPreamble 0xA55A            //POE 'ePhy' binary download preamble header added to each packet
+
+//may roll this buffer back to Buf1500[] after initial debugging
+uint16  eBufWrds[(BYTCNT250/2)+10];         //local buffer added, may not be needed 125words or 250bytes
+
+
+//FEBv2 timing
+//PGM FLASH ONE WORD AT A TIME  
+//(scope check 1.8mS for 250/2 words)
+//(scope check 15uS per word)
+//
+//
+//Send preloaded FLASH memory image to FEB via ROCs Phy Link
+//count=1 to send to single port, count=24 to send to all ports
+//
+int SendFile_SrcSector71(int prt, int poePrt, int count, u_16Bit cksum, u_32Bit imageSz)  //send fpga bin to FEB
+{
+    uint16 d16, stat, wait=0, bits, idx, chksum=0, rdat, TimeOut=0;
+    uint32 len, sndByteCnt=0, pacCnt=0, rSumErr=0, totBytes=0;
+    uint16 PacSum=0;
+       
+    uint16* srcData=(uint16*)(flashBase+ SectAddr71w); //data from FLASH Sector71    
+    len= imageSz;   
+    idx=2;                                  //2ints or 4 byte index into xmit buffer, first 2 words will be xmit header
+    sndByteCnt=0;    
+
+    while(len>1)
+      {
+      TimeOut=0;
+      d16 = *srcData++;                     //Flash chip reads are 16bit
+      //1st byte
+      chksum += (d16>>8);                   //SDR_RD16SWP1;  //get data from fpga1 sdRam memory
+      PacSum += (d16>>8);                   //packet sum goes into header
+      
+      //2nd byte
+      chksum += d16&0xff;
+      PacSum += d16&0xff;;                  //packet sum goes into header
+
+      eBufWrds[idx++]= d16;                 //moving byte to xmit buffer 'eBuf15'
+      len-=2;
+      totBytes+=2;
+      sndByteCnt+=2;                       //counter for packet xmit
+      if(sndByteCnt>=BYTCNT250)            //one packet 250 bytes for PMT expected page size if using page pgm mode
+          { 
+          pacCnt++;
+          //Binary packet to send on ePhy Port to FEB
+          eBufWrds[0]= ePayLdBinPreamble;   //POE 'ePhy' binary download preamble header added to each packet
+          eBufWrds[1]= (eCMD77_BINARY_DAT+((sndByteCnt+4)<<8));  //total_bytes - this_packetsize  reverse byte order      
+         
+          PHY_LOADER_FLASH((char*)eBufWrds, prt,  poePrt, eECHO_ON,0, sndByteCnt+4); //add 4 byte header  
+          
+          //Wait with timeout for FEB packet 'acknowledge ACK' 
+          //
+          mDelay(2);   //Add extra time since multi feb may be programming and this is only checking one        
+          do  {
+               //FEB Word Program Time 6uS Typicl (6-80 max µS per word) or for ~256 bytes wait 1mS
+               stat= *(u_16Bit*)IOPs[poePrt].FM40_STAp;
+               if (wait++>100)              
+                  {
+                  //error, no data from FEB in rec buffer
+                  rdat = 0x0000;            //no valid data in buffer
+                  TimeOut++;                //error, abort
+                  break;                    //force exit counter
+                  }
+               uDelay(100);
+               bits= (stat& IOPs[poePrt].ePHY_BIT);
+              } while(bits== IOPs[poePrt].ePHY_BIT);   //0= data available
+                             
+          if (TimeOut)
+                {
+                rdat=0;                                 //no return data, packet never sent(ROC) or received(FEB)
+                sprintf(tBuf,"xPac=%d xSum=%4X rSum=%4X  (No FEB Reply Err)\r\n", pacCnt, PacSum, rdat);
+                //sciSendByte(UART,'.');
+                }
+          else
+                {
+                rdat =*(u_16Bit*)IOPs[poePrt].FM30_DATp;  //look for FEB echo on lvds port checksum reply
+                if (rdat != PacSum)
+                    {
+                    rSumErr++;
+                    sprintf(tBuf,"xPac=%d xSum=%4X rSum=%4X  (ChkSum Error) %X\r\n", pacCnt, PacSum, rdat, rSumErr);
+                    }
+                else
+                    {
+                    sprintf(tBuf,"xPac=%d xSum=%4X rSum=%4X\r\n", pacCnt, PacSum, rdat); //good chksum reply from FEB
+                    }                         
+                }
+           putBuf(tty, tBuf, 0);
+           sndByteCnt= 0;
+           idx=2 ;                          //2ints or 4 byte index into xmit buffer, first 2 words will be xmit header
+           wait=0;
+           PacSum=0;           
+
+           //global reset clears all lvds rec fifos
+          *(uSHT*)IOPs[POE01].FM41_PARp= FMRstBit8;     //FPGA2 lvds fifo buf and parErr clr              
+          *(uSHT*)IOPs[POE09].FM41_PARp= FMRstBit8;     //FPGA3 lvds fifo buf and parErr clr               
+          *(uSHT*)IOPs[POE17].FM41_PARp= FMRstBit8;     //FPGA4 lvds fifo buf and parErr clr                                           
+                      
+           if ((TimeOut) || (rSumErr))          //break on error
+               {
+               int bytecnt= (pacCnt-1) * (BYTCNT250);  //last packet was not acknowledged
+               sprintf(tBuf,"\r\nROCSOCK: No FEB Reply, Abort FEBSEND at PacCnt=%d  ByteCnt=%d  0x%x\r\n", pacCnt,bytecnt,bytecnt);
+               putBuf(tty, tBuf, 0);
+               break;
+               }
+           mDelay(2);        //Add extra time since multi feb may be programming and this is only checking one        
+          }
+      }
+    
+    // Done with full size packet 
+    // Now Final xmit, most of the time will be less than BYTCNT238 
+    if((sndByteCnt) && (TimeOut==0)) //if errors skip any final packet
+      {
+      pacCnt++;  
+      if(sndByteCnt&1)          //odd cnt bytes but we send on 16bit link registers
+          {
+          sndByteCnt++;         //fix for even word xfer
+          eBufWrds[idx++]=0;    //mark extra data as zero som checksum is okay
+          }
+                 
+      //Binary packet to send on ePhy Port to FEB
+      eBufWrds[0]= 0xA55A;               //POE 'ePhy' binary download preamble header added to each packet
+      eBufWrds[1]= (eCMD77_BINARY_DAT+((sndByteCnt+4)<<8));  //total_bytes - this_packetsize  reverse byte order      
+      PHY_LOADER_FLASH((char*)eBufWrds, 0,  poePrt, eECHO_ON,0, sndByteCnt+4); //4char header
+      
+      //final packet ACK display
+      mDelay(5);
+      rdat =*(u_16Bit*)IOPs[poePrt].FM30_DATp; //look for FEB echo on lvds port
+      if(bits==1)               //no valid data avail
+          rdat=0;
+      
+      sprintf(tBuf,"xPac=%d xSum=%4X rSum=%4X\r\n", pacCnt, PacSum, rdat);
+      putBuf(tty, tBuf, 0);  
+      }
+    
+    sprintf(tBuf,"\r\nTotal Bytes Sent %d\r\nCheckSum=%4X\r\nChkSumErrs=%d\r\n", totBytes, chksum, rSumErr);
+    putBuf(tty, tBuf, 0);      
+    return TimeOut;
+}
 
 
 extern struct   HappyBusReg HappyBus;

@@ -1,0 +1,22 @@
+*.dep
+*.ewd
+*.ewt
+settings/*.bat
+settings/*.xcl
+settings/*.crun
+settings/*.dbgdt
+settings/*.wsdt
+# Additional IAR settings
+settings/*.ps1
+settings/*.dnx
+
+# Build outputs
+Debug/
+Release/
+*.bin
+*.out
+*.sim
+
+# Keep project files
+!*.ewp
+!*.hcg
