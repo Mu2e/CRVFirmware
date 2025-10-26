@@ -350,7 +350,9 @@ component EventBuilder is
 		  Stats           : in  std_logic_vector(15 downto 0);
 		  InjectionTs     : in  std_logic_vector(15 downto 0);
 		  InjectionWindow : in  std_logic_vector(15 downto 0);
-		  FakeNum         : out std_logic_vector( 7 downto 0)
+		  FakeNum         : out std_logic_vector( 7 downto 0);
+		  -- debug
+		  uBDebugOut      : out std_logic_vector (96 downto 0)
     );
 end component EventBuilder;
 

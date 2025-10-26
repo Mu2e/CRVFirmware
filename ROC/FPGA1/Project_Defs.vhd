@@ -171,6 +171,13 @@ constant GTPTxRdAddr : AddrPtr         := "00" & X"85";
 constant DReqBuffTraceAd : AddrPtr     := "00" & X"86";
 constant LinkFIFOTraceAd : AddrPtr     := "00" & X"87";
 
+constant EvBuildUbDebug0Add : AddrPtr  := "00" & X"88";
+constant EvBuildUbDebug1Add : AddrPtr  := "00" & X"89";
+constant EvBuildUbDebug2Add : AddrPtr  := "00" & X"8a";
+constant EvBuildUbDebug3Add : AddrPtr  := "00" & X"8b";
+constant EvBuildUbDebug4Add : AddrPtr  := "00" & X"8c";
+constant EvBuildUbDebug5Add : AddrPtr  := "00" & X"8d";
+constant EvBuildUbDebug6Add : AddrPtr  := "00" & X"8e";
 
 constant DRCntAdd : AddrPtr        := "00" & X"94";
 constant DebugCntAdd : AddrPtr        := "00" & X"95";

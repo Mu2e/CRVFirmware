@@ -413,6 +413,7 @@ signal drgenerator_uCD, drgenerator_mid_uCD : std_logic_vector(15 downto 0);
 signal TStmpBuff_In : std_logic_vector(15 downto 0); -- for multiplexing timestamp buffer
 signal drgenerator_ts_wr_en : std_logic;
 
+signal uBDebugOut : std_logic_vector(96 downto 0); 
 --signal debug_cnt : std_logic_vector(7 downto 0);
 
 begin
@@ -501,7 +502,9 @@ EventBuilderInst : EventBuilder
 				Stats            => CRCErrCnt & LosCounter & "000" & PLLStat, -- Status
 				InjectionTs      => InjectionTs_first, -- InjectionTs, --_first,
 				InjectionWindow  => InjectionWindow,
-				FakeNum          => FakeNum
+				FakeNum          => FakeNum,
+				-- debug
+				uBDebugOut       => uBDebugOut
         );
 
 PacketFormerInst : PacketFormer
@@ -3102,7 +3105,14 @@ iCD <= X"0" &
 		 DRTimeout when DRTimeoutAdd,
 		 NimTrigLast & "00" & GPI & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"00a1" when DebugVersionAd,
+		 uBDebugOut(15 downto  0) when EvBuildUbDebug0Add,
+		 uBDebugOut(31 downto 16) when EvBuildUbDebug1Add,
+		 uBDebugOut(47 downto 32) when EvBuildUbDebug2Add,
+		 uBDebugOut(63 downto 48) when EvBuildUbDebug3Add,
+		 uBDebugOut(79 downto 64) when EvBuildUbDebug4Add,
+		 uBDebugOut(95 downto 80) when EvBuildUbDebug5Add,
+		 X"000" & "000" & uBDebugOut(96) when EvBuildUbDebug6Add,
+		 X"00a5" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 DRcnt when DRCntAdd,
