@@ -31,7 +31,7 @@ entity EventBuilder is
         -- Settings
         FormHold        : in  std_logic; -- like and inverted enable, if hight -> hold  
         sendGR          : in  std_logic;
-        uBinHeader      : in  std_logic;
+        uBinHeader      : in  std_logic; -- no longer used, alwasy 1
         uBwrt           : in  std_logic;
         GA              : in  std_logic_vector( 1 downto 0);
 		  sendGrCnt       : in  std_logic_vector( 7 downto 0);
@@ -182,13 +182,13 @@ begin
         -- Write the "OR" of the status as the controller status word
         
            when RduB => -- this step could be jumped
-                if uBinHeader = '0'                        then next_state <= WrtStat;
-                else
+                --if uBinHeader = '0'                        then next_state <= WrtStat;
+                --else
                     if    ActiveReg(15 downto 0) = 0       then next_state <= RduB2low; -- only FPGA2 active 
                     elsif ActiveReg( 7 downto 0) = 0       then next_state <= RduB1low; -- FPGA1 active, FPGA0 not active, FPGA2 maybe active
                     else                                        next_state <= RduB0low; -- FPGA0 active
                     end if;  
-                end if;
+                --end if;
         
             when RduB2low =>
                 next_state <= RduB2high;
@@ -374,11 +374,14 @@ begin
 		    if current_state = Idle then EventSum <= (others => '0');
             -- Account for removing the word count and status words from the data
             elsif current_state = RdInWdCnt0 then 
-                if uBinHeader = '0' then EventSum <= EventSum + LinkFIFOOut(0) - 2; else EventSum <= EventSum + LinkFIFOOut(0) - 4; end if;
+                --if uBinHeader = '0' then EventSum <= EventSum + LinkFIFOOut(0) - 2; else 
+					 EventSum <= EventSum + LinkFIFOOut(0) - 4; -- end if;
             elsif current_state = RdInWdCnt1 then 
-                if uBinHeader = '0' then EventSum <= EventSum + LinkFIFOOut(1) - 2; else EventSum <= EventSum + LinkFIFOOut(1) - 4; end if;
+                --if uBinHeader = '0' then EventSum <= EventSum + LinkFIFOOut(1) - 2; else 
+					 EventSum <= EventSum + LinkFIFOOut(1) - 4; -- end if;
             elsif current_state = RdInWdCnt2 then 
-                if uBinHeader = '0' then EventSum <= EventSum + LinkFIFOOut(2) - 2; else EventSum <= EventSum + LinkFIFOOut(2) - 4; end if;
+                --if uBinHeader = '0' then EventSum <= EventSum + LinkFIFOOut(2) - 2; else 
+					 EventSum <= EventSum + LinkFIFOOut(2) - 4; -- end if;
             elsif current_state = CheckWdCnt then
 				    if EventSum > MAX_EVENT_SUM then EventSum <= MAX_EVENT_SUM; else EventSum <= EventSum; end if;
 				else EventSum <= EventSum;
@@ -523,25 +526,28 @@ begin
 
     -- Count down the words read from each of the link FIFOs
     if current_state = RdInWdCnt0 then 
-        if uBinHeader = '0'                               then FIFOCount(0) <= LinkFIFOOut(0) - 2; 
-        else                                                   FIFOCount(0) <= LinkFIFOOut(0) - 4; 
-        end if;   
+        --if uBinHeader = '0'                               then FIFOCount(0) <= LinkFIFOOut(0) - 2; 
+        --else                                                   
+		  FIFOCount(0) <= LinkFIFOOut(0) - 4; 
+        --end if;   
     elsif current_state = ReadFIFO0 and FIFOCount(0) /= 0 then FIFOCount(0) <= FIFOCount(0) - 1;
     else                                                       FIFOCount(0) <= FIFOCount(0);
     end if;
 
     if current_state = RdInWdCnt1 then 
-        if uBinHeader = '0'                               then FIFOCount(1) <= LinkFIFOOut(1) - 2; 
-        else                                                   FIFOCount(1) <= LinkFIFOOut(1) - 4; 
-        end if;
+        --if uBinHeader = '0'                               then FIFOCount(1) <= LinkFIFOOut(1) - 2; 
+        --else                                                   
+		  FIFOCount(1) <= LinkFIFOOut(1) - 4; 
+        --end if;
     elsif current_state = ReadFIFO1 and FIFOCount(1) /= 0 then FIFOCount(1) <= FIFOCount(1) - 1;
     else                                                       FIFOCount(1) <= FIFOCount(1);
     end if;
 
     if current_state = RdInWdCnt2 then 
-        if uBinHeader = '0'                               then FIFOCount(2) <= LinkFIFOOut(2) - 2; 
-        else                                                   FIFOCount(2) <= LinkFIFOOut(2) - 4; 
-        end if;
+        --if uBinHeader = '0'                               then FIFOCount(2) <= LinkFIFOOut(2) - 2; 
+        --else                                                   
+		  FIFOCount(2) <= LinkFIFOOut(2) - 4; 
+        --end if;
     elsif current_state = ReadFIFO2 and FIFOCount(2) /= 0 then FIFOCount(2) <= FIFOCount(2) - 1;
     else                                                       FIFOCount(2) <= FIFOCount(2);
     end if;
@@ -551,7 +557,9 @@ begin
     if (LinkRDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = LinkRdAddr(0))
        -- Read of header words, read of data words
        or current_state = RdInWdCnt0 or current_state = RdStat0 or current_state = ReadFIFO0
-       or (current_state = RdUb and uBinHeader = '1') or current_state = RdUb0low --or current_state = RdUb0high
+       --or (current_state = RdUb and uBinHeader = '1') 
+		 or current_state = RdUb
+		 or current_state = RdUb0low --or current_state = RdUb0high
        or current_state = VerifyUb0low --or current_state = VerifyUb0high
     then LinkFIFORdReq_b(0) <= '1'; 
     else LinkFIFORdReq_b(0) <= '0'; 
@@ -560,7 +568,9 @@ begin
     if (LinkRDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = LinkRdAddr(1))
     -- Read of header words, read of data words
         or current_state = RdInWdCnt1 or current_state = RdStat1 or current_state = ReadFIFO1
-        or (current_state = RdUb and uBinHeader = '1') or current_state = RdUb1low --or Event_Builder = RdUb1high
+        --or (current_state = RdUb and uBinHeader = '1') 
+		  or current_state = RdUb
+		  or current_state = RdUb1low --or Event_Builder = RdUb1high
         or current_state = VerifyUb1low --or Event_Builder = VerifyUb1high
     then LinkFIFORdReq_b(1) <= '1'; 
     else LinkFIFORdReq_b(1) <= '0'; 
@@ -569,7 +579,9 @@ begin
     if (LinkRDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = LinkRdAddr(2))
     -- Read of header words, read of data words
         or current_state = RdInWdCnt2 or current_state = RdStat2 or current_state = ReadFIFO2
-        or (current_state = RdUb and uBinHeader = '1') or current_state = RdUb2low --or Event_Builder = RdUb2high
+        --or (current_state = RdUb and uBinHeader = '1') 
+		  or current_state = RdUb
+		  or current_state = RdUb2low --or Event_Builder = RdUb2high
         or current_state = VerifyUb2low --or Event_Builder = VerifyUb2high
     then LinkFIFORdReq_b(2) <= '1'; 
     else LinkFIFORdReq_b(2) <= '0'; 
