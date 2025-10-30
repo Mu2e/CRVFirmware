@@ -594,6 +594,8 @@ uint8       DMA_DAQ_BUF[(DMA_DAQ_WSIZ*2)+4];//DMA Buffer size
 int         DMA_FPGA_OUT(int xWords);
 int         DMA_OTREE_IN(int xWords);
 
+//DCS
+struct FebDCSRply DCSrply = {0,0,0};
 
 adcData_t   adc_data[16];                   //read buf size ***must always be 16***    
 uint8_t     USB_inBuf[USB_inBufSz];
@@ -1017,6 +1019,9 @@ void main_mu2e(void)
     
     //dont stop network checking for now even if init failed
     genFlag |= ZEST_ETM1_OK;
+    
+    //enable DCS checks by default 
+    genFlag |= Check_DCS;
         
     //putBuf(tty,"Compiler Optimizatiion must be set to 'NONE', else random nError resets\r\n\n",0);
     //LVDS FM Rec pError, BIT8 clear error flags
@@ -1116,7 +1121,15 @@ void main_mu2e(void)
             }
 
         
-        
+        //**************************************************************
+        //******     Process DCS packages, takes ? uS           ********
+        //************************************************************** 
+        //
+        if (genFlag & Check_DCS)
+            {
+            CheckAndProcessDCS();
+            }
+             
 
         //**************************************************************
         //******     DATA POOL UPDATE REQ, takes 15-40uS        ********
@@ -1374,6 +1387,11 @@ void putBuf(int prt, char* sBuf,  int len)
         send(3, (const char*) sBuf, ((len)/2), g_TxCountOdd);//sock, src, len, flags ignored
     else if (prt==tty)
         sciUartSendText(UART,(uint8*)sBuf,len);         //send ascii 'tty'
+    else if (prt==DCS)
+        {
+        REG16(fpgaBase0+(0x53*2)) = DCSrply.add;
+        REG16(fpgaBase0+(0x53*2)) = (int)strtol(sBuf,NULL, 16L);
+        }
   //TODO, setup code to have UART buffer xmits via interrupts
     return;
 }
@@ -1768,6 +1786,28 @@ int process(int prt, char *cmdPtr)
                     loadFLASH(S29JL064J_SECTOR40, prt); //Actual S29JL064J address= 0x110000 @Sector 41
                     break;
                     }
+                else if (!strcmp(tok, "FL3"))        //FLASH Load of FPGA File via USB
+                   {
+                    if (prt!=tty)
+                        {
+                        putBuf(prt,"Use USB port to load FLASH\r\n",0);
+                        break;                        //tty only
+                        }
+                    sprintf(tBuf,"S29JL064J: FEB Image Flash Loader\r\n");
+                    putBuf(prt, tBuf,0);
+                    flashStatus(prt);                   //displays status
+                    uDelay(100);                     
+                    
+                    //SectAddr71 Actual S29JL064J Word ADR=0x200000 (FEB BackUp image storeage) 
+                    //"RFI 400000 to display"
+                    eraseFLASH_Sector71(FileSectCntH, SectAddr71, prt);  //SectorsToErase, SectorStartAddr, DisplayPrt
+                    //FLASH erase done
+                    sprintf(tBuf,"S29JL064J: Select Binary File Now (enable DSR/DTR)\r\n");
+                    putBuf(prt, tBuf,0);
+                    //Begin FLASH load using USB
+                    loadFLASH(SectAddr71, prt);         //Actual S29JL064J Word ADR=0x200000 "RFI 400000 to display" (upper BackUp image)  
+                    break;
+		  }
                 else if (!strcmp(tok, "FLSOCK1"))       //FLASH Load via SOCKETs FPGA1
                    {
                     //disable watchdog timer, file notifications.c
@@ -1838,7 +1878,44 @@ int process(int prt, char *cmdPtr)
                     //flashXFER(4, prt);                //forces fpga to reload from updated Flash 
                     break;
                     }
-
+                else if (!strcmp(tok, "FLSOCK3"))       //FLASH Load via SOCKETs ROC FLASH Sector71=FEB Image
+                   {
+                    //disable watchdog timer, file notifications.c
+                    if(prt==tty)
+                        {
+                        putBuf(prt,"FL3_SOCK : Flash not ready\r\n",0); //send to current active port
+                        break;
+                        }          
+                    while(FLASH_RDY==0)
+                        {
+                        putBuf(prt,"FL3_SOCK : Flash not ready\r\n",0); //send to current active port
+                        break;
+                        }
+                    
+                    sprintf(tBuf,  "FL3_SOCK : FEB Image Flash Loader\r\n");
+                    putBuf(prt, tBuf,0);
+                    flashStatus(prt);               //displays status
+                    uDelay(100);        
+                    
+                    sprintf(tBuf,  "FL3_SOCK : FLASH Erase Now\r\n");
+                    putBuf(prt, tBuf,0);
+					
+                    //SectAddr71 Actual S29JL064J Word ADR=0x200000 (FEB BackUp image storeage) 
+                    //"RFI 400000 to display"
+                    eraseFLASH_Sector71(FileSectCntH, SectAddr71, prt);  //SectorsToErase, SectorStartAddr, DisplayPrt
+					//erase done
+                    sprintf(tBuf,"FL3_SOCK : Total sector erased%d (%d Bytes)\r\n", SECTORES, SECTORES*0x8000);
+                    putBuf(prt, tBuf,0);
+                    uPhySums.FL_SOCK_CHKSIZE= 0;
+                    uPhySums.FL_SOCK_CHKSUM=0;
+                    //flash load begin
+                    loadFLASH_SOCK(prt,(char*)eRecDatBuf[g_Sock],3);  //3==SectAddr71
+                    sprintf(tBuf,"FL3_SOCK : Finished, reset board for complete update\r\n");
+                    putBuf(prt, tBuf,0);
+                    uDelay(200);                   
+                    //flashXFER(4, prt);                //forces fpga to reload from updated Flash 
+                    break;
+                    }
                 else if (!strcmp(tok, "FT"))            //FLASH Load of FPGA File via USB
                    {
                     sprintf(tBuf,"FLASH xFer to FPGAs 0,1,2,3\r\n");
@@ -1850,6 +1927,145 @@ int process(int prt, char *cmdPtr)
                             iFlag |= CONFIGFAIL;
                         }
                     InitFPGA_REGISTERS();
+                    break;
+                    }
+                else if (!strcmp(tok, "FEBSEND"))       //Send FPGA file via ePhy Link from ROC to FEB (expect FEB ready, see FEB cmd 'HF')
+                   {
+                    //disable watchdog timer, file notifications.c
+                    int retval=0, poePort=0, PgmCount=0, actPorts;
+                    lvLnk.PoolMode=0;                   //data pool must be off                    
+                    lvLnk.PoolChkmSec=0;                //pool update req timer init
+                    
+                    if ( (poePort=arg_dec(&paramPtr,-1))==-1) //get 1st param, port 1of24h
+                        { parErr++;  break;}            //no parameter input error                    
+                    if ( (poePort<1) || (poePort>24))   //valid ports 1-24
+                        { parErr++;  break;}
+
+                    //Enter number of FEB to FLASH as 1(single) or 24(all)
+                    if ( (PgmCount=arg_dec(&paramPtr,-1))==-1) //get 2nd param, pgm board count 1 or 24
+                        { parErr++;  break;}            //no parameter input error                    
+                    if (!((PgmCount==1) || (PgmCount==24)))
+                        { parErr++;  break;}            //valid 1 or 24                     
+
+                    actPorts= ( (ACT_PORTS_HI<<16)+ ACT_PORTS_LO);
+                    if((actPorts&(1<<(poePort-1)))==0)
+                        {
+                        sprintf(tBuf,"ROC Port is inactive %d\r\n",poePort);
+                        putBuf(prt, tBuf,0);  
+                        break;
+                        }
+                                        
+                    //verify valid image in FLASH
+                    u_16Bit cksum;
+                    u_32Bit imageSz;
+                    //flashStatus(prt);                       //displays status
+                    FRAM_RD(DWNLD_3_COUNT,(uint8*)&imageSz, 4); //read 4 bytes
+                    FRAM_RD(DWNLD_3_CSUM, (uint8*)&cksum, 2);   //read 2 bytes
+                                       
+                    imageSz &=0xfffffe;                     //even file size
+                    if ((imageSz==0) || (imageSz>3000000))  //image size to small or large, normal around 2,192,012 bytes
+                        return 1;
+                    
+                    //using process() function to disable data pooling 
+                    sprintf(tBuf,"FEBSEND: Disable data pool\r\n");
+                    putBuf(prt, tBuf,0);  
+                    sprintf(tBuf,"POOLENA 0");      //command to erase single active FEB
+                    process(prt, tBuf);
+                    
+                    //set single FEB as control board to recieve 'ack checksum' returned on LVDS link'
+                    HappyBus.SavePrt= poePort;
+                    assignLinkPort(poePort,1);
+
+                    //show ROC is busy for about 1 minute
+                    //
+                    sprintf(tBuf,"FEBSEND: ROC waiting on FEB(s) FLASH Erase, 50sec\r\n");
+                    putBuf(prt, tBuf,0);  
+
+                    //Use process() function, command to FEB(s), erase single of multiple erase flash high                    
+                    //
+                    if(PgmCount==24)
+                        sprintf(tBuf,"LCA FL3ERA");     //command to erase all active FEB                      
+                    else
+                        sprintf(tBuf,"LC FL3ERA");      //command to erase single active FEB
+                    process(prt, tBuf);
+                    
+                    //ROC has to 'wait' while FEBs erase, Then send fpga image, erase time varies, min ~45 seconds
+                    mDelay(1000*55);                    //55 Second Delay
+                    
+                    //global reset clears all lvds rec fifos
+                    *(uSHT*)IOPs[POE01].FM41_PARp= FMRstBit8;//FPGA2 lvds fifo buf and parErr clr              
+                    *(uSHT*)IOPs[POE09].FM41_PARp= FMRstBit8;//FPGA3 lvds fifo buf and parErr clr               
+                    *(uSHT*)IOPs[POE17].FM41_PARp= FMRstBit8;//FPGA4 lvds fifo buf and parErr clr                                   
+                    
+
+                    if(PgmCount==24)     
+                        {
+                        //enable all Phy to transmit (with active FEB connected)
+                        *IOPs[1].ePHY0E_XMSKp= 0xFF;    //enable all port   
+                        *IOPs[9].ePHY0E_XMSKp= 0xFF;    //enable all port   
+                        *IOPs[17].ePHY0E_XMSKp=0xFF;    //enable all port   
+                        }
+                    else
+                        {
+                        //enable 1 Phy to transmit
+                        *IOPs[1].ePHY0E_XMSKp= 0;        //enable all port   
+                        *IOPs[9].ePHY0E_XMSKp= 0;        //enable all port   
+                        *IOPs[17].ePHY0E_XMSKp=0;        //enable all port   
+                        *IOPs[poePort].ePHY0E_XMSKp= IOPs[poePort].ePHY_BIT; //enable single phy port
+                        }
+                    
+                    //send data file on ePHY to PMT
+                    sprintf(tBuf,"FEBSEND: Sending Image File from local ROC FLASH to FEB\r\n");
+                    putBuf(prt, tBuf,0);                                     
+                    
+                    //Limits background activity during 1mS interrupt routine
+                    iFlag |= iPHY_BINMODE;              //set binary xfer flag, see 'notification.c', 
+                    retval= SendFile_SrcSector71(prt, HappyBus.PoeBrdCh, PgmCount, cksum, imageSz);  // see 'Mu2e_Cntrl_Misc.c'
+                    iFlag &= ~iPHY_BINMODE;             //clr binary xfer flag, see 'notification.c'
+                    LED_GRN0;                           //GRN front panel tri-color LED OFF
+                    
+                    if(retval==0)                       //zero is good, no errors                      
+                        sprintf(tBuf,"FEBSEND: Done\r\n\n");//show now error
+                    else
+                        sprintf(tBuf,"FEBSEND: Error\r\n\n");//show now error
+                    putBuf(prt, tBuf,0);                                          
+                    mDelay(2000);                       // allow for possible slower FEBs to reply
+                              
+                    //just in case of Phy Xmit Seq in FPGA, lets reset
+                    sprintf(tBuf,"FT");                 //FPGA PHY xmit sequencer may get somewhat hung up at times 
+                    process(prt, tBuf);                         
+                    mDelay(2500);                       //allow fpga load time
+                    
+                    //Use process(), cmd FEBs to store last download size and checksum to FEB FRAM and read flash status
+                    //
+                    if(PgmCount==24)
+                        {
+                        sprintf(tBuf,"LCA FL3EOF");     //command store FL3 load size and chksum
+                        process(prt, tBuf);                    
+                        putBuf(prt,"\r\n",0);
+                        sprintf(tBuf,"LCA FS");         //command for flash status                      
+                        process(prt, tBuf);                    
+                        }
+                    else
+                        {
+                        sprintf(tBuf,"LC FL3EOF");      //command store FL3 load size and chksum
+                        process(prt, tBuf);                         
+                        //wait and display returned data
+                        while (HappyBus.WaitCnt)        //muti blocks, use timer
+                            HappyBusCheck();            //check status/get data, takes ~200nS                        
+                        putBuf(prt,"\r\n",0);
+                        
+                        sprintf(tBuf,"LC FS");          //command for  flash status
+                        process(prt, tBuf);                         
+                        //wait and display returned data
+                        while (HappyBus.WaitCnt)        //muti blocks, use timer
+                            HappyBusCheck();            //check status/get data, takes ~200nS                        
+                        }
+                   
+                    putBuf(prt,"\r\n",0);
+                    //restore hBus link
+                    mDelay(200);                        //wait for hBus reply
+                    assignLinkPort(HappyBus.SavePrt,1);                    
                     break;
                     }
                 else if (!strcmp(tok, "FS"))            //FLASH Status
@@ -1868,6 +2084,15 @@ int process(int prt, char *cmdPtr)
                     sprintf(tBuf   ,"Flash2 BytCt: %d\r\n",D32);
                     strcat (Buf1500,tBuf);
                     sprintf(tBuf,   "Flash2 SumCk: %04X\r\n",D16);
+                    strcat (Buf1500,tBuf);
+                    putBuf(prt, Buf1500,0);
+                    
+                    //FLASH Sector71 reserved for downloadable FEB image file
+                    FRAM_RD(DWNLD_3_COUNT,(uint8*)&D32, 4); //read 4 bytes
+                    FRAM_RD(DWNLD_3_CSUM, (uint8*)&D16, 2);   //read 2 bytes
+                    sprintf(tBuf   ,"FEBFL3 BytCt: %d\r\n",D32);
+                    strcat (Buf1500,tBuf);
+                    sprintf(tBuf,   "FEBFL3 SumCk: %04X\r\n",D16);
                     strcat (Buf1500,tBuf);
                     putBuf(prt, Buf1500,0);
                     break;
@@ -2118,6 +2343,30 @@ int process(int prt, char *cmdPtr)
                     //link_ID_Chk() fills status array, see 'lvLnk.IDChkSec== ID_RegTime' 
                     sprintf(tBuf,   "Active FEBs : %d\r\n",POE_PORTS_ACTIVE[0]);
                     strcat (Buf1500,tBuf);
+                    putBuf(prt, Buf1500,0);
+                    break;
+                    }
+                 else if (!strcmp(tok, "IDS")) // ID - Serial
+                    {
+                    sprintf(Buf1500, "%X04\r\n", Ser_Cntrl_Numb.serNumb);
+                    putBuf(prt, Buf1500,0);
+                    break;
+                    }
+                else if (!strcmp(tok, "IDV1")) // ID - Version major
+                    {
+                    sprintf(Buf1500, "%04X\r\n", divV.quot);
+                    putBuf(prt, Buf1500,0);
+                    break;
+                    }
+                else if (!strcmp(tok, "IDV2")) // ID - Version minor
+                    {
+                    sprintf(Buf1500, "%04X\r\n", divV.rem);
+                    putBuf(prt, Buf1500,0);
+                    break;
+                    }
+                else if (!strcmp(tok, "IDA")) // ID - active FEBs
+                    {
+                    sprintf(Buf1500, "%04X\r\n", POE_PORTS_ACTIVE[0]);
                     putBuf(prt, Buf1500,0);
                     break;
                     }
@@ -2496,7 +2745,13 @@ int process(int prt, char *cmdPtr)
                     {                                   //Set Bus Board Numb 1-24, 0=all
                     lvLnk.IDChkSec= ID_RegTime-1;       //use timer, does same as link_ID_Chk(0);                    
                     break;
-                    }                
+                    } 
+                else if (!strcmp(tok, "LPR"))
+                    {
+                    sprintf(Buf1500,"%04X\r\n",HappyBus.PoeBrdCh);
+                    putBuf(prt, Buf1500,0);                 //send to current active port  
+                    break;
+                    }
                 else  {parErr=0xf;   break; }
         case 'N':
                 if (!strcmp(tok, "NETSAV"))             //restoring network defaults
@@ -2550,13 +2805,27 @@ int process(int prt, char *cmdPtr)
                                     *poolPtr=0;
                                 if (LF%16==0)
                                     strcat(Buf1500, "\r\n");
-                                putBuf(prt, Buf1500,0);          
+                                putBuf(prt, Buf1500,0);              
                                 }
                             putBuf(prt,"\r\n",0); 
-                            }
+                             }
                         }  
                     break;
                     }
+                
+                else if (!strcmp(tok, "POOLPAR"))               //display 'datapool' data
+                    {
+                    //int LF=1, idx, grp;
+                    //u_16Bit *poolPtr= &stab_Pool[0][0];
+                    param1=arg_dec(&paramPtr,0)-1;        //1st param (rd/clr pool)
+                    param2=arg_dec(&paramPtr,1);
+                    sprintf (Buf1500, "%4X", stab_Pool[param1][param2]);
+                    putBuf(prt, Buf1500, 0);
+                    putBuf(prt,"\r\n",0);
+                     break;
+                }
+                    
+  
                 else if (!strcmp(tok, "POOLENA"))           //for testing stop data pool
                     {
                     param1=arg_dec(&paramPtr,1);            //default mode is enable
@@ -2575,7 +2844,7 @@ int process(int prt, char *cmdPtr)
                         //all genFlags cleared in 'notifications.c' when disabled
                         lvLnk.PoolMode=0;
                         sprintf(tBuf,"Data Pool OFF\r\n");
-                        }
+                        }  
                     putBuf(prt, tBuf,0);
                     break;
                     }
@@ -2593,7 +2862,7 @@ int process(int prt, char *cmdPtr)
                         {
                         cur= POE_CUR_ALL[i];
                       //Current, 1 LSB = 61.035µA when RSENSE= 0.5O or 122.07µA when RSENSE= 0.25O
-                        cur= cur * .00012207;
+                         cur= cur * .00012207;
                         vlt= POE_VLT_ALL[i];
                         vlt= vlt * .005760;  //.005835;
 
@@ -2612,6 +2881,34 @@ int process(int prt, char *cmdPtr)
                         putBuf(prt, tBuf,0);
                         }                      
                     break;
+                    }
+                else if (!strcmp(tok, "PWRV"))
+                    {
+                    param1=arg_dec(&paramPtr,0); // select port
+                    if((param1<24))
+                        {
+                        sprintf(tBuf,"%04X\r\n",POE_VLT_ALL[param1]);
+                        putBuf(prt, tBuf, 0);
+                        break;
+                        } else {
+                        sprintf(tBuf,"ffff\r\n");
+                        putBuf(prt, tBuf, 0);
+                        break;
+                        }
+                    }
+                 else if (!strcmp(tok, "PWRA"))
+                    {
+                    param1=arg_dec(&paramPtr,0); // select port
+                    if((param1<24))
+                        {
+                        sprintf(tBuf,"%04X\r\n",POE_CUR_ALL[param1]);
+                        putBuf(prt, tBuf, 0);
+                        break;
+                        } else {
+                        sprintf(tBuf,"ffff\r\n");
+                        putBuf(prt, tBuf, 0);
+                        break;
+                        }
                     }
                 else if (!strcmp(tok, "PWROT"))             //Power cycle Orange Tree Dau Board 'ZestETM1'
                     {
@@ -3075,8 +3372,40 @@ int process(int prt, char *cmdPtr)
                      break;
                     }
                 else  {parErr=0xf;   break; }
-        case 'R':
-                if (!strcmp(tok, "RD"))                     //16 bit EPI BUSS FPGA READ
+        case 'R':          
+                if (!strcmp(tok, "RD2"))                     //16 bit EPI BUSS FPGA READ
+                    {
+                    if ( (param1=arg_hex(&paramPtr,-1))==-1)//now get 1st param
+                        { parErr++;  break; }
+                    //address only, no board number
+                    param1 &= 0xFFFF;
+                    sPTR saddr = (sPTR) fpgaBase0;
+                    saddr += param1;                        //adding to pointer, incr by ptr size
+                    g_dat16= *saddr;
+
+                    // send DCS package
+                    
+                    sPTR saddr2 = (sPTR) fpgaBase0;
+                    saddr2 += 0x1A;                        //generate preamble
+                    *saddr2 = 0x4;
+                    saddr2 += 2;
+                    *saddr2 = 0x10;
+                    *saddr2 = 0x8040;
+                    *saddr2 = 0x0000;
+                    *saddr2 = param1;
+                    *saddr2 = g_dat16;
+                    *saddr2 = 0x0000;
+                    *saddr2 = 0x0000;
+                    *saddr2 = 0x0000;
+                    saddr2 += 2;
+                    *saddr2 = 0x1;
+                    
+                    sprintf(Buf1500,"%04X\r\n",g_dat16);
+                    putBuf(prt, Buf1500,0);                 //send to current active port
+                    break;
+                    }
+          
+                else if (!strcmp(tok, "RD"))                     //16 bit EPI BUSS FPGA READ
                     {
                     if ( (param1=arg_hex(&paramPtr,-1))==-1)//now get 1st param
                         { parErr++;  break; }
@@ -4797,7 +5126,7 @@ int LDFLASH(int prt)
 			wr16FPGA(0x18,0x164);
 			wr16FPGA(0x18,0xB401);
 			wr16FPGA(0x17,0x12);
-			wr16FPGA(0x18,0x42);
+			wr16FPGA(0x18,0x12);
 			mDelay(100);
 			}
 		else
@@ -5275,7 +5604,7 @@ float poePower(int poeprt)
 //see CDCUN1208LP datasheet for info on data array
 #define CLKFANOUT    *(sPTR)(fpgaBase0+ (0x42*2))   //CDCUN1208LPRHBR read/write 16bit
 uint16 CLKINITDATA[]= {0x0398,0x0398,0x0398,0x0398, 0x0398,0x0398,0x0398,0x0398,
-                        0x0398,0,0,8,  0,0,0,2 };
+                        0x0398,0,0,1,  0,0,0,2 };
 //
 //Init 'CDCUN1208LPRHBR' Clock(FM) Fanout Buffer via FPGA Configured SPI Port
 //Init 3 'CDCUN1208LP' chips

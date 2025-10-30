@@ -23,6 +23,9 @@
 #define eCMD75_CONSOLEBIN 0x75   
 //#define eCMD79_LINK_DAQ   0x76   
 //#define eCMD79_LINK_INIT  0x79   
+#define eCMD76_BINARY_EOF 0x76
+#define eCMD77_BINARY_DAT 0x77              //FPGA File Data type, Download packet, tek added Apr2025
+#define ePayLdBinPreamble 0xA55A            //POE 'ePhy' binary download preamble header added to each packet
 #define eECHO_ON          1
 #define eECHO_OFF         0
 
@@ -43,7 +46,17 @@
 #define     sBLOCKSIZ   38              //ON FEBs
 #define     sSMALLSIZ   22              //ON FEBs
 
- 
+#define DWNLD_3_VALID   0x0620              //2 BYTES fpga FEB image valid download
+#define DWNLD_3_COUNT   0x0624              //4 BYTES fpga FEB image byte cnt
+#define DWNLD_3_CSUM    0x0628              //2 BYTES fpga FEB image cksum
+
+
+// ROC POE FEB Flash Download 
+int PHY_LOADER_FLASH(char* paramPtr, int Sock, int PrtPOE, int echo, int broadCast, uint16 SndCnt);
+int PHY_LOADER_EOF(char* paramPtr, int Sock, int PrtPOE, int echo, int broadCast, uint16 SndCntByts);
+int PHY_LOADER_eCMD77(char* paramPtr, int Sock, int PrtPOE, int echo, int broadCast); 
+
+
 //#define LVDS_tOUT5000  5000             //lvds rec data timeout, used in 'Mu2e_Cntrl_DAQ_LVDS.c'
 
 int PHY_LOADER_CONSOLE(char*, int, int, int, int);

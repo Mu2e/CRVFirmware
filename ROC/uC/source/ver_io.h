@@ -8,7 +8,7 @@
 #ifndef _VER_IO
 #define _VER_IO
 
-#define MU2Ever   494
+#define MU2Ever   499
 //code version, Major(1), Minor(00)
 
 typedef	unsigned char   u_8Bit;                 //8-bit value
@@ -118,6 +118,9 @@ typedef void*           volatile vPTR;
 #define GTP0_RQ_PAC0D *(sPTR)(fpgaBase0+ (0x0D*2))  //GTP0 Sorted Data Req Packet Buffer
 #define GTP0_RQ_CNT0E *(sPTR)(fpgaBase0+ (0x0E*2))  //GTP0 Sorted Data Req Packet Buffer count
 
+#define GTP0_DCS_PAC0D *(sPTR)(fpgaBase0+ (0x50*2)) //GTP0 Sorted DCS Packet Buffer
+#define GTP0_DCS_CNT0E *(sPTR)(fpgaBase0+ (0x51*2)) //GTP0 Sorted DCS Packet Buffer count
+
 #define GTP0_PREAM   *(sPTR)(fpgaBase0+ (0x1A*2))   //GTP0 PREAMBLE 
 #define GTP1_PREAM   *(sPTR)(fpgaBase0+ (0x1B*2))   //GTP1 PREAMBLE 
 #define GTP0_PAYLD   *(sPTR)(fpgaBase0+ (0x1C*2))   //GTP0 PAYLOAD 
@@ -126,6 +129,7 @@ typedef void*           volatile vPTR;
 #define GTP1_XMIT    *(sPTR)(fpgaBase0+ (0x1F*2))   //GTP1 CKSUM/XMIT
 #define GTP0_RECFIFO *(sPTR)(fpgaBase0+ (0x20*2))   //GTP0 RECEIVE FIFO
 #define GTP1_RECFIFO *(sPTR)(fpgaBase0+ (0x21*2))   //GTP1 RECEIVE FIFO
+#define GTP0_DCS_TX  *(sPTR)(fpgaBase0+ (0x53*2))   //GTP0 DCS BUFFER
 
 #define fLNK_RECFIFO *(sPTR)(fpgaBase0+ (0x27*2))   //FPGA Link Rec FIFO status
 
@@ -283,6 +287,7 @@ typedef void*           volatile vPTR;
 #define ECHO_ACT_PORT   0x0100              //echo link poe port number with newline prompt
 //#define POOL_Active     0x0200               //data req for link check active
 #define ZEST_ETM1_INTR  0x0400              //Orange Tree gigabit ethernet intr check
+#define Check_DCS       0x0800              //Check for DCS packages
 #define PoolReqNow      0x1000              //Start poe link feb finder req data
 #define PoolReqGetData  0x2000              //Req Time out FEB get pool data now
 #define ID_ReqNow       0x4000              //Start poe link feb id req data
@@ -298,6 +303,7 @@ typedef void*           volatile vPTR;
 #define CONFIGFAIL      0x0001              //FPGA config status
 #define OTREE_CONFIG    0x0002              //ORG TREE Zest board config error
 #define iNoPrompt       0x0004              //echo new line prompt
+#define iPHY_BINMODE   0x0008              //Sending binary file on saved data structure
 
 //flash variables
 #define adr555 (0x555 << 1)                 //flash chip command codes
@@ -334,6 +340,7 @@ typedef void*           volatile vPTR;
 #define Sock1           1                   //i/o stream port socket 1
 #define Sock2           2                   //i/o stream port socket 2
 #define Sock3           3                   //i/o stream port socket 3
+#define DCS             8                   //DCS interface
 #define NoPmt1          9                   //port adj to prevent prompts after certain commands
 #define eCmdBufBytSiz   128                 //socket(s) command line buffer size
 
@@ -549,7 +556,11 @@ typedef struct FPGA_Registers{
 } FPGA_RegS;
 
 
-
+typedef struct FebDCSRply {
+    unsigned short cnt;
+    int add;
+    char val[4];
+} sFebDCSRply;
 
 //ePHY LINK Board numbering for 'Happy Bus
 typedef struct HappyBusReg{
@@ -641,6 +652,15 @@ struct ePHYdaqS{
    unsigned short u_BRDNUM;     //uHdr brdNum   2 bytes
    unsigned short u_CMDTYP;     //uHdr cmdType  2 bytes
    unsigned short u_uBunchBuf[uBunSz256];  //int data size
+};
+
+#define PacSize 256+10
+//
+//Bin file download struct
+struct ePHY_BinFile{
+    unsigned short CMDTYP;           //xmit data cmdType 1 word 'eCMD77_FPGA_CNTRL'
+    unsigned short WrdCnt;           //xmit data words to send
+    unsigned short binBuf[PacSize];  //xmit data buffer
 };
 
             
