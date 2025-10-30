@@ -165,7 +165,7 @@ signal SPI_Count : std_logic_vector (9 downto 0);
 signal Strt,TA,R_W,iMDIO,ChainSel : std_logic_vector (1 downto 0);
 signal SMI_Out : std_logic_vector (23 downto 0);
 signal PhyAd : std_logic_vector (4 downto 0);
-signal BitCount : std_logic_vector (4 downto 0);
+signal BitCount : std_logic_vector (5 downto 0);
 signal SMIShift : std_logic_vector (31 downto 0);
 signal SMIRdReg0,SMIRdReg1 : std_logic_vector (15 downto 0);
 Type  SMI_FSM is (Idle,Load,Shift,Done);
@@ -649,7 +649,7 @@ begin
 
 Clk25MHz <= '0'; SMI_rdreq <= '0'; MDC <= "00"; 
 TxEn <= (others => '0'); Strt <= "01"; TA <= "10"; 
-R_W <= "01"; PhyAd <= "00000"; BitCount <= "00000";
+R_W <= "01"; PhyAd <= "00000"; BitCount <= (others => '0');
 SMIShift <= (others => '0'); SMIRdReg0 <= (others => '0');
 SMIRdReg1 <= (others => '0'); SMI_Shift <= Idle;
 TxNibbleCount <= "00"; PhyTx <= (others => X"0");
@@ -716,14 +716,17 @@ end if;
 
 -- Serial bit counter
 if SMI_Shift = Load and BitCount = 0 and MDC(0) = '0'
-then BitCount <= "11111";
+--then BitCount <= "11111";
+then BitCount <= "100000";
 elsif BitCount /= 0 and SMI_Shift = Shift and MDC(0) = '0' then BitCount <= BitCount - 1;
 end if;
 
--- Send clocks as long as there is data waiting to go out
-if SMI_Empty = '0' then MDC <= not MDC;
-else MDC <= "00";
-end if;
+MDC <= not MDC;
+--if SMI_Shift /= Idle or SMI_Empty = '0' then
+--   MDC <= not MDC;
+--else 
+--   MDC <= "00"; 
+--end if;
 
 -- Clock in any readback data
 if R_W = "10" and SMI_Shift = Shift and BitCount /= 0 and MDC(0) = '0'
@@ -1920,7 +1923,7 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 LinkTxFullCnt & "00" & LinkTxFull & LinkTxEmpty & 
 				           "000" & LinkStatEn when LinkCtrlAd,		
 		 tx_overflow_cnt when OverflowCntAd,
-       X"000c" when DebugVersion,							  
+       X"0010" when DebugVersion,							  
 		 X"0000" when others;
 
 uCD <= iCD when uCRd = '0' and CpldCS = '0' and uCA(11 downto 10) = GA 
