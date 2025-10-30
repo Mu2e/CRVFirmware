@@ -207,6 +207,7 @@ signal PhaseAccD : std_logic;
 signal LinkFIFOEn,LinkFIFOEnd,LinkFIFORdReq,LinkFIFOWrReq,
 		 LinkFIFOEmpty,LinkFIFOFull : std_logic_vector (2 downto 0);
 signal LinkFIFORdCnt : Array_3x14;
+signal LinkFIFORst : std_logic;
 signal LinkRDDL : std_logic_vector (1 downto 0);
 signal LinkFIFOOut : Array_3x16;
 
@@ -412,6 +413,7 @@ signal drgenerator_uCD, drgenerator_mid_uCD : std_logic_vector(15 downto 0);
 signal TStmpBuff_In : std_logic_vector(15 downto 0); -- for multiplexing timestamp buffer
 signal drgenerator_ts_wr_en : std_logic;
 
+signal uBDebugOut : std_logic_vector(96 downto 0); 
 --signal debug_cnt : std_logic_vector(7 downto 0);
 
 begin
@@ -478,6 +480,7 @@ EventBuilderInst : EventBuilder
             LinkFIFORdCnt    => LinkFIFORdCnt,
             LinkFIFOEmpty    => LinkFIFOEmpty,
             LinkFIFORdReq    => LinkFIFORdReq,
+				LinkFIFORst      => LinkFIFORst,
             EventBuff_Dat     => EventBuff_Dat,
             EventBuff_WrtEn   => EventBuff_WrtEn,
             TStmpWds         => TStmpWds,
@@ -499,7 +502,9 @@ EventBuilderInst : EventBuilder
 				Stats            => CRCErrCnt & LosCounter & "000" & PLLStat, -- Status
 				InjectionTs      => InjectionTs_first, -- InjectionTs, --_first,
 				InjectionWindow  => InjectionWindow,
-				FakeNum          => FakeNum
+				FakeNum          => FakeNum,
+				-- debug
+				uBDebugOut       => uBDebugOut
         );
 
 PacketFormerInst : PacketFormer
@@ -1329,7 +1334,7 @@ end if;
 --end if;
 
 if (UsrRDDL(0) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPTxRdAddr) 
-   or (GTPTxBuff_DatCnt >= "01" & X"FE" and GTPTxBuff_wr_en = '1') -- this line makes the fifo behave like a trace buffer
+   or (GTPTxBuff_DatCnt >= "01" & X"F0" and GTPTxBuff_wr_en = '1') -- this line makes the fifo behave like a trace buffer
 then GTPTxBuff_rd_en <= '1';
 else GTPTxBuff_rd_en <= '0'; 
 end if;
@@ -1404,7 +1409,7 @@ elsif rising_edge (UsrClk2(1)) then
 
 -- Use the data count to make the FIFO behave like a trace buffer.
 if (UsrRDDL(1) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPRdAddr1)
-	or (GTPRxBuff_DatCnt(1) >= "01" & X"FFE" and GTPRxBuff_wr_en(1) = '1')
+	or (GTPRxBuff_DatCnt(1) >= "11" & X"F0" and GTPRxBuff_wr_en(1) = '1')
 then GTPRxBuff_rd_en(1) <= '1';
 else GTPRxBuff_rd_en(1) <= '0'; 
 end if;
@@ -1654,7 +1659,7 @@ port map (
 -- Three lower bits from lane 1 and 5 bits from lane 0
 LinkBuff : LinkFIFO
   port map (
-    rst => LinkBuffRst or GTPRxRst, 
+    rst => LinkBuffRst or GTPRxRst or LinkFIFORst, 
     wr_clk => RxOutClk(i), 
 	 rd_clk => UsrClk2(0), 
     wr_en => LinkFIFOWrReq(i),rd_en => LinkFIFORdReq(i),
@@ -3100,7 +3105,14 @@ iCD <= X"0" &
 		 DRTimeout when DRTimeoutAdd,
 		 NimTrigLast & "00" & GPI & NimTrig & InjectionDuty when InjectionDutyAdd,
 		 ExtuBunchCount(15 downto 0) when LastUbSentAddr,
-		 X"0099" when DebugVersionAd,
+		 uBDebugOut(15 downto  0) when EvBuildUbDebug0Add,
+		 uBDebugOut(31 downto 16) when EvBuildUbDebug1Add,
+		 uBDebugOut(47 downto 32) when EvBuildUbDebug2Add,
+		 uBDebugOut(63 downto 48) when EvBuildUbDebug3Add,
+		 uBDebugOut(79 downto 64) when EvBuildUbDebug4Add,
+		 uBDebugOut(95 downto 80) when EvBuildUbDebug5Add,
+		 X"000" & "000" & uBDebugOut(96) when EvBuildUbDebug6Add,
+		 X"00a5" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 DRcnt when DRCntAdd,
