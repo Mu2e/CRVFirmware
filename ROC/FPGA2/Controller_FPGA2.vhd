@@ -77,7 +77,9 @@ Type Array_8x2 is Array(0 to 7) of std_logic_vector(1 downto 0);
 Type Array_8x3 is Array(0 to 7) of std_logic_vector(2 downto 0);
 Type Array_8x4 is Array (0 to 7) of std_logic_vector(3 downto 0);
 Type Array_8x11 is Array(0 to 7) of std_logic_vector(10 downto 0);
+Type Array_8x12 is Array(0 to 7) of std_logic_vector(11 downto 0);
 Type Array_8x13 is Array(0 to 7) of std_logic_vector(12 downto 0);
+Type Array_8x14 is Array(0 to 7) of std_logic_vector(13 downto 0);
 Type Array_8x16 is Array(0 to 7) of std_logic_vector(15 downto 0);
 Type Array_8x32 is Array(0 to 7) of std_logic_vector(31 downto 0);
 Type Array_3x8x16 is Array(0 to 2) of Array_8x16;
@@ -161,7 +163,7 @@ signal ReadCount,DDRRdStat,TxBlkCount : std_logic_vector(2 downto 0);
 
 -- SMI signals
 signal SMI_Full,SMI_Empty,SMI_wreq,SMI_rdreq,ClkDiv,MDIORd : std_logic;
-signal SPI_Count : std_logic_vector (9 downto 0); 
+signal SPI_Count : std_logic_vector (10 downto 0); 
 signal Strt,TA,R_W,iMDIO,ChainSel : std_logic_vector (1 downto 0);
 signal SMI_Out : std_logic_vector (23 downto 0);
 signal PhyAd : std_logic_vector (4 downto 0);
@@ -184,7 +186,7 @@ Signal SPI_State : SPI_FSM;
 signal PhyRstCnt : std_logic_vector (1 downto 0);
 signal PhyTxBuff_Full,PhyTxBuff_Empty,PhyTxBuff_rdreq,PreambleTx,DDRRd_en,
 		 PhyTxBuff_wreq,TxEnReq,TxEnAck,DDRWrt_En,DDRWrt_EnD,InitReq,PhyDatSel : std_logic;
-signal PhyTxBuff_Count : std_logic_vector (9 downto 0);
+signal PhyTxBuff_Count : std_logic_vector (10 downto 0);
 signal PreambleCnt : std_logic_vector (2 downto 0);
 signal TxReg : std_logic_vector (3 downto 0);
 signal Preamble,CRCErr_Reg,TxEnMask : std_logic_vector (7 downto 0);
@@ -195,7 +197,7 @@ signal TxNibbleCount : std_logic_vector (1 downto 0);
 signal PhyRxBuff_wreq,PhyRxBuff_rdreq,PhyRxBuff_Empty,HitFlag,
 		 PhyRxBuff_Full,iCRS,PhyRxBuff_RdStat : std_logic_vector (7 downto 0);
 signal RxBuffRst,FMRxBuffRst : std_logic;
-Signal PhyRxBuff_RdCnt : Array_8x13;
+Signal PhyRxBuff_RdCnt : Array_8x12;
 signal PhyRxBuff_Out : Array_8x16;
 signal RxPipeline : Array_3x8x16;
 signal RxNibbleCount,RxClkDL,iRxDV : Array_8x2;
@@ -241,6 +243,11 @@ signal LinkFIFO_Dat : std_logic_vector(17 downto 0);
 signal BitClk,WdClk,PllLock,LockOut,Link_Stat_Req : std_logic;
 signal LinkTxFull,LinkTxEmpty,LinkTxWrReq,LinkTxRDReq,TxValid,LinkTxTraceWrReq : std_logic;
 
+-- Added 11/24: PHY to FEB signal for prefetch filling
+-- Ready notification / edge-detect signals (per PHY port)
+signal phy_empty_d    : Array_8x2 := (others => (others => '0'));  -- delayed copy for edge detect
+signal ReadyStatus    : std_logic_vector(7 downto 0) := (others => '0');  -- sticky ready bits
+
 -- debug trace buffer
 signal LinkTxTraceRDReq : std_logic;
 signal TxFIFOTrace_Out : std_logic_vector(8 downto 0);
@@ -263,6 +270,16 @@ constant MAX_TX_WORDS : std_logic_vector(15 downto 0) := X"1ffc";-- X"2000";
 -- constant UB_MISMATCH_STATUS_BIT : std_logic_vector(7 downto 0) := X"10";
 constant OVERFLOW_STATUS_BIT : std_logic_vector(15 downto 0) := X"1000"; -- bit 12
 
+-- helper: returns true if all bits of the std_logic_vector are '0'
+function is_all_zero(vec : std_logic_vector) return boolean is
+begin
+  for i in vec'range loop
+    if vec(i) = '1' then
+      return false;
+	 end if;
+  end loop;
+  return true;
+end function is_all_zero;
 
 begin
 
@@ -490,14 +507,8 @@ Debug(4) <= FEBRxOut(0).Done;
 Debug(5) <= FEBRxBuff_rdreq(0);
 Debug(6) <= FMRx(0);
 
-Gen_RxBuffs : for i in 0 to 7 generate
-
--- CRC generators for receive data CRC checking. 
-RxCRC : CRC32_D4 
- port map(rst => RxCRCRst(i), clk => RxFMClk, crc_en => RdCRCEn(i), 
-			 data_in => PhyRx(i),
-			 crc_out => Rx_CRC_Out(i));
-
+-- 2 BRAM based
+Gen_FEBRxBuffs : for i in 0 to 7 generate
 -- 4k deep input buffers for eight Rx Phy channels
 FEBRx_Buff : PhyRxBuff
   PORT MAP (rst => RxBuffRst, rd_clk => SysClk,
@@ -506,6 +517,33 @@ FEBRx_Buff : PhyRxBuff
     dout => PhyRxBuff_Out(i), full => PhyRxBuff_Full(i),
     empty => PhyRxBuff_Empty(i),
 	 rd_data_count => PhyRxBuff_RdCnt(i));
+end generate;
+
+-- 2 DRAM based
+--Gen_FEBRxBuffs_test : for i in 5 to 7 generate
+
+--FEBRx_Buff_test : FEBRx_test_Buff
+  --PORT MAP (rst => RxBuffRst, rd_clk => SysClk,
+    --wr_clk => RxFMClk, din => RxPipeline(2)(i),
+--    wr_en => PhyRxBuff_wreq(i), rd_en => PhyRxBuff_rdreq(i),
+--    dout => PhyRxBuff_Out(i), full => PhyRxBuff_Full(i),
+--    empty => PhyRxBuff_Empty(i),
+--	 rd_data_count => PhyRxBuff_RdCnt(i));
+--	 
+--end generate;
+
+
+Gen_RxBuffs : for i in 0 to 7 generate
+
+-- CRC generators for receive data CRC checking. 
+RxCRC : CRC32_D4 
+ port map(rst => RxCRCRst(i), clk => RxFMClk, crc_en => RdCRCEn(i), 
+			 data_in => PhyRx(i),
+			 crc_out => Rx_CRC_Out(i));
+
+
+
+
 
 -- FM receivers for FEB FM links
 FEBFMRx : FM_Rx
@@ -949,6 +987,25 @@ main : process(SysClk, CpldRst)
 
 elsif rising_edge (SysClk) then 
 
+    for p in 0 to 7 loop
+      -- two-stage sample of FIFO empty flag for safe edge detection
+      phy_empty_d(p)(1) <= phy_empty_d(p)(0);
+      phy_empty_d(p)(0) <= PhyRxBuff_Empty(p);
+
+      -- rising edge detected: PhyRxBuff became empty (0 -> 1)
+      if phy_empty_d(p)(0) = '1' and phy_empty_d(p)(1) = '0' then
+        if ReadyStatus(p) = '0' then
+          ReadyStatus(p) <= '1';   -- latch that port is ready for new data
+          --ReadyIRQ <= '1';         -- single-cycle pulse; clear below
+        end if;
+      end if;
+
+		if not is_all_zero(PhyRxBuff_RdCnt(p)) then
+			ReadyStatus(p) <= '0';
+		end if;
+    end loop;
+
+   
 -- Synchronous edge detectors for read and write strobes
 RDDL(0) <= not uCRD and not CpldCS;
 RDDL(1) <= RDDL(0); 
@@ -960,6 +1017,14 @@ WRDL(1) <= WRDL(0);
 if RDDL = 1 or WRDL = 1 then AddrReg <= uCA;
 else AddrReg <= AddrReg;
 end if;
+
+-- clear ReadyStatus on microcontroller read using the latched address (AddrReg) and the delayed read strobe
+-- AddrReg is the latched address the MCU read uses; using RDDL = 2 + AddrReg matches the rest of the file's read servicing idiom and avoids racing with the MCU's sampling of iCD.
+-- it is right after the AddrReg update so the clear happens in the same clock where the MCU read is being serviced.
+if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = ReadyStatusAddr then
+  ReadyStatus <= (others => '0');
+end if;
+       
 
 -- 1us time base
 if Counter1us /= Count1us then Counter1us <= Counter1us + 1;
@@ -1041,6 +1106,11 @@ if WRDL = 1 and ((uCA(11 downto 10) = GA and uCA(9 downto 0) = PhyTxFIFOWrtAd)
 				 or uCA(9 downto 0) = PhyTxBroadCastAd)
 then PhyTxBuff_wreq <= '1'; 
 else PhyTxBuff_wreq <= '0';
+end if;
+
+-- Clear ReadyStatus bits by writing 1s in the lower byte of uCD
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = ReadyClearAddr then
+  ReadyStatus <= ReadyStatus and (not uCD(7 downto 0));
 end if;
 
 -- When at least one packet has bee received, examine it. If it is a trigger request packet,
@@ -1676,6 +1746,8 @@ end if;
   then PhyRxBuff_RdStat(i) <= '1';
   else PhyRxBuff_RdStat(i) <= '0';
  end if;
+ 
+ 
 
 end loop;
 
@@ -1827,10 +1899,12 @@ end process main;
 
 DDRRd_Mux <= SDRdDat(31 downto 16) when RdHi_LoSel = '0' else SDRdDat(15 downto 0);
 
+
 with uCA(9 downto 0) select
 
-iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En & '0' 
-				& FMRxEn & not PhyPDn & '0' & RxBuffRst when CSRRegAddr,
+-- did I mess up these bits? Check what it used to be? *First worry about size of design
+iCD <= "00000" & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En & "0" 
+				& FMRxEn & (not PhyPDn) & "0" & RxBuffRst when CSRRegAddr,
 		 X"00" & MaskReg when InputMaskAddr,
 		 UpTimeStage(31 downto 16) when UpTimeRegAddrHi,
 		 UpTimeStage(15 downto 0) when UpTimeRegAddrLo,
@@ -1847,16 +1921,16 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 X"0" & "00" & SDrd_empty & SDrd_full & SDcmd_empty(1) & SDcmd_full(1) 
 						 & SDwr_empty & SDwr_full & SDcmd_empty(0) & SDcmd_full(0) 
 		 & SDCalDn & SD_RstO when DDRStatAddr,
-		 SMIRdReg0 when SMIRdDataAd0,
+	    SMIRdReg0 when SMIRdDataAd0,
 		 SMIRdReg1 when SMIRdDataAd1,
-		 "000" & PhyRxBuff_RdCnt(0) when PhyRxWdUsedRdAddr(0),
-		 "000" & PhyRxBuff_RdCnt(1) when PhyRxWdUsedRdAddr(1),
-		 "000" & PhyRxBuff_RdCnt(2) when PhyRxWdUsedRdAddr(2),
-		 "000" & PhyRxBuff_RdCnt(3) when PhyRxWdUsedRdAddr(3),
-		 "000" & PhyRxBuff_RdCnt(4) when PhyRxWdUsedRdAddr(4),
-		 "000" & PhyRxBuff_RdCnt(5) when PhyRxWdUsedRdAddr(5),
-		 "000" & PhyRxBuff_RdCnt(6) when PhyRxWdUsedRdAddr(6),
-		 "000" & PhyRxBuff_RdCnt(7) when PhyRxWdUsedRdAddr(7),
+		 "0000" & PhyRxBuff_RdCnt(0) when PhyRxWdUsedRdAddr(0),
+		 "0000" & PhyRxBuff_RdCnt(1) when PhyRxWdUsedRdAddr(1),
+		 "0000" & PhyRxBuff_RdCnt(2) when PhyRxWdUsedRdAddr(2),
+		 "0000" & PhyRxBuff_RdCnt(3) when PhyRxWdUsedRdAddr(3),
+		 "0000" & PhyRxBuff_RdCnt(4) when PhyRxWdUsedRdAddr(4),
+		 "0000" & PhyRxBuff_RdCnt(5) when PhyRxWdUsedRdAddr(5),
+		 "0000" & PhyRxBuff_RdCnt(6) when PhyRxWdUsedRdAddr(6),
+		 "0000" & PhyRxBuff_RdCnt(7) when PhyRxWdUsedRdAddr(7),
 		 PhyRxBuff_Out(0) when PhyRxRdAddr(0),
 		 PhyRxBuff_Out(1) when PhyRxRdAddr(1),
 		 PhyRxBuff_Out(2) when PhyRxRdAddr(2),
@@ -1864,7 +1938,7 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 PhyRxBuff_Out(4) when PhyRxRdAddr(4),
 		 PhyRxBuff_Out(5) when PhyRxRdAddr(5),		 
 		 PhyRxBuff_Out(6) when PhyRxRdAddr(6),
-		 PhyRxBuff_Out(7) when PhyRxRdAddr(7),
+	    PhyRxBuff_Out(7) when PhyRxRdAddr(7),
 		 X"00" & Rx_active when FEBFMActiveAD,
 		 FEBRxBuff_Out(0) when FEBFMRdAddr(0),
 		 FEBRxBuff_Out(1) when FEBFMRdAddr(1),
@@ -1880,7 +1954,7 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 X"0" & '0' & FMRxBuff_Count(3) when FEBFMWdsUsedAddr(3),
 		 X"0" & '0' & FMRxBuff_Count(4) when FEBFMWdsUsedAddr(4),
 		 X"0" & '0' & FMRxBuff_Count(5) when FEBFMWdsUsedAddr(5),
-		 X"0" & '0' & FMRxBuff_Count(6) when FEBFMWdsUsedAddr(6),
+    	 X"0" & '0' & FMRxBuff_Count(6) when FEBFMWdsUsedAddr(6),
 		 X"0" & '0' & FMRxBuff_Count(7) when FEBFMWdsUsedAddr(7),
 		 FEBRxBuff_Full & FEBRxBuff_Empty when FMRxStatAddr,
 		 Rx_CRC_Out(0)(31 downto 16) when RdCRCAddr(0),
@@ -1888,7 +1962,7 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 Rx_CRC_Out(1)(31 downto 16) when RdCRCAddr(2),
 		 Rx_CRC_Out(1)(15 downto 0)  when RdCRCAddr(3),
 		 Rx_CRC_Out(2)(31 downto 16) when RdCRCAddr(4),
-		 Rx_CRC_Out(2)(15 downto 0)  when RdCRCAddr(5),
+    	 Rx_CRC_Out(2)(15 downto 0)  when RdCRCAddr(5),
 		 Rx_CRC_Out(3)(31 downto 16) when RdCRCAddr(6),
 		 Rx_CRC_Out(3)(15 downto 0)  when RdCRCAddr(7),
 		 Rx_CRC_Out(4)(31 downto 16) when RdCRCAddr(8),
@@ -1915,7 +1989,7 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 X"00" & TxEnMask when TxEnMaskAd,
 		 X"00" & not PhyRxBuff_Empty when RxDAVAddr,
 		 X"000" & "00" & PhyTxBuff_Empty & TxEnAck when PhyTxCSRAddr,
-		 X"0" & "00" & PhyTxBuff_Count when PhyTxCntAddr,
+       "00000" & PhyTxBuff_Count when PhyTxCntAddr,
 		 TrigWdCount & DRegSrc & '0' & Debug when DebugAddr,
 		 "00" & SDRdPtr(29 downto 16) when SDRdPtrAddrHi,
 		 SDRdPtr(15 downto 0) when SDRdPtrAddrLo,
@@ -1923,8 +1997,10 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 LinkTxFullCnt & "00" & LinkTxFull & LinkTxEmpty & 
 				           "000" & LinkStatEn when LinkCtrlAd,		
 		 tx_overflow_cnt when OverflowCntAd,
-       X"0010" when DebugVersion,							  
+       X"0011" when DebugVersion,							  X"00" & ReadyStatus when ReadyStatusAddr,
 		 X"0000" when others;
+
+
 
 uCD <= iCD when uCRd = '0' and CpldCS = '0' and uCA(11 downto 10) = GA 
 		 else (others => 'Z');
