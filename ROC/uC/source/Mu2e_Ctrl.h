@@ -19,6 +19,15 @@
 #include "i2c.h"
 #include "sci.h"
 
+#define CMD_PREFETCH 0xA1         // Prefetch command code                   
+#define CMD_DATAREQUEST 0xA2      // Data request command code               
+
+typedef struct {                                                              
+    uint8_t cmdType;           // Command type (e.g., prefetch, data request) 
+    uint16_t eventWindowTag;   // Unique identifier for the event window      
+    char payload[609]; // Packet data - buffer was 600?
+} DataPacket; 
+
 
 //internal fuctions
 int     putchar(int  c);
@@ -138,5 +147,10 @@ void    HexDump16(char *addr, int len);
 void    header1(int);
 void    appendTerm(int prt);
 
+
+static int find_free_prefetch_slot();
+static int find_prefetch_slot(uint16_t event_lo, uint16_t event_hi);
+static void clear_prefetch_slot(int idx);
+  
 #define putchar     __putchar
 #endif

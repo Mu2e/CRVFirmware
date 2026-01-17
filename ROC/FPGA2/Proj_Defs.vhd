@@ -5,6 +5,7 @@
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
 use IEEE.std_logic_unsigned.all ;
+
 library unisim ;
 use unisim.vcomponents.all ;
 
@@ -114,9 +115,16 @@ constant SpillWdCntLoAd : AddrPtr   := "00" & X"6B";
 constant UpTimeRegAddrHi : AddrPtr  := "00" & X"6C";
 constant UpTimeRegAddrLo : AddrPtr  := "00" & X"6D";
 
+constant PHYActivityCntAdd : AddrArrayType := ("00" & X"70","00" & X"71","00" & X"72","00" & X"73",
+											      		  "00" & X"74","00" & X"75","00" & X"76","00" & X"77");
+															  
+constant OverflowCntAd : AddrPtr  := "00" & X"80";
+
 -- Register collecting SMI data returned from the PHY chips
 constant SMIRdDataAd0 : AddrPtr  := "00" & X"FD";
 constant SMIRdDataAd1 : AddrPtr  := "00" & X"FE";
+
+constant DebugVersion : AddrPtr  := "00" & X"99";
 -- Phy SMI control register
 constant SMICtrlAddr : AddrPtr  := "00" & X"FF";
 -- Map of the internal setup registers of the PHY chips
@@ -153,6 +161,16 @@ constant RefreshCmd : std_logic_vector (2 downto 0) := "100";
 constant ReadCmd : std_logic_vector (2 downto 0) := "001";
 constant WriteCmd : std_logic_vector (2 downto 0) := "000";
 
+-- Added 11/24 for assessing when it is "ready" to send data for prefetch from FEB to ROC
+-- new register addresses (lower 10 bits)
+-- Use the same defs file so both uC and FPGA see the constants.
+--constant ReadyStatusAddr : std_logic_vector(9 downto 0) := X"1A0"; -- read ReadyStatus (low 8 bits)
+--constant ReadyClearAddr  : std_logic_vector(9 downto 0) := X"1A1"; -- write bits=1 to clear corresponding ReadyStatus bits
+-- Ready status / clear register addresses (10-bit)
+-- 0x1A0 = 416 decimal  = "0110100000" (10 bits)
+-- 0x1A1 = 417 decimal  = "0110100001" (10 bits)
+constant ReadyStatusAddr : std_logic_vector(9 downto 0) := "0110100000";
+constant ReadyClearAddr  : std_logic_vector(9 downto 0) := "0110100001";
 ----------------------------- Type Defs -------------------------------
 
 -- Inter-module link FM serializer and deserializer type declarations
@@ -295,7 +313,7 @@ COMPONENT PhyTxBuff
     dout : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
     full : OUT STD_LOGIC;
     empty : OUT STD_LOGIC;
-    wr_data_count : OUT STD_LOGIC_VECTOR(9 DOWNTO 0));
+    wr_data_count : OUT STD_LOGIC_VECTOR(10 DOWNTO 0));
 END COMPONENT;
 
 COMPONENT PhyRxBuff
@@ -309,7 +327,21 @@ COMPONENT PhyRxBuff
     dout : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
     full : OUT STD_LOGIC;
     empty : OUT STD_LOGIC;
-    rd_data_count : OUT STD_LOGIC_VECTOR(12 DOWNTO 0));
+    rd_data_count : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));
+END COMPONENT;
+
+COMPONENT FEBRx_test_Buff
+  PORT (
+    rst : IN STD_LOGIC;
+    wr_clk : IN STD_LOGIC;
+    rd_clk : IN STD_LOGIC;
+    din : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+    wr_en : IN STD_LOGIC;
+    rd_en : IN STD_LOGIC;
+    dout : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+    full : OUT STD_LOGIC;
+    empty : OUT STD_LOGIC;
+    rd_data_count : OUT STD_LOGIC_VECTOR(13 DOWNTO 0));
 END COMPONENT;
 
 COMPONENT HeaderBuff

@@ -641,6 +641,43 @@ struct uBuns uBReq;                     //uBunch related vars
 #define DATA_CNT    MAX_TRANSFER_UNIT/PAC_CNT  //MAX_TRANSFER_UNIT_1514
 #define DATA_LESS14 DATA_CNT-20
 
+// start of Natalie code:
+// this belongs in a header file
+// along with:
+// #define CMD_PREFETCH 0xA1         // Prefetch command code
+// #define CMD_DATAREQUEST 0xA2      // Data request command code
+//typedef struct {
+//    uint8_t cmdType;           // Command type (e.g., prefetch, data request)
+//    uint16_t eventWindowTag;   // Unique identifier for the event window
+//    uint8_t payload[DATA_PAYLOAD_SIZE]; // Packet data
+//} DataPacket;
+
+// 1. send_prefetch_to_FEB()
+// 2. handle_PRP()
+// 3. on_prefetch_data() = when prefetch data arrives from FEB
+// 4. GTP handles receipt and processing of microbunch trigger packets
+// 5. handle_DRP (is 4 a real step?)
+// 6. on_data_arrival() - when data arrives from FEB
+
+
+// state machine
+// IDLE: no activity for the event window
+// PREFETCH_REQUESTED: ROC has received a prefetch request (PRP) from DTC, sent a prefetch commant to FEB, and is waiting for data
+// DATA_REQUESTED: ROC received a data request (DRP) from DTC and sent a data request to FEB (if not already prefetched, only case in EWT=0)
+// DATA_BUFFERED: Data from DRP or PREFETCH is available and ready to send to DTC
+// DONE: Data sent to DTC, buffer cleared
+
+enum DataState { IDLE, PREFETCH_REQUESTED, PREFETCH_BUFFERED, DATA_REQUESTED, DATA_BUFFERED, DONE };
+
+struct EventWindow {
+  DataState state;
+  char buffer;
+  uint32 last_update;
+};
+
+// On receiving PRP (Prefetch Request Packet)
+
+
 
 //FPGA (Bsee 0) write (addr,data16)
 void wr16FPGA(uint16_t offset, uint16_t d16)
@@ -5054,7 +5091,29 @@ int sendBin(int prt)
         //sprintf(tBuf,"No Data Total Waits = %2.3f Sec\r\n", (float) g_wait * .000025);
         //putBuf(tty, tBuf,0);
         BinSt.gBusy=0;
-        return 0;
+// Find a free slot for a new prefetch, or return -1 if none                                                   
+static int find_free_prefetch_slot() {
+    for (int i = 0; i < NUM_PREFETCH; i++)
+        if (!prefetch_slots[i].valid)
+            return i;
+    return -1;
+}
+
+// Find the slot for a given event ID, or return -1 if not found                                               
+static int find_prefetch_slot(uint16_t event_lo, uint16_t event_mid) {
+    for (int i = 0; i < NUM_PREFETCH; i++)
+        if (prefetch_slots[i].valid &&
+            prefetch_slots[i].event_lo == event_lo &&
+            prefetch_slots[i].event_mid == event_mid)
+            return i;
+    return -1;
+}
+
+// Mark the slot as free after use                                                                             
+static void clear_prefetch_slot(int idx) {
+    if(idx >= 0 && idx < NUM_PREFETCH)
+        prefetch_slots[idx].valid = 0;
+}        return 0;
         }
 
   return 0;
@@ -5325,3 +5384,26 @@ void InitFPGA_REGISTERS()
 }                    
 
 
+// Find a free slot for a new prefetch, or return -1 if none                                                   
+static int find_free_prefetch_slot() {
+    for (int i = 0; i < NUM_PREFETCH; i++)
+        if (!prefetch_slots[i].valid)
+            return i;
+    return -1;
+}
+
+// Find the slot for a given event ID, or return -1 if not found                                               
+static int find_prefetch_slot(uint16_t event_lo, uint16_t event_mid) {
+    for (int i = 0; i < NUM_PREFETCH; i++)
+        if (prefetch_slots[i].valid &&
+            prefetch_slots[i].event_lo == event_lo &&
+            prefetch_slots[i].event_mid == event_mid)
+            return i;
+    return -1;
+}
+
+// Mark the slot as free after use                                                                             
+static void clear_prefetch_slot(int idx) {
+    if(idx >= 0 && idx < NUM_PREFETCH)
+        prefetch_slots[idx].valid = 0;
+}

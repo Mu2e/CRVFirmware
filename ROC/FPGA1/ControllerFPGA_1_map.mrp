@@ -1,0 +1,1925 @@
+Release 14.7 Map P.20131013 (lin64)
+Xilinx Mapping Report File for Design 'ControllerFPGA_1'
+
+Design Information
+------------------
+Command Line   : map -intstyle ise -p xc6slx25t-fgg484-3 -w -logic_opt off -ol
+high -xe n -t 1 -xt 0 -register_duplication off -r 4 -global_opt off -mt off -ir
+off -pr b -lc off -power off -o ControllerFPGA_1_map.ncd ControllerFPGA_1.ngd
+ControllerFPGA_1.pcf 
+Target Device  : xc6slx25t
+Target Package : fgg484
+Target Speed   : -3
+Mapper Version : spartan6 -- $Revision: 1.55 $
+Mapped Date    : Wed Aug 27 11:30:16 2025
+
+Design Summary
+--------------
+Number of errors:      0
+Number of warnings:    2
+Slice Logic Utilization:
+  Number of Slice Registers:                 4,027 out of  30,064   13%
+    Number used as Flip Flops:               4,023
+    Number used as Latches:                      4
+    Number used as Latch-thrus:                  0
+    Number used as AND/OR logics:                0
+  Number of Slice LUTs:                      4,121 out of  15,032   27%
+    Number used as logic:                    3,839 out of  15,032   25%
+      Number using O6 output only:           2,218
+      Number using O5 output only:             462
+      Number using O5 and O6:                1,159
+      Number used as ROM:                        0
+    Number used as Memory:                       0 out of   3,664    0%
+    Number used exclusively as route-thrus:    282
+      Number with same-slice register load:    244
+      Number with same-slice carry load:        38
+      Number with other load:                    0
+
+Slice Logic Distribution:
+  Number of occupied Slices:                 1,740 out of   3,758   46%
+  Number of MUXCYs used:                     1,508 out of   7,516   20%
+  Number of LUT Flip Flop pairs used:        5,192
+    Number with an unused Flip Flop:         1,686 out of   5,192   32%
+    Number with an unused LUT:               1,071 out of   5,192   20%
+    Number of fully used LUT-FF pairs:       2,435 out of   5,192   46%
+    Number of unique control sets:             272
+    Number of slice register sites lost
+      to control set restrictions:             949 out of  30,064    3%
+
+  A LUT Flip Flop pair for this architecture represents one LUT paired with
+  one Flip Flop within a slice.  A control set is a unique combination of
+  clock, reset, set, and enable signals for a registered element.
+  The Slice Logic Distribution report is not meaningful if the design is
+  over-mapped for a non-slice resource or if Placement fails.
+
+IO Utilization:
+  Number of bonded IOBs:                       144 out of     250   57%
+    Number of LOCed IOBs:                      130 out of     144   90%
+    IOB Flip Flops:                             97
+    IOB Latches:                                16
+    Number of bonded IPADs:                      8 out of       8  100%
+      Number of LOCed IPADs:                     8 out of       8  100%
+    Number of bonded OPADs:                      4 out of       4  100%
+      Number of LOCed OPADs:                     4 out of       4  100%
+
+Specific Feature Utilization:
+  Number of RAMB16BWERs:                        47 out of      52   90%
+  Number of RAMB8BWERs:                          3 out of     104    2%
+  Number of BUFIO2/BUFIO2_2CLKs:                 9 out of      32   28%
+    Number used as BUFIO2s:                      6
+    Number used as BUFIO2_2CLKs:                 3
+  Number of BUFIO2FB/BUFIO2FB_2CLKs:             1 out of      32    3%
+    Number used as BUFIO2FBs:                    1
+    Number used as BUFIO2FB_2CLKs:               0
+  Number of BUFG/BUFGMUXs:                      14 out of      16   87%
+    Number used as BUFGs:                       14
+    Number used as BUFGMUX:                      0
+  Number of DCM/DCM_CLKGENs:                     3 out of       4   75%
+    Number used as DCMs:                         3
+    Number used as DCM_CLKGENs:                  0
+  Number of ILOGIC2/ISERDES2s:                  65 out of     272   23%
+    Number used as ILOGIC2s:                    47
+    Number used as ISERDES2s:                   18
+  Number of IODELAY2/IODRP2/IODRP2_MCBs:        24 out of     272    8%
+    Number used as IODELAY2s:                   24
+    Number used as IODRP2s:                      0
+    Number used as IODRP2_MCBs:                  0
+  Number of OLOGIC2/OSERDES2s:                  50 out of     272   18%
+    Number used as OLOGIC2s:                    50
+    Number used as OSERDES2s:                    0
+  Number of BSCANs:                              0 out of       4    0%
+  Number of BUFHs:                               0 out of     160    0%
+  Number of BUFPLLs:                             0 out of       8    0%
+  Number of BUFPLL_MCBs:                         0 out of       4    0%
+  Number of DSP48A1s:                            0 out of      38    0%
+  Number of GTPA1_DUALs:                         1 out of       1  100%
+    Number of LOCed GTPA1_DUALs:                 1 out of       1  100%
+  Number of ICAPs:                               0 out of       1    0%
+  Number of MCBs:                                0 out of       2    0%
+  Number of PCIE_A1s:                            0 out of       1    0%
+  Number of PCILOGICSEs:                         0 out of       2    0%
+  Number of PLL_ADVs:                            0 out of       2    0%
+  Number of PMVs:                                0 out of       1    0%
+  Number of STARTUPs:                            0 out of       1    0%
+  Number of SUSPEND_SYNCs:                       0 out of       1    0%
+
+Average Fanout of Non-Clock Nets:                3.79
+
+Peak Memory Usage:  1030 MB
+Total REAL time to MAP completion:  33 secs 
+Total CPU time to MAP completion:   32 secs 
+
+Table of Contents
+-----------------
+Section 1 - Errors
+Section 2 - Warnings
+Section 3 - Informational
+Section 4 - Removed Logic Summary
+Section 5 - Removed Logic
+Section 6 - IOB Properties
+Section 7 - RPMs
+Section 8 - Guide Report
+Section 9 - Area Group and Partition Summary
+Section 10 - Timing Report
+Section 11 - Configuration String Information
+Section 12 - Control Set Information
+Section 13 - Utilization by Hierarchy
+
+Section 1 - Errors
+------------------
+
+Section 2 - Warnings
+--------------------
+WARNING:PhysDesignRules:372 - Gated clock. Clock net
+   PacketFormerInst/current_state[3]_PWR_17_o_Mux_30_o is sourced by a
+   combinatorial pin. This is not good design practice. Use the CE pin to
+   control the loading of data into the flip-flop.
+WARNING:PhysDesignRules:2410 - This design is using one or more 9K Block RAMs
+   (RAMB8BWER).  9K Block RAM initialization data, both user defined and
+   default, may be incorrect and should not be used.  For more information,
+   please reference Xilinx Answer Record 39999.
+
+Section 3 - Informational
+-------------------------
+INFO:LIT:243 - Logical network VXO_N has no load.
+INFO:LIT:395 - The above info message is repeated 68 more times for the
+   following (max. 5 shown):
+   PFTrigFM,
+   ZEthEOF<1>_IBUF,
+   ZEthEOF<0>_IBUF,
+   VXO_P_IBUF,
+   Clk50MHz_IBUF
+   To see the details of these info messages, please use the -detail switch.
+INFO:MapLib:562 - No environment variables are currently set.
+INFO:Pack:1716 - Initializing temperature to 85.000 Celsius. (default - Range:
+   0.000 to 85.000 Celsius)
+INFO:Pack:1720 - Initializing voltage to 1.140 Volts. (default - Range: 1.140 to
+   1.260 Volts)
+INFO:Map:215 - The Interim Design Summary has been generated in the MAP Report
+   (.mrp).
+INFO:Place:834 - Only a subset of IOs are locked. Out of 144 IOs, 143 are locked
+   and 1 are not locked. If you would like to print the names of these IOs,
+   please set the environment variable XIL_PAR_DESIGN_CHECK_VERBOSE to 1. 
+INFO:Pack:1650 - Map created a placed design.
+INFO:PhysDesignRules:1861 - To achieve optimal frequency synthesis performance
+   with the CLKFX and CLKFX180 outputs of the DCM comp Sys_Pll/dcm_sp_inst,
+   consult the device Data Sheet.
+
+Section 4 - Removed Logic Summary
+---------------------------------
+ 224 block(s) removed
+  52 block(s) optimized away
+ 267 signal(s) removed
+
+Section 5 - Removed Logic
+-------------------------
+
+The trimmed logic report below shows the logic removed from your design due to
+sourceless or loadless signals, and VCC or ground connections.  If the removal
+of a signal or symbol results in the subsequent removal of an additional signal
+or symbol, the message explaining that second removal will be indented.  This
+indentation will be repeated as a chain of related logic is removed.
+
+To quickly locate the original cause for the removal of a chain of logic, look
+above the place where that logic is listed in the trimming report, then locate
+the lines that are least indented (begin at the leftmost edge).
+
+Loadless block "Sys_Pll/clkout4_buf" (CKBUF) removed.
+ The signal "Sys_Pll/clkdv" is loadless and has been removed.
+The signal
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/rd_dc_i<3>" is sourceless and has been removed.
+The signal
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/rd_dc_i<2>" is sourceless and has been removed.
+The signal
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/rd_dc_i<1>" is sourceless and has been removed.
+The signal
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/rd_dc_i<0>" is sourceless and has been removed.
+The signal
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.w
+r/gwas.wsts/ram_full_i" is sourceless and has been removed.
+The signal
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.rfwft/empty_fwft_i" is sourceless and has been removed.
+The signal
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/diff_wr_rd_tmp<0>" is sourceless and has been removed.
+ Sourceless block
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/Mmux_diff_wr_rd[12]_GND_200_o_mux_5_OUT11" (ROM) removed.
+  The signal
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<0>" is sourceless and has
+been removed.
+   Sourceless block
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/rd_dc_i_0" (FF) removed.
+The signal
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<3>" is sourceless and has
+been removed.
+ Sourceless block
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/rd_dc_i_3" (FF) removed.
+The signal
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<2>" is sourceless and has
+been removed.
+ Sourceless block
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/rd_dc_i_2" (FF) removed.
+The signal
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<1>" is sourceless and has
+been removed.
+ Sourceless block
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/rd_dc_i_1" (FF) removed.
+The signal
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.rfwft/going_empty_fwft_leaving_empty_fwft_OR_8_o" is sourceless and has
+been removed.
+ Sourceless block
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.rfwft/empty_fwft_i" (FF) removed.
+ Sourceless block
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.rfwft/empty_fwft_fb" (FF) removed.
+  The signal
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.rfwft/empty_fwft_fb" is sourceless and has been removed.
+   Sourceless block
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.rfwft/going_empty_fwft_leaving_empty_fwft_OR_8_o1" (ROM) removed.
+The signal
+"DCSPktBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/g
+was.wsts/ram_full_i" is sourceless and has been removed.
+The signal
+"DCSPktBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/g
+r1.rfwft/empty_fwft_i" is sourceless and has been removed.
+The signal
+"DCSPktBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/g
+r1.rfwft/going_empty_fwft_leaving_empty_fwft_OR_8_o" is sourceless and has been
+removed.
+ Sourceless block
+"DCSPktBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/g
+r1.rfwft/empty_fwft_i" (FF) removed.
+ Sourceless block
+"DCSPktBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/g
+r1.rfwft/empty_fwft_fb" (FF) removed.
+  The signal
+"DCSPktBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/g
+r1.rfwft/empty_fwft_fb" is sourceless and has been removed.
+   Sourceless block
+"DCSPktBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/g
+r1.rfwft/going_empty_fwft_leaving_empty_fwft_OR_8_o1" (ROM) removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i<12>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i<11>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i<10>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i<9>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i<8>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i<7>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i<6>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i<5>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i<4>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i<3>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i<2>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i<1>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i<0>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr
+/gwas.wsts/ram_full_i" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.rfwft/empty_fwft_i" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<10>" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_xor<11>" (XOR) removed.
+  The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Madd_diff_wr_rd[12]_GND_200_o_add_3_OUT_lut<11>" is sourceless
+and has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<11>1" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<11>" is sourceless and has
+been removed.
+     Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i_11" (FF) removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<12>1" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<12>" is sourceless and has
+been removed.
+     Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i_12" (FF) removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<11>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<9>" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_xor<10>" (XOR) removed.
+  The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Madd_diff_wr_rd[12]_GND_200_o_add_3_OUT_lut<10>" is sourceless
+and has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<10>1" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<10>" is sourceless and has
+been removed.
+     Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i_10" (FF) removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<10>" (MUX) removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<10>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<8>" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_xor<9>" (XOR) removed.
+  The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Madd_diff_wr_rd[12]_GND_200_o_add_3_OUT_lut<9>" is sourceless and
+has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<9>1" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<9>" is sourceless and has been
+removed.
+     Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i_9" (FF) removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<9>" (MUX) removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<9>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<7>" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_xor<8>" (XOR) removed.
+  The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Madd_diff_wr_rd[12]_GND_200_o_add_3_OUT_lut<8>" is sourceless and
+has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<10>21_SW1" (ROM) removed.
+    The signal "EventBuffSpy/N30" is sourceless and has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<8>1" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<8>" is sourceless and has been
+removed.
+     Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i_8" (FF) removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<8>" (MUX) removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<8>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<6>" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_xor<7>" (XOR) removed.
+  The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Madd_diff_wr_rd[12]_GND_200_o_add_3_OUT_lut<7>" is sourceless and
+has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<7>" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<7>" is sourceless and has been
+removed.
+     Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i_7" (FF) removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<10>21_SW4" (ROM) removed.
+    The signal "EventBuffSpy/N36" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<7>" (MUX) removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<7>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<5>" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_xor<6>" (XOR) removed.
+  The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Madd_diff_wr_rd[12]_GND_200_o_add_3_OUT_lut<6>" is sourceless and
+has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<6>1" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<6>" is sourceless and has been
+removed.
+     Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i_6" (FF) removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<9>1_SW0" (ROM) removed.
+    The signal "EventBuffSpy/N40" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<6>" (MUX) removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<6>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<4>" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_xor<5>" (XOR) removed.
+  The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Madd_diff_wr_rd[12]_GND_200_o_add_3_OUT_lut<5>" is sourceless and
+has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<5>1" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<5>" is sourceless and has been
+removed.
+     Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i_5" (FF) removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<8>1_SW0" (ROM) removed.
+    The signal "EventBuffSpy/N42" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<5>" (MUX) removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<5>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<3>" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_xor<4>" (XOR) removed.
+  The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Madd_diff_wr_rd[12]_GND_200_o_add_3_OUT_lut<4>" is sourceless and
+has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<4>1" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<4>" is sourceless and has been
+removed.
+     Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i_4" (FF) removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<4>" (MUX) removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<4>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<2>" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_xor<3>" (XOR) removed.
+  The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Madd_diff_wr_rd[12]_GND_200_o_add_3_OUT_lut<3>" is sourceless and
+has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<10>41" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<10>_bdd6" is sourceless and
+has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Mmux_diff_wr_rd[12]_GND_200_o_mux_5_OUT71" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<3>" is sourceless and has been
+removed.
+     Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i_3" (FF) removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<3>" (MUX) removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<3>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<1>" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_xor<2>" (XOR) removed.
+  The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Madd_diff_wr_rd[12]_GND_200_o_add_3_OUT_lut<2>" is sourceless and
+has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Mmux_diff_wr_rd[12]_GND_200_o_mux_5_OUT61" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<2>" is sourceless and has been
+removed.
+     Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i_2" (FF) removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<10>41_SW0" (ROM) removed.
+    The signal "EventBuffSpy/N26" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<2>" (MUX) removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<2>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<0>" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_xor<1>" (XOR) removed.
+  The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Madd_diff_wr_rd[12]_GND_200_o_add_3_OUT_cy<1>" is sourceless and
+has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Mmux_diff_wr_rd[12]_GND_200_o_mux_5_OUT51" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<1>" is sourceless and has been
+removed.
+     Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i_1" (FF) removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<1>" (MUX) removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<1>" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<0>" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_xor<0>" (XOR) removed.
+  The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd_tmp<0>" is sourceless and has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Mmux_diff_wr_rd[12]_GND_200_o_mux_5_OUT11" (ROM) removed.
+    The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<0>" is sourceless and has been
+removed.
+     Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/rd_dc_i_0" (FF) removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_cy<0>" (MUX) removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.rfwft/user_valid" is sourceless and has been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/diff_wr_rd[12]_GND_200_o_mux_5_OUT<7>_SW0" (ROM) removed.
+  The signal "EventBuffSpy/N01" is sourceless and has been removed.
+The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.rfwft/going_empty_fwft_leaving_empty_fwft_OR_8_o" is sourceless and has
+been removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.rfwft/empty_fwft_i" (FF) removed.
+ Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.rfwft/empty_fwft_fb" (FF) removed.
+  The signal
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.rfwft/empty_fwft_fb" is sourceless and has been removed.
+   Sourceless block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.rfwft/going_empty_fwft_leaving_empty_fwft_OR_8_o1" (ROM) removed.
+The signal
+"HrtBtBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/gw
+as.wsts/ram_full_i" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i<10>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i<9>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i<8>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i<7>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i<6>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i<5>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i<4>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i<3>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i<2>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i<1>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i<0>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/gwas.
+wsts/ram_full_i" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.r
+fwft/empty_fwft_i" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<8>" is sourceless and has been removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_xor<9>" (XOR) removed.
+  The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Madd_diff_wr_rd[10]_GND_193_o_add_3_OUT_lut<9>" is sourceless and has
+been removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<9>" (ROM) removed.
+    The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<9>" is sourceless and has been
+removed.
+     Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i_9" (FF) removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<10>" (ROM) removed.
+    The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<10>" is sourceless and has been
+removed.
+     Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i_10" (FF) removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<9>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<7>" is sourceless and has been removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_xor<8>" (XOR) removed.
+  The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Madd_diff_wr_rd[10]_GND_193_o_add_3_OUT_lut<8>" is sourceless and has
+been removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<8>" (ROM) removed.
+    The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<8>" is sourceless and has been
+removed.
+     Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i_8" (FF) removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<8>" (MUX) removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<8>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<6>" is sourceless and has been removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_xor<7>" (XOR) removed.
+  The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Madd_diff_wr_rd[10]_GND_193_o_add_3_OUT_lut<7>" is sourceless and has
+been removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<7>1" (ROM) removed.
+    The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<7>" is sourceless and has been
+removed.
+     Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i_7" (FF) removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<7>" (MUX) removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<7>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<5>" is sourceless and has been removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_xor<6>" (XOR) removed.
+  The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Madd_diff_wr_rd[10]_GND_193_o_add_3_OUT_lut<6>" is sourceless and has
+been removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<9>_SW1" (ROM) removed.
+    The signal "PFBuff/N24" is sourceless and has been removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<6>1" (ROM) removed.
+    The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<6>" is sourceless and has been
+removed.
+     Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i_6" (FF) removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<6>" (MUX) removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<6>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<4>" is sourceless and has been removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_xor<5>" (XOR) removed.
+  The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Madd_diff_wr_rd[10]_GND_193_o_add_3_OUT_lut<5>" is sourceless and has
+been removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<5>1" (ROM) removed.
+    The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<5>" is sourceless and has been
+removed.
+     Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i_5" (FF) removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<5>" (MUX) removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<5>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<3>" is sourceless and has been removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_xor<4>" (XOR) removed.
+  The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Madd_diff_wr_rd[10]_GND_193_o_add_3_OUT_lut<4>" is sourceless and has
+been removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<10>31" (ROM) removed.
+    The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<10>_bdd4" is sourceless and has been
+removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<4>1" (ROM) removed.
+    The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<4>" is sourceless and has been
+removed.
+     Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i_4" (FF) removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<10>_SW1" (ROM) removed.
+    The signal "PFBuff/N26" is sourceless and has been removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<4>" (MUX) removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<4>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<2>" is sourceless and has been removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_xor<3>" (XOR) removed.
+  The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Madd_diff_wr_rd[10]_GND_193_o_add_3_OUT_lut<3>" is sourceless and has
+been removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Mmux_diff_wr_rd[10]_GND_193_o_mux_5_OUT51" (ROM) removed.
+    The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<3>" is sourceless and has been
+removed.
+     Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i_3" (FF) removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<10>31_SW1" (ROM) removed.
+    The signal "PFBuff/N28" is sourceless and has been removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<3>" (MUX) removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<3>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<1>" is sourceless and has been removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_xor<2>" (XOR) removed.
+  The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Madd_diff_wr_rd[10]_GND_193_o_add_3_OUT_lut<2>" is sourceless and has
+been removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Mmux_diff_wr_rd[10]_GND_193_o_mux_5_OUT41" (ROM) removed.
+    The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<2>" is sourceless and has been
+removed.
+     Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i_2" (FF) removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<2>" (MUX) removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<2>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<0>" is sourceless and has been removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_xor<1>" (XOR) removed.
+  The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Madd_diff_wr_rd[10]_GND_193_o_add_3_OUT_cy<1>" is sourceless and has
+been removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Mmux_diff_wr_rd[10]_GND_193_o_mux_5_OUT31" (ROM) removed.
+    The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<1>" is sourceless and has been
+removed.
+     Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i_1" (FF) removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<1>" (MUX) removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<1>" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<0>" is sourceless and has been removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_xor<0>" (XOR) removed.
+  The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd_tmp<0>" is sourceless and has been removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Mmux_diff_wr_rd[10]_GND_193_o_mux_5_OUT11" (ROM) removed.
+    The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<0>" is sourceless and has been
+removed.
+     Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/rd_dc_i_0" (FF) removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_cy<0>" (MUX) removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.r
+fwft/user_valid" is sourceless and has been removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/diff_wr_rd[10]_GND_193_o_mux_5_OUT<8>_SW0" (ROM) removed.
+  The signal "PFBuff/N4" is sourceless and has been removed.
+The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.r
+fwft/going_empty_fwft_leaving_empty_fwft_OR_8_o" is sourceless and has been
+removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.r
+fwft/empty_fwft_i" (FF) removed.
+ Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.r
+fwft/empty_fwft_fb" (FF) removed.
+  The signal
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.r
+fwft/empty_fwft_fb" is sourceless and has been removed.
+   Sourceless block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.r
+fwft/going_empty_fwft_leaving_empty_fwft_OR_8_o1" (ROM) removed.
+The signal
+"DReqBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/gwa
+s.wsts/ram_full_i" is sourceless and has been removed.
+The signal "FEBIDList/doutb<15>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<14>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<13>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<12>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<11>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<10>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<9>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<8>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<7>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<6>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<5>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<4>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<3>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<2>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<1>" is sourceless and has been removed.
+The signal "FEBIDList/doutb<0>" is sourceless and has been removed.
+The signal "FEBIDList/N0" is sourceless and has been removed.
+The signal "FEBIDList/N1" is sourceless and has been removed.
+The signal
+"CMDFifo/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/gwss
+.wsts/ram_full_i" is sourceless and has been removed.
+The signal
+"PLLBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/gwss
+.wsts/ram_full_i" is sourceless and has been removed.
+The signal
+"TimeStampBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.w
+r/gwss.wsts/ram_full_i" is sourceless and has been removed.
+The signal
+"TimeStampBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.rfwft/empty_fwft_i" is sourceless and has been removed.
+The signal
+"TimeStampBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.rfwft/going_empty_fwft_leaving_empty_fwft_OR_8_o" is sourceless and has
+been removed.
+ Sourceless block
+"TimeStampBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.rfwft/empty_fwft_i" (FF) removed.
+ Sourceless block
+"TimeStampBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.rfwft/empty_fwft_fb" (FF) removed.
+  The signal
+"TimeStampBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.rfwft/empty_fwft_fb" is sourceless and has been removed.
+   Sourceless block
+"TimeStampBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.rfwft/going_empty_fwft_leaving_empty_fwft_OR_8_o1" (ROM) removed.
+The signal
+"GTPTxBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/gw
+ss.wsts/ram_full_i" is sourceless and has been removed.
+The signal
+"GTPTxBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr
+1.rfwft/empty_fwft_i" is sourceless and has been removed.
+The signal
+"GTPTxBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr
+1.rfwft/going_empty_fwft_leaving_empty_fwft_OR_8_o" is sourceless and has been
+removed.
+ Sourceless block
+"GTPTxBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr
+1.rfwft/empty_fwft_i" (FF) removed.
+ Sourceless block
+"GTPTxBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr
+1.rfwft/empty_fwft_fb" (FF) removed.
+  The signal
+"GTPTxBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr
+1.rfwft/empty_fwft_fb" is sourceless and has been removed.
+   Sourceless block
+"GTPTxBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr
+1.rfwft/going_empty_fwft_leaving_empty_fwft_OR_8_o1" (ROM) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<15>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_15_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_15_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_15" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<14>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_14_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_14_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_14" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<13>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_13_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_13_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_13" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<12>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_12_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_12_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_12" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<11>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_11_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_11_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_11" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<10>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_10_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_10_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_10" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<9>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_9_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_9_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_9" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<8>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_8_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_8_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_8" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<7>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_7_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_7_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_7" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<6>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_6_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_6_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_6" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<5>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_5_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_5_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_5" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<4>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_4_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_4_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_4" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<3>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_3_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_3_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_3" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<2>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_2_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_2_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_2" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<1>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_1_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_1_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_1" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i<0>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_0_dpot" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_0_dpot" is sourceless and has been removed.
+   Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/dout_i_0" (SFF) removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/rstblk/ngw
+rdrst.grst.rd_rst_reg<0>" is sourceless and has been removed.
+ Sourceless block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/tmp_ram_rd_en1" (ROM) removed.
+  The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/tmp_ram_rd_en" is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/ram_wr_en"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.gl0.rd/rd_pntr_plus1<0>_inv" is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<15>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<14>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<13>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<12>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<11>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<10>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<9>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<8>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<7>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<6>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<5>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<4>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<3>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<2>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<1>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/doutb_i<0>"
+is sourceless and has been removed.
+The signal
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/DB
+ITERR" is sourceless and has been removed.
+
+The trimmed logic reported below is either:
+   1. part of a cycle
+   2. part of disabled logic
+   3. a side-effect of other trimmed logic
+
+The signal "GTPRxReg_1<15>" is unused and has been removed.
+ Unused block "GTPRxReg_1_15" (FF) removed.
+  The signal "GTPRx<1><15>" is unused and has been removed.
+The signal "GTPRxReg_1<14>" is unused and has been removed.
+ Unused block "GTPRxReg_1_14" (FF) removed.
+  The signal "GTPRx<1><14>" is unused and has been removed.
+The signal "GTPRxReg_1<13>" is unused and has been removed.
+ Unused block "GTPRxReg_1_13" (FF) removed.
+  The signal "GTPRx<1><13>" is unused and has been removed.
+The signal "GTPRxReg_1<12>" is unused and has been removed.
+ Unused block "GTPRxReg_1_12" (FF) removed.
+  The signal "GTPRx<1><12>" is unused and has been removed.
+The signal "GTPRxReg_1<11>" is unused and has been removed.
+ Unused block "GTPRxReg_1_11" (FF) removed.
+  The signal "GTPRx<1><11>" is unused and has been removed.
+The signal "GTPRxReg_1<10>" is unused and has been removed.
+ Unused block "GTPRxReg_1_10" (FF) removed.
+  The signal "GTPRx<1><10>" is unused and has been removed.
+The signal "GTPRxReg_1<9>" is unused and has been removed.
+ Unused block "GTPRxReg_1_9" (FF) removed.
+  The signal "GTPRx<1><9>" is unused and has been removed.
+The signal "GTPRxReg_1<8>" is unused and has been removed.
+ Unused block "GTPRxReg_1_8" (FF) removed.
+  The signal "GTPRx<1><8>" is unused and has been removed.
+The signal "GTPRxReg_1<7>" is unused and has been removed.
+ Unused block "GTPRxReg_1_7" (FF) removed.
+  The signal "GTPRx<1><7>" is unused and has been removed.
+The signal "GTPRxReg_1<6>" is unused and has been removed.
+ Unused block "GTPRxReg_1_6" (FF) removed.
+  The signal "GTPRx<1><6>" is unused and has been removed.
+The signal "GTPRxReg_1<5>" is unused and has been removed.
+ Unused block "GTPRxReg_1_5" (FF) removed.
+  The signal "GTPRx<1><5>" is unused and has been removed.
+The signal "GTPRxReg_1<4>" is unused and has been removed.
+ Unused block "GTPRxReg_1_4" (FF) removed.
+  The signal "GTPRx<1><4>" is unused and has been removed.
+The signal "GTPRxReg_1<3>" is unused and has been removed.
+ Unused block "GTPRxReg_1_3" (FF) removed.
+  The signal "GTPRx<1><3>" is unused and has been removed.
+The signal "GTPRxReg_1<2>" is unused and has been removed.
+ Unused block "GTPRxReg_1_2" (FF) removed.
+  The signal "GTPRx<1><2>" is unused and has been removed.
+The signal "GTPRxReg_1<1>" is unused and has been removed.
+ Unused block "GTPRxReg_1_1" (FF) removed.
+  The signal "GTPRx<1><1>" is unused and has been removed.
+The signal "GTPRxReg_1<0>" is unused and has been removed.
+ Unused block "GTPRxReg_1_0" (FF) removed.
+  The signal "GTPRx<1><0>" is unused and has been removed.
+Unused block
+"CMDFifo/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/gwss
+.wsts/ram_full_i" (FF) removed.
+Unused block
+"DCSPktBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/g
+was.wsts/ram_full_i" (FF) removed.
+Unused block
+"DReqBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/gwa
+s.wsts/ram_full_i" (FF) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<0>" (ROM) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<10>" (ROM) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<11>" (ROM) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<1>" (ROM) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<2>" (ROM) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<3>" (ROM) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<4>" (ROM) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<5>" (ROM) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<6>" (ROM) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<7>" (ROM) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<8>" (ROM) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_lut<9>" (ROM) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd
+/gr1.rfwft/user_valid" (FF) removed.
+Unused block
+"EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr
+/gwas.wsts/ram_full_i" (FF) removed.
+Unused block
+"FEBIDList/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ram
+loop[0].ram.r/s6_noinit.ram/SDP.WIDE_PRIM9.ram" (RAMB8BWER) removed.
+Unused block "FEBIDList/XST_GND" (ZERO) removed.
+Unused block "FEBIDList/XST_VCC" (ONE) removed.
+Unused block
+"GTPTxBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/gw
+ss.wsts/ram_full_i" (FF) removed.
+Unused block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.gl0.rd/rpntr/Madd_gc0.count[11]_GND_185_o_add_0_OUT_lut<0>_INV_0" (BUF)
+removed.
+Unused block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.gl0.wr/ram_wr_en_i1" (ROM) removed.
+Unused block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XS
+T_GND" (ZERO) removed.
+Unused block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/ra
+mloop[0].ram.r/s6_noinit.ram/SDP.SIMPLE_PRIM18.ram" (RAMB16BWER) removed.
+Unused block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/ra
+mloop[1].ram.r/s6_noinit.ram/SDP.SIMPLE_PRIM18.ram" (RAMB16BWER) removed.
+Unused block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/ra
+mloop[2].ram.r/s6_noinit.ram/SDP.SIMPLE_PRIM18.ram" (RAMB16BWER) removed.
+Unused block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sy
+nc_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/ra
+mloop[3].ram.r/s6_noinit.ram/SDP.SIMPLE_PRIM18.ram" (RAMB16BWER) removed.
+Unused block
+"GenGTP_Pairs[1].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/rstblk/ngw
+rdrst.grst.rd_rst_reg_0" (FF) removed.
+Unused block
+"HrtBtBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/gw
+as.wsts/ram_full_i" (FF) removed.
+Unused block
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/Mmux_diff_wr_rd[12]_GND_200_o_mux_5_OUT51" (ROM) removed.
+Unused block
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/Mmux_diff_wr_rd[12]_GND_200_o_mux_5_OUT61" (ROM) removed.
+Unused block
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/Mmux_diff_wr_rd[12]_GND_200_o_mux_5_OUT71" (ROM) removed.
+Unused block
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.r
+d/gr1.grdc2.rdc/Msub_diff_wr_rd_tmp_xor<0>" (XOR) removed.
+Unused block
+"LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.w
+r/gwas.wsts/ram_full_i" (FF) removed.
+Unused block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<0>" (ROM) removed.
+Unused block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<1>" (ROM) removed.
+Unused block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<2>" (ROM) removed.
+Unused block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<3>" (ROM) removed.
+Unused block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<4>" (ROM) removed.
+Unused block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<5>" (ROM) removed.
+Unused block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<6>" (ROM) removed.
+Unused block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<7>" (ROM) removed.
+Unused block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<8>" (ROM) removed.
+Unused block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.g
+rdc2.rdc/Msub_diff_wr_rd_tmp_lut<9>" (ROM) removed.
+Unused block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.r
+fwft/user_valid" (FF) removed.
+Unused block
+"PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/gwas.
+wsts/ram_full_i" (FF) removed.
+Unused block
+"PLLBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.wr/gwss
+.wsts/ram_full_i" (FF) removed.
+Unused block
+"TimeStampBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.w
+r/gwss.wsts/ram_full_i" (FF) removed.
+
+Optimized Block(s):
+TYPE 		BLOCK
+GND
+		CMDFifo/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm.gb
+mg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GND
+GND 		CMDFifo/XST_GND
+GND
+		DCSOutBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm
+.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GND
+GND 		DCSOutBuff/XST_GND
+VCC 		DCSOutBuff/XST_VCC
+GND
+		DCSPktBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm
+.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GND
+GND 		DCSPktBuff/XST_GND
+VCC 		DCSPktBuff/XST_VCC
+GND
+		DReqBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm.g
+bmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GND
+GND 		DReqBuff/XST_GND
+VCC 		DReqBuff/XST_VCC
+GND
+		EventBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm.
+gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GND
+GND 		EventBuff/XST_GND
+VCC 		EventBuff/XST_VCC
+GND
+		EventBuffSpy/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/g
+bm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GND
+GND 		EventBuffSpy/XST_GND
+VCC 		EventBuffSpy/XST_VCC
+GND
+		GTPTxBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm.
+gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GND
+GND 		GTPTxBuff/XST_GND
+VCC 		GTPTxBuff/XST_VCC
+GND
+		GenGTP_Pairs[0].GTPRxBuffs/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_s
+ync_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/X
+ST_GND
+GND 		GenGTP_Pairs[0].GTPRxBuffs/XST_GND
+VCC 		GenGTP_Pairs[0].GTPRxBuffs/XST_VCC
+GND 		GenGTP_Pairs[1].GTPRxBuffs/XST_GND
+VCC 		GenGTP_Pairs[1].GTPRxBuffs/XST_VCC
+GND
+		GenSerdes[0].LinkBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_f
+ifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GN
+D
+GND 		GenSerdes[0].LinkBuff/XST_GND
+VCC 		GenSerdes[0].LinkBuff/XST_VCC
+GND
+		GenSerdes[1].LinkBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_f
+ifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GN
+D
+GND 		GenSerdes[1].LinkBuff/XST_GND
+VCC 		GenSerdes[1].LinkBuff/XST_VCC
+GND
+		GenSerdes[2].LinkBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_f
+ifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GN
+D
+GND 		GenSerdes[2].LinkBuff/XST_GND
+VCC 		GenSerdes[2].LinkBuff/XST_VCC
+GND
+		HrtBtBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm.
+gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GND
+GND 		HrtBtBuff/XST_GND
+VCC 		HrtBtBuff/XST_VCC
+GND
+		LinkBuffTrace/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/
+gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GND
+GND 		LinkBuffTrace/XST_GND
+VCC 		LinkBuffTrace/XST_VCC
+GND
+		PFBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm.gbm
+g.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GND
+GND 		PFBuff/XST_GND
+VCC 		PFBuff/XST_VCC
+GND
+		PLLBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm.gb
+mg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GND
+GND 		PLLBuff/XST_GND
+GND
+		TimeStampBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/
+gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GND
+GND 		TimeStampBuff/XST_GND
+GND
+		WdCountBuff/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gb
+m.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/XST_GND
+GND 		WdCountBuff/XST_GND
+VCC 		WdCountBuff/XST_VCC
+GND 		XST_GND
+VCC 		XST_VCC
+
+To enable printing of redundant blocks removed and signals merged, set the
+detailed map report option and rerun map.
+
+Section 6 - IOB Properties
+--------------------------
+
++---------------------------------------------------------------------------------------------------------------------------------------------------------+
+| IOB Name                           | Type             | Direction | IO Standard          | Diff  | Drive    | Slew | Reg (s)      | Resistor | IOB      |
+|                                    |                  |           |                      | Term  | Strength | Rate |              |          | Delay    |
++---------------------------------------------------------------------------------------------------------------------------------------------------------+
+| BnchClk_N                          | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          |          |
+| BnchClk_P                          | IOB              | INPUT     | LVDS_25              | TRUE  |          |      | IDDR         |          |          |
+| Clk50MHz                           | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| ClkB_N                             | IOB              | INPUT     | LVDS_25              | FALSE |          |      |              |          |          |
+| ClkB_P                             | IOB              | INPUT     | LVDS_25              | FALSE |          |      |              |          |          |
+| CpldCS                             | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| CpldRst                            | IOB              | INPUT     | LVCMOS25             |       |          |      |              | PULLUP   |          |
+| DQ<0>                              | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<1>                              | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<2>                              | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<3>                              | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<4>                              | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<5>                              | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<6>                              | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<7>                              | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<8>                              | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<9>                              | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<10>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<11>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<12>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<13>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<14>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| DQ<15>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | ILATCH       |          |          |
+|                                    |                  |           |                      |       |          |      | OFF          |          |          |
+|                                    |                  |           |                      |       |          |      | TFF          |          |          |
+| Debug<1>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST |              |          |          |
+| Debug<2>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST |              |          |          |
+| Debug<3>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST |              |          |          |
+| Debug<4>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST |              |          |          |
+| Debug<5>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST |              |          |          |
+| Debug<6>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST |              |          |          |
+| Debug<7>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST |              |          |          |
+| Debug<8>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST |              |          |          |
+| Debug<9>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST |              |          |          |
+| Debug<10>                          | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST |              |          |          |
+| EthCS                              | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| GA<0>                              | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| GA<1>                              | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| GPI                                | IOB              | INPUT     | LVCMOS25             |       |          |      | IFF          |          |          |
+| GPO<0>                             | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW |              |          |          |
+| GPO<1>                             | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW |              |          |          |
+| GTPClk_N<0>                        | IPAD             | INPUT     |                      |       |          |      |              |          |          |
+| GTPClk_N<1>                        | IPAD             | INPUT     |                      |       |          |      |              |          |          |
+| GTPClk_P<0>                        | IPAD             | INPUT     |                      |       |          |      |              |          |          |
+| GTPClk_P<1>                        | IPAD             | INPUT     |                      |       |          |      |              |          |          |
+| GTPRx_N<0>                         | IPAD             | INPUT     |                      |       |          |      |              |          |          |
+| GTPRx_N<1>                         | IPAD             | INPUT     |                      |       |          |      |              |          |          |
+| GTPRx_P<0>                         | IPAD             | INPUT     |                      |       |          |      |              |          |          |
+| GTPRx_P<1>                         | IPAD             | INPUT     |                      |       |          |      |              |          |          |
+| GTPTx_N<0>                         | OPAD             | OUTPUT    |                      |       |          |      |              |          |          |
+| GTPTx_N<1>                         | OPAD             | OUTPUT    |                      |       |          |      |              |          |          |
+| GTPTx_P<0>                         | OPAD             | OUTPUT    |                      |       |          |      |              |          |          |
+| GTPTx_P<1>                         | OPAD             | OUTPUT    |                      |       |          |      |              |          |          |
+| HeartBeatFM_N                      | IOB              | OUTPUT    | BLVDS_25             |       |          |      |              |          |          |
+| HeartBeatFM_P                      | IOB              | OUTPUT    | BLVDS_25             |       |          |      |              |          |          |
+| LEDLd<0>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| LEDLd<1>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| LEDLd<2>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| LEDLd<3>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| LEDLd<4>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| LEDLd<5>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| LEDRst                             | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| LEDSClk<0>                         | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| LEDSClk<1>                         | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| LEDSClk<2>                         | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| LEDSDat<0>                         | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| LEDSDat<1>                         | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| LEDSDat<2>                         | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| LINKClk_N<0>                       | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          | FIXED    |
+| LINKClk_N<1>                       | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          | FIXED    |
+| LINKClk_N<2>                       | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          | FIXED    |
+| LINKClk_P<0>                       | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          | FIXED    |
+| LINKClk_P<1>                       | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          | FIXED    |
+| LINKClk_P<2>                       | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          | FIXED    |
+| LinkFR_N<0>                        | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          |          |
+| LinkFR_N<1>                        | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          |          |
+| LinkFR_N<2>                        | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          |          |
+| LinkFR_P<0>                        | IOB              | INPUT     | LVDS_25              | TRUE  |          |      | ISERDES      |          | DIFF_PHA |
+| LinkFR_P<1>                        | IOB              | INPUT     | LVDS_25              | TRUE  |          |      | ISERDES      |          | DIFF_PHA |
+| LinkFR_P<2>                        | IOB              | INPUT     | LVDS_25              | TRUE  |          |      | ISERDES      |          | DIFF_PHA |
+| LinkSDat_N<0>                      | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          |          |
+| LinkSDat_N<1>                      | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          |          |
+| LinkSDat_N<2>                      | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          |          |
+| LinkSDat_N<3>                      | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          |          |
+| LinkSDat_N<4>                      | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          |          |
+| LinkSDat_N<5>                      | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          |          |
+| LinkSDat_P<0>                      | IOB              | INPUT     | LVDS_25              | TRUE  |          |      | ISERDES      |          | DIFF_PHA |
+| LinkSDat_P<1>                      | IOB              | INPUT     | LVDS_25              | TRUE  |          |      | ISERDES      |          | DIFF_PHA |
+| LinkSDat_P<2>                      | IOB              | INPUT     | LVDS_25              | TRUE  |          |      | ISERDES      |          | DIFF_PHA |
+| LinkSDat_P<3>                      | IOB              | INPUT     | LVDS_25              | TRUE  |          |      | ISERDES      |          | DIFF_PHA |
+| LinkSDat_P<4>                      | IOB              | INPUT     | LVDS_25              | TRUE  |          |      | ISERDES      |          | DIFF_PHA |
+| LinkSDat_P<5>                      | IOB              | INPUT     | LVDS_25              | TRUE  |          |      | ISERDES      |          | DIFF_PHA |
+| Marker_N                           | IOB              | INPUT     | LVDS_25              | TRUE  |          |      |              |          |          |
+| Marker_P                           | IOB              | INPUT     | LVDS_25              | TRUE  |          |      | IDDR         |          |          |
+| NimTrig                            | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| OGLEDA                             | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| OGLEDB                             | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| PllLd                              | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| PllPDn                             | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| PllSClk                            | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| PllSDat                            | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| PllStat                            | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| SD_A                               | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| SD_B                               | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| TDisA                              | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| TDisB                              | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF          |          |          |
+| TrigFM                             | IOB              | OUTPUT    | LVCMOS25             |       | 16       | FAST |              |          |          |
+| TrigLED                            | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW |              |          |          |
+| VXO_P                              | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| YLED                               | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW |              |          |          |
+| ZEthA<0>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST | OFF          |          |          |
+| ZEthA<1>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST | OFF          |          |          |
+| ZEthA<2>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST | OFF          |          |          |
+| ZEthA<3>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST | OFF          |          |          |
+| ZEthA<4>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST | OFF          |          |          |
+| ZEthA<5>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST | OFF          |          |          |
+| ZEthA<6>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST | OFF          |          |          |
+| ZEthA<7>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST | OFF          |          |          |
+| ZEthA<8>                           | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST | OFF          |          |          |
+| ZEthBE<0>                          | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST | OFF          |          |          |
+| ZEthBE<1>                          | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST | OFF          |          |          |
+| ZEthCS                             | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST |              |          |          |
+| ZEthClk                            | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST | OFF          |          |          |
+| ZEthEOF<0>                         | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| ZEthEOF<1>                         | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| ZEthLen                            | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| ZEthWE                             | IOB              | OUTPUT    | LVCMOS25             |       | 12       | FAST | OFF          |          |          |
+| uBunchLED                          | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW |              |          |          |
+| uCA<0>                             | IOB              | INPUT     | LVCMOS25             |       |          |      | IFF          |          |          |
+| uCA<1>                             | IOB              | INPUT     | LVCMOS25             |       |          |      | IFF          |          |          |
+| uCA<2>                             | IOB              | INPUT     | LVCMOS25             |       |          |      | IFF          |          |          |
+| uCA<3>                             | IOB              | INPUT     | LVCMOS25             |       |          |      | IFF          |          |          |
+| uCA<4>                             | IOB              | INPUT     | LVCMOS25             |       |          |      | IFF          |          |          |
+| uCA<5>                             | IOB              | INPUT     | LVCMOS25             |       |          |      | IFF          |          |          |
+| uCA<6>                             | IOB              | INPUT     | LVCMOS25             |       |          |      | IFF          |          |          |
+| uCA<7>                             | IOB              | INPUT     | LVCMOS25             |       |          |      | IFF          |          |          |
+| uCA<8>                             | IOB              | INPUT     | LVCMOS25             |       |          |      | IFF          |          |          |
+| uCA<9>                             | IOB              | INPUT     | LVCMOS25             |       |          |      | IFF          |          |          |
+| uCA<10>                            | IOB              | INPUT     | LVCMOS25             |       |          |      | IFF          |          |          |
+| uCA<11>                            | IOB              | INPUT     | LVCMOS25             |       |          |      | IFF          |          |          |
+| uCD<0>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<1>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<2>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<3>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<4>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<5>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<6>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<7>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<8>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<9>                             | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<10>                            | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<11>                            | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<12>                            | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<13>                            | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<14>                            | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCD<15>                            | IOB              | BIDIR     | LVCMOS25             |       | 12       | FAST | IFF          |          |          |
+| uCRd                               | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
+| uCWr                               | IOB              | INPUT     | LVCMOS25             |       |          |      |              |          |          |
++---------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Section 7 - RPMs
+----------------
+
+Section 8 - Guide Report
+------------------------
+Guide not run on this design.
+
+Section 9 - Area Group and Partition Summary
+--------------------------------------------
+
+Partition Implementation Status
+-------------------------------
+
+  No Partitions were found in this design.
+
+-------------------------------
+
+Area Group Information
+----------------------
+
+  No area groups were found in this design.
+
+----------------------
+
+Section 10 - Timing Report
+--------------------------
+A logic-level (pre-route) timing report can be generated by using Xilinx static
+timing analysis tools, Timing Analyzer (GUI) or TRCE (command line), with the
+mapped NCD and PCF files. Please note that this timing report will be generated
+using estimated delay information. For accurate numbers, please generate a
+timing report with the post Place and Route NCD file.
+
+For more information about the Timing Analyzer, consult the Xilinx Timing
+Analyzer Reference Manual; for more information about TRCE, consult the Xilinx
+Command Line Tools User Guide "TRACE" chapter.
+
+Section 11 - Configuration String Details
+-----------------------------------------
+Use the "-detail" map option to print out Configuration Strings
+
+Section 12 - Control Set Information
+------------------------------------
+Use the "-detail" map option to print out Control Set Information.
+
+Section 13 - Utilization by Hierarchy
+-------------------------------------
+Use the "-detail" map option to print out the Utilization by Hierarchy section.
