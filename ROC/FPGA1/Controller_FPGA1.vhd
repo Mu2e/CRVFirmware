@@ -285,6 +285,13 @@ signal HrtBtDone,HrtBtTxReq,HrtBtTxAck,HrtBtFMTxEn,TxEnReq,DReqTxEn,LinkBusy : s
 signal HrtBtData : std_logic_vector (23 downto 0);
 signal TrigFMDat : std_logic_vector (15 downto 0);
 
+signal HrtBtGeneratorEn : std_logic; 
+signal HrtBtPeriod : std_logic_vector (31 downto 0);
+signal HrtBtFMTxEn_muxed : std_logic;
+signal HrtBtData_muxed : std_logic_vector (23 downto 0);
+signal HrtBtGeneratorData : std_logic_vector (23 downto 0);
+signal HrtBtGenereatorFMTxEn : std_logic;
+
 -- Trigger request packet buffer, FIFO status bits
 signal DReqBuff_Out, DReqBuff_In : std_logic_vector (15 downto 0);
 signal DReqBuff_wr_en,DReqBuff_rd_en,DReqBuff_uCRd, DCSPktBuff_uCRd,
@@ -597,13 +604,16 @@ HrtBtData(21) <= '0' when ExtuBunchCount(31 downto 20) = 0 else '1';
 HrtBtData(23 downto 22) <= "00";
 -- FM transmitter for boadcasting microbunch numbers to the FEBs
 
+HrtBtData_muxed   <= HrtBtData when HrtBtGeneratorEn = '0' else HrtBtGeneratorData;
+HrtBtFMTxEn_muxed <= HrtBtFMTxEn when HrtBtGeneratorEn = '0' else HrtBtGenereatorFMTxEn;
+
 --Clk80MHzFMTx <= Clk80MHzPLL;
 HeartBeatTx : FM_Tx 
 	generic map (Pwidth => 24)
 		 port map(clock => Clk80MHz, 
 					 reset => ResetHi,
-					 Enable => HrtBtFMTxEn,
-					 Data => HrtBtData, 
+					 Enable => HrtBtFMTxEn_muxed,
+					 Data => HrtBtData_muxed, 
 					 Tx_Out => HrtBtTxOuts);
 HeartBeatFM <= HrtBtTxOuts.FM when ExtTmg = '0' else GPI;
 --GPO(0) <= HeartBeatFM;
@@ -1005,6 +1015,16 @@ DRpacketGenerator_inst : DRpacketGenerator
 
 -- GTP logic processes
 
+HrtBtGen_inst : HrtBtGen
+    port map(
+        clk         => Clk80MHz,
+        rst_n       => CpldRst,
+        enable      => HrtBtGeneratorEn,
+        period      => HrtBtPeriod,
+        data_out    => HrtBtGeneratorData,
+        tx_en_out   => HrtBtGenereatorFMTxEn
+    );
+
 -- GTP event handling process
 TrigReqTx : process (UsrClk2(0), CpldRst)
 
@@ -1338,6 +1358,8 @@ if (UsrRDDL(0) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPT
 then GTPTxBuff_rd_en <= '1';
 else GTPTxBuff_rd_en <= '0'; 
 end if;
+
+
 
     if GTPRstArm = '1' then
 	     GTPRstCnter <= (others=>'0');
@@ -2287,6 +2309,10 @@ main : process(SysClk, CpldRst)
    drgenerator_uCD <= (others => '0');
 	drgenerator_mid_uCD <= (others => '0');
 	
+	HrtBtGeneratorEn <= '0';
+	HrtBtPeriod <= (others => '0');
+	
+	
  elsif rising_edge (SysClk) then 
 
 -- Synchronous edge detectors for read and write strobes
@@ -2485,6 +2511,23 @@ end if;
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = LoopbackAdd
 	then LoopbackMode(2 downto 0) <= uCD(2 downto 0);
 	else LoopbackMode <= LoopbackMode;
+end if;
+
+-- Auto Heartbeat Generator Enable
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtGenEnAddr then
+    HrtBtGeneratorEn <= uCD(0);
+else
+    HrtBtGeneratorEn <= HrtBtGeneratorEn;
+end if;
+
+-- Auto Heartbeat Generator Period (32-bit requires two registers)
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtGenPerHiAddr then
+--if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtGenPerAddr then
+    HrtBtPeriod(31 downto 16) <= uCD;
+elsif WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtGenPerLoAddr then
+    HrtBtPeriod(15 downto 0) <= uCD;
+else
+    HrtBtPeriod <= HrtBtPeriod;
 end if;
 
 --	Read of the trigger request FIFO
@@ -3112,10 +3155,13 @@ iCD <= X"0" &
 		 uBDebugOut(79 downto 64) when EvBuildUbDebug4Add,
 		 uBDebugOut(95 downto 80) when EvBuildUbDebug5Add,
 		 X"000" & "000" & uBDebugOut(96) when EvBuildUbDebug6Add,
-		 X"00a5" when DebugVersionAd,
+		 X"00a6" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 DRcnt when DRCntAdd,
+		 X"000" & "000" & HrtBtGeneratorEn when HrtBtGenEnAddr,
+       HrtBtPeriod(15 downto 0)  when HrtBtGenPerLoAddr,
+		 HrtBtPeriod(31 downto 16) when HrtBtGenPerHiAddr,
 		 --X"00" & debug_cnt when DebugCntAdd,
 		 X"0000" when others;
 

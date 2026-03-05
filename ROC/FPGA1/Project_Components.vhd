@@ -428,4 +428,15 @@ component DRpacketGenerator is
     );
 end component;
 
+component HrtBtGen is 
+    port(
+        clk         : in  std_logic;
+        rst_n       : in  std_logic;
+        enable      : in  std_logic;
+        period      : in  std_logic_vector(31 downto 0);
+        data_out    : out std_logic_vector(23 downto 0);
+        tx_en_out   : out std_logic
+    );
+end component;
+
 end Project_Components;

@@ -135,6 +135,10 @@ constant DCSSpyAd            : AddrPtr := "00" & X"5F"; -- remove me again
 constant DRGeneratorAdd      : AddrPtr := "00" & X"60";
 constant DRGeneratorHiAdd    : AddrPtr := "00" & X"61";
 
+constant HrtBtGenEnAddr      : AddrPtr := "00" & X"62";
+constant HrtBtGenPerLoAddr     : AddrPtr := "00" & X"63";
+constant HrtBtGenPerHiAddr     : AddrPtr := "00" & X"64";
+
 constant SpillTrigCntAdHi : AddrPtr := "00" & X"66";
 constant SpillTrigCntAdLo : AddrPtr := "00" & X"67";
 
