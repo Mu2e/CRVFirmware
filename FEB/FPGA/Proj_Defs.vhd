@@ -118,6 +118,11 @@ constant FRDat0RegAd : AddrPtr := "00" & X"74";
 constant FRDat1RegAd : AddrPtr := "00" & X"75";
 constant DebugVersionAd : AddrPtr := "00" & X"76";
 constant PageRstAddr : AddrPtr := "00" & X"77";
+constant onSpillCntAd : AddrPtr := "00" & X"78";
+constant offSpillCntAd : AddrPtr := "00" & X"79";
+constant GPOSelAd : AddrPtr := "00" & X"7A";
+
+
 -- Spill indicator
 
 Type AddrArrayType is Array(0 to 7) of AddrPtr;

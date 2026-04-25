@@ -44,6 +44,8 @@ extern struct    sLVDS_ePHY_REG IOPs[];  //testing link assignment regs structur
 extern struct   msTimers mStime;
 extern struct   sLVDS lvLnk;
 
+extern struct FebDCSRply DCSrply;
+
 //test code
 extern int g_tempDelay;
 extern struct ky k28;
@@ -875,6 +877,315 @@ int GTP1_Rec_TEST()                 //trig requesting
 uSHT uBunIDs[uBunMaxLWRDs2+2];      //store to compare to rtn data
 
 
+//This function checks the DCS buffer and processes the requests
+//
+#define DCS_D4     0x4    // DCS replay is D4.y
+#define DCS_Type   0x8040 // valid, dcs replay package type
+#define DCS_Length 0x10   // 
+#define DCS_Res    0x0
+int CheckAndProcessDCS()
+    {
+    int k28_in, dat16;
+    int opcode, add, val;
+    
+    k28_in = GTP0_DCS_CNT0E;
+    
+    //wait for ePHY Xmit FIFO empty
+    //if (PhyXmitBsy(HappyBus.PoeBrdCh))
+    if (k28_in >= 9) 
+        {
+        dat16= GTP0_DCS_PAC0D; //xFer byte cnt
+        dat16= GTP0_DCS_PAC0D; //valid(1), type
+        dat16= GTP0_DCS_PAC0D; //block op additional packet count[15:6], Reserved [5], Op Code [4:0]
+        opcode = dat16 & 0x001f;
+        dat16= GTP0_DCS_PAC0D; //op1 address
+        add = dat16;
+        dat16= GTP0_DCS_PAC0D; //op1 wrt data
+        val = dat16;
+        dat16= GTP0_DCS_PAC0D; //op2 address
+        dat16= GTP0_DCS_PAC0D; //op2 wrt data
+        dat16= GTP0_DCS_PAC0D; // reserved
+        dat16= GTP0_DCS_PAC0D; // CRC
+        
+
+        if (opcode == 0) // read
+            {
+            if ((add & 0xf000) == 0) // local, ROC
+                {
+                sPTR saddr = (sPTR) fpgaBase0;
+                saddr += add;                        //adding to pointer, incr by ptr size
+                val= *saddr;
+                    
+                // send DCS package                
+                REG16(fpgaBase0+(0x53*2)) = add;
+                REG16(fpgaBase0+(0x53*2)) = val;
+                //debug1 = add;
+                //debug2 = val;
+                }
+            else if ((add & 0xf000) == 0x1000) // remote, FEB 
+                {
+                 DCSrply.add = add;
+                 sprintf(tBuf,"LC RD %X", DCSrply.add);             //empty ePhy rec fifos
+                 DCSrply.cnt = 0;
+                 
+                 process(DCS, tBuf);
+                 //process(tty, tBuf);      
+                }
+            else if ((add & 0x8000) == 0x8000) // uC functions 
+                {
+                DCSrply.add = add;
+                DCSrply.cnt = 0;
+                if ((add & 0x1fff) == 0x0000)  // local, LP mapped to LPR
+                    {
+                    sprintf(tBuf,"LPR");             //empty ePhy rec fifos
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fff) == 0x0002) // local, ID - version major
+                    {
+                    sprintf(tBuf,"IDV1");
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fff) == 0x0003) // local, ID - version minor
+                    {
+                    sprintf(tBuf,"IDV2");    
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fff) == 0x0004) // local, ID - active FEBs
+                    {
+                    sprintf(tBuf,"IDA");    
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fff) == 0x0005) // local, ID - serial
+                    {
+                    sprintf(tBuf,"IDS");     
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fe0) == 0x0020) // 21-38: local, PWR volts, last 5 bits used for channel
+                    {
+                    sprintf(tBuf,"PWRV %d", (add & 0x001f)-1);
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fe0) == 0x0040) // 41-58: local, PWR amps, last 5 bits used for channel
+                    {
+                    sprintf(tBuf,"PWRA %d", (add & 0x001f)-1);    
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fff) == 0x1102) // remote, OVC
+                    {
+                    sprintf(tBuf,"LC OVC");     
+                    process(DCS, tBuf); 
+                    }
+                //else if ((add & 0x1c00) == 0x0400) // single par from pool
+                else if ((add & 0x1800) == 0x0800)
+                    { 
+                    // Map to pool indices for parameters we need to monitor
+                    // We don't have enough bits to read the entire pool, this is a solution
+                    // 0 (0): serial number, 1 (1): spill cycle count, 2 (2): FEB temperature, 3-18 (3-18): ADC channels, 19-20 (44-45): bias buses, 21-24 (46-49): AFE (CMB) temperatures
+                    //int map[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 44, 45, 46, 47, 48, 49};
+                    int map[] = {0, 1, 2,  
+                    3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, // 19 
+                                  44,  45,  46,  47,  48,  49, // 6 from FPGA1
+                                  82,  83,  84,  85,  86,  87, // 6 from FPGA2
+                                 120, 121, 122, 123, 124, 125, // 6 from FPGA3
+                                 158, 159, 160, 161, 162, 163, // 6 from FPGA4
+                                 19, 20, 21, 0, 0, 0, 0, 0, 0, 0, // 10 reserved
+                                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 // 10 reserved
+                    };
+                    // Word number (bits 0-6 of the address, 00000111111) 
+                    // int no = ( (add & 0xce0 ) >> 5 ); // [0, 31] // 
+                    int no = ( (add & 0x7f )); // [0, 63]
+                    // Retrieve the pool index
+                    int index = map[no];
+                    // Get the word
+                    // Port number (bits 7-10 of the address, 11111) 
+                    int port = ((add & 0x0780) >> 7);
+                    sprintf(tBuf,"POOLPAR %d %d", port, index);    
+                       process(DCS, tBuf);
+                    }   
+                }
+            }
+        else if (opcode == 1) // write
+            {
+            if ((add & 0xf000) == 0) // local, ROC
+                {
+                //sPTR saddr = (sPTR) fpgaBase0;
+                //saddr += add;
+                //*saddr= val;
+                REG16(fpgaBase0+(add*2)) = val;
+                }
+            else if ((add & 0xf000) == 0x1000) // remote, FEB 
+                {
+                 sprintf(tBuf,"LC WR %X %X", add, val);    
+                 process(DCS, tBuf);
+                }
+            else if ((add & 0xf000) == 0x2000) // remote, FEB, broadcast 
+                {
+                 sprintf(tBuf,"LCA WR %X %X", add, val);    
+                 process(DCS, tBuf);
+                }
+            else if ((add & 0x8000) == 0x8000) // uC functions 
+                {
+                if ((add & 0x1fff) == 0x0000)  // local, select port LP
+                    {
+                    sprintf(tBuf,"LP %d", val);
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fff) == 0x0006)
+                    {
+                    sprintf(tBuf,"LI");    
+                    process(DCS, tBuf);
+                    } 
+                else if ((add & 0xfff) == 0x001) // RESET
+                    {
+                    if ((add & 0x1000) == 0x0000) // local
+                        {
+                        sprintf(tBuf,"RESET");    
+                        process(DCS, tBuf);
+                        }
+                    else // remote
+                        {
+                        sprintf(tBuf,"LC RESET");    
+                        process(DCS, tBuf);
+                        }
+                    }
+                else if ((add & 0x1fff) == 0x000a) // local, PWRRST
+                    {
+                    sprintf(tBuf,"PWRRST %d", val);    
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x0fff) == 0x000b) //  
+                    {
+                    if ((add & 0x1000) == 0x0000) // local
+                        {
+                        sprintf(tBuf,"TRIG %d", val);    
+                        process(DCS, tBuf);
+                        } else                    // remote 
+                        {
+                        if ((add & 0x2000) == 0x2000) 
+                            {sprintf(tBuf,"LCA TRIG %d", val);} // broadcast
+                        else {sprintf(tBuf,"LC TRIG %d", val);}  // LC
+                        process(DCS, tBuf);
+                        }
+                    }
+                //else if ((add & 0x1fff) == 0x0050) // local, UBs
+                //    {
+                //    sprintf(tBuf,"UB%d", val);    
+                //    process(DCS, tBuf);
+                //    }
+                else if ((add & 0x0fff) == 0x0100) // local, DSAV
+                    {
+                    if ((add & 0x1000) == 0x0000) // local
+                        {
+                        sprintf(tBuf,"DSAV");    
+                        process(DCS, tBuf);
+                        } else {
+                        if ((add & 0x2000) == 0x2000) 
+                            {sprintf(tBuf,"LCA DSAV");} // broadcast
+                        else {sprintf(tBuf,"LC DSAV");}  // LC
+                        process(DCS, tBuf);
+                        }
+                    }
+                else if ((add & 0x1fff) == 0x0101) // local, DREV
+                    {
+                    if ((add & 0x1000) == 0x0000) // local
+                        {
+                        sprintf(tBuf,"DREC %d", val);    
+                        process(DCS, tBuf);
+                        } else {
+                        if ((add & 0x2000) == 0x2000) 
+                            {sprintf(tBuf,"LCA DREC %d", val);} // broadcast
+                        else {sprintf(tBuf,"LC DREC %d", val);}  // LC
+                        process(DCS, tBuf);
+                        }
+                    }
+                else if ((add & 0x0fff) == 0x0102) // local, FI
+                    {
+                    if ((add & 0x1000) == 0x0000) // local
+                        {
+                        sprintf(tBuf,"FI");    
+                        process(DCS, tBuf);
+                        } else                    // remote 
+                        {
+                        if ((add & 0x2000) == 0x2000) 
+                            {sprintf(tBuf,"LCA FI");} // broadcast
+                        else {sprintf(tBuf,"LC FI");}  // LC
+                        process(DCS, tBuf);
+                        }
+                    }   
+                else if ((add & 0x1fff) == 0x1100) // remote, AFERESET f
+                    {
+                    if ((add & 0x2000) == 0x2000) 
+                         {sprintf(tBuf,"LCA AFERESET %d", val);} // broadcast
+                    else {sprintf(tBuf,"LC AFERESET %d", val);}  // LC
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fff) == 0x1101) // remote, PWR n
+                    {
+                    if ((add & 0x2000) == 0x2000) 
+                         {sprintf(tBuf,"LCA PWR %d", val);} // broadcast
+                    else {sprintf(tBuf,"LC PWR %d", val);}  // LC
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fff) == 0x1102) // remote, OVC write
+                    {
+                    if ((add & 0x2000) == 0x2000) 
+                         {sprintf(tBuf,"LCA OVC %d", val);} // broadcast
+                    else {sprintf(tBuf,"LC OVC %d", val);}  // LC
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fff) == 0x1103) // remote, MUX
+                    {
+                    if ((add & 0x2000) == 0x2000) 
+                         {sprintf(tBuf,"LCA MUX %d", val);} // broadcast
+                    else {sprintf(tBuf,"LC MUX %d", val);}  // LC
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fff) == 0x1104) // remote, GAIN
+                    {
+                    if ((add & 0x2000) == 0x2000) 
+                         {sprintf(tBuf,"LCA GAIN %d", val);} // broadcast
+                    else {sprintf(tBuf,"LC GAIN %d", val);}  // LC
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fff) == 0x1105) // remote, LINK
+                    {
+                    if ((add & 0x2000) == 0x2000) 
+                         {sprintf(tBuf,"LCA LINK %d", val);} // broadcast
+                    else {sprintf(tBuf,"LC LINK %d", val);}  // LC
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fff) == 0x1106) // remote, CMBENA
+                    {
+                    if ((add & 0x2000) == 0x2000) 
+                         {sprintf(tBuf,"LCA CMBENA %d", val);} // broadcast
+                    else {sprintf(tBuf,"LC CMBENA %d", val);}  // LC
+                    process(DCS, tBuf);
+                    }
+                else if ((add & 0x1fff) == 0x0107) // local, POOLENA
+                    {
+                    sprintf(tBuf,"POOLENA %d", val);
+                    process(DCS, tBuf);
+                    }
+                }
+            }
+        else if (opcode == 2) // block read, TODO
+            {
+            }
+        else if (opcode == 3) // block write, TODO
+            {
+            }
+        else if (opcode == 4) // double read, TODO
+            {
+            }
+        else if (opcode == 5) // double write, TODO
+            {
+            }
+        }
+    k28_in= GTP0_DCS_CNT0E; 
+    return k28_in;
+    }
+
+
 //This function access is controller by cmd 'TRIG' and 'TRIG1'
 //At some point this function will enable for normal DAQ data taking
 //Getting here using 'TRIG1' should become the normal
@@ -1167,6 +1478,49 @@ int PHY_LOAD_DAQ_K28SEND_BCAST_MINI(int cmdType, int PrtPOE, sPTR xBuf, int ubCn
     //send now using ePhy link global_24 data (broadcast) xmit    
     ePHY302_BCAST_XMIT= 1;                  //global xmit broadcast
     return PrtPOE;
+}
+
+struct ePHYdaqS ePHY_PREAMP= {
+                    {0xD2D1, 0xD4D3, 0xD6D5},   //mac dest  ,One time init only used for diag pac viewing
+                    {0xE2E1, 0xE4E3, 0xE6E5}   //DataBuf uBIT16[uBunSz256]
+         };
+
+
+#define ePHY301_BCAST_DATA *(sPTR)(fpgaBase0+(0x301*2))//ePhy link global_24 data (fifo) loader
+#define ePHY302_BCAST_XMIT *(sPTR)(fpgaBase0+(0x302*2))//ePhy link global_24 data (broadcast) xmit
+
+
+//POE PHY Binary File buffer xmit
+//paramPtr= points to binary data
+//SndCntBytes is byte count to xmit includes 2 word header
+//load size when using string move... Payload +2 words (CheckSum)
+//Global Phy Xmit command string with binary data to FEBs, note mask enabled ePHY ports
+//
+int PHY_LOADER_FLASH(char* paramPtr, int Sock, int PrtPOE, int echo, int broadCast, uint16 SndCntByte)
+    {                                         
+    SndCntByte += 4;                        //maybe add crc
+
+    if (PhyXmitBsy(HappyBus.PoeBrdCh))         //check 1, assume other done
+        {
+        //Should never happen
+        putBuf(tty,"PHY_LOADER: Phy Busy timeout\r\n",0); //send it   
+        uBReq.errFLAG++;
+        }
+
+    PhyXmitBsy(PrtPOE);            
+    movStr16_NOICDEST((unsigned short*)&ePHY_PREAMP, &ePHY301_BCAST_DATA, 6); //dest,src,len(1Wrd),uC_Hdr(3Wrds)    
+    movStr16_NOICDEST((unsigned short*)paramPtr, &ePHY301_BCAST_DATA, (SndCntByte/2)); //fpga uses words  
+    
+    //move mask settings to command lines "FEBSEND" in Me2e_Ctrl_Misc.c
+    //*IOPs[1].ePHY0E_XMSKp= 0xFF;        //enable all port   
+    //*IOPs[9].ePHY0E_XMSKp= 0xFF;        //enable all port   
+    //*IOPs[17].ePHY0E_XMSKp=0xFF;        //enable all port   
+    //send now using ePhy link global_24 data (broadcast) xmit    
+    ePHY302_BCAST_XMIT= 1;
+    
+    HappyBus.Socket= Sock;                  //HappyBus.ASCIIPrt ASCII xMIT I/O, ie SOCK,TTY,ePHY 
+    HappyBus.CntRecd=0;
+    return Sock;
 }
 
 

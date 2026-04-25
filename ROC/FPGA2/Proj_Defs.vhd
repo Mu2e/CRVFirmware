@@ -114,9 +114,16 @@ constant SpillWdCntLoAd : AddrPtr   := "00" & X"6B";
 constant UpTimeRegAddrHi : AddrPtr  := "00" & X"6C";
 constant UpTimeRegAddrLo : AddrPtr  := "00" & X"6D";
 
+constant PHYActivityCntAdd : AddrArrayType := ("00" & X"70","00" & X"71","00" & X"72","00" & X"73",
+											      		  "00" & X"74","00" & X"75","00" & X"76","00" & X"77");
+															  
+constant OverflowCntAd : AddrPtr  := "00" & X"80";
+
 -- Register collecting SMI data returned from the PHY chips
 constant SMIRdDataAd0 : AddrPtr  := "00" & X"FD";
 constant SMIRdDataAd1 : AddrPtr  := "00" & X"FE";
+
+constant DebugVersion : AddrPtr  := "00" & X"99";
 -- Phy SMI control register
 constant SMICtrlAddr : AddrPtr  := "00" & X"FF";
 -- Map of the internal setup registers of the PHY chips

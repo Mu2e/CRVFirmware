@@ -169,17 +169,28 @@ const   char HelpMenu_ORG_TREE[]={
                  
 };
 
+
 const   char HelpMenuFLASH[]={
                "HELP HF: -------------- FLASH MEMORY LOADING/PROGRAMMING -------------------\r\n\n"
 
-               "USB PORT Program FPGAs 1,2 FLASH\r\n"
-               "   FL1         Program FPGA(1) FLASH with Xilinx binary file, no reboot\r\n"
-               "   FL2         Program FPGAs(2,3,4) FLASH with Xilinx bin file, no reboot\r\n\n"
+               "FLASH Load Using USB PORT\r\n"
+               " FL1         Erase, Program FPGA(1) File Xilinx binary file, no reboot\r\n"
+               " FL2         Erase, Program FPGAs(2-4) File Xilinx bin file, no reboot\r\n"
+               " FL3         Erase, Program FEBs FPGA Xilinx bin file to unused Sector71+\r\n\n"
 
-               "SOCKET PORT DIRECT, Programs ROC FLASH\r\n"
-               "   FLSOCK1     Erase and Program FPGA(1) FLASH with Xilinx bin file\r\n"
-               "   FLSOCK2     Erase and Program FPGA(2-4) FLASH with Xilinx bin file\r\n\n"
+               "FLASH Load using Socket Port\r\n"
+               " FLSOCK1     Erase and Program FPGA(1) FLASH with Xilinx bin file\r\n"
+               " FLSOCK2     Erase and Program FPGA(2-4) FLASH with Xilinx bin file\r\n"
+               " FLSOCK3     Erase, Program FEBs FPGA Xilinx bin file to unused Sector71+\r\n\n"
                 
+               "FLASH Load FEB using PHY link, Pgm 1 or all FEB Ports, cmd 'FS' view image file\r\n"                 
+               " FEBSEND p c Send 'FLSOCK3' stored image to FEB, p=1 cntrl port, c=cnt, ~54Secs\r\n"
+               "             option p=1-24, a single active cntrl port, use cmd 'LP' to check\r\n"
+               "             option c=1=single load a port or c=24=load all active ports\r\n\n"
+               "             Examples   Note FEBs busy time will be about 1 minute\r\n"
+               "                FEBSEND 1 1 , send to port1 using port1 as control port\r\n"
+               "                FEBSEND 4 1 , send to port4 using port4 control port\r\n"
+               "                FEBSEND 6 24, send to all active ports, port6 control port\r\n\n"                
                "SOCKET PORT Programs ROC FLASH using SD_RAM, FPGAs must already be Configured\r\n" 
                "   LDFILE 2    Step1, Download Data to FPGA2 SD_RAM (DAQ Inactive)\r\n"
                "   LDFLASH     Step2, Programs FLASH with option for FPGA1 or FPGA2-4\r\n\n"

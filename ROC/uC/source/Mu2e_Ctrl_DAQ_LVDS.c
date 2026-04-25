@@ -33,6 +33,7 @@ extern uint16   lvdsBuf128[];
 extern uint32   genFlag;
 extern int      adc_ms;                 //using adc update time as ref for link re-init
 extern char     Buf1500[];
+extern struct FebDCSRply DCSrply;
 
 extern struct   sLVDS_ePHY_REG IOPs[];  //testing link assignment regs structure
 //extern uint16_t POE_PORTS_ACTIVE[];     //24 port plus 1 to hold 'act port cnt'
@@ -173,14 +174,32 @@ int HappyBusCheck()
                 *(u_16Bit*)CHARS=*(u_16Bit*)IOPs[seq].FM30_DATp;
                 if (!err)  
                     {
-                    //Console display here, allow ascii chars and crlf
                     if ((( (CHARS[0]>= ' ') && (CHARS[0]< 128)) || (CHARS[0]=='\r') || (CHARS[0]=='\n')) && 
                         (( (CHARS[1]>= ' ') && (CHARS[1]< 128)) || (CHARS[1]=='\r') || (CHARS[1]=='\n')) ||
                             CHARS[1]==0 )    //allow null 2nd char if only char is valid
                         //2 ASCII Chars per 16Bit port read, THIS SLOWS DOWN RECEIVING DATA
-                        putBuf(HappyBus.Socket,(char*)CHARS, 2); //HappyBus.ASCIIPrt ASCII xMIT I/O, ie SOCK,TTY,ePHY
+                        {
+                        if(HappyBus.Socket != DCS)
+                            putBuf(HappyBus.Socket,(char*)CHARS, 2); //HappyBus.ASCIIPrt ASCII xMIT I/O, ie SOCK,TTY,ePHY
+                        else 
+                            {
+                            if(DCSrply.cnt < 4)
+                                {
+                                DCSrply.val[DCSrply.cnt] = CHARS[0];
+                                DCSrply.val[DCSrply.cnt+1] = CHARS[1];
+                                DCSrply.cnt = DCSrply.cnt + 2;
+                                if(DCSrply.cnt == 4) 
+                                    {
+                                    //send
+                                    REG16(fpgaBase0+(0x53*2)) = DCSrply.add;
+                                    REG16(fpgaBase0+(0x53*2)) = (int)strtol(DCSrply.val,NULL, 16L);//
+                                    }
+                                }
+                            }
+                        }
                     else
                         CHARS[1]=0;                     //added for testing only
+                        //}
                     }
                 CmdLenB= HappyBus.CmdLenB;
                 if (HappyBus.CntRecd== CmdLenB)

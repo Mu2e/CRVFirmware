@@ -42,6 +42,13 @@ NET "Debug[1]" IOSTANDARD = LVCMOS25;
 #
 # LPDDR MIG pins
 NET "LPDDRCtrl/memc3_infrastructure_inst/sys_clk_ibufg" KEEP = "TRUE";
+# Fix DRP clock timing violation - relax to achievable timing  
+# See https://adaptivesupport.amd.com/s/article/40385?language=en_US (and some LLM help)
+NET "LPDDRCtrl/c3_sysclk_2x_180" TNM_NET = "TNM_MIG_2X";
+NET "LPDDRCtrl/c3_mcb_drp_clk" TNM_NET = "TNM_MIG_DRP";
+
+# Override the specific timing path with the required passing period (13.6 ns)
+TIMESPEC TS_MIG_DRP_FIX = FROM "TNM_MIG_2X" TO "TNM_MIG_DRP" 13.6 ns;
 
 NET "BA[1]" LOC = G1;
 NET "BA[0]" LOC = G3;
