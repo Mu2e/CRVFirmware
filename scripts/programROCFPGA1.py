@@ -25,5 +25,5 @@ print("this will take up to 20s")
 with open(fname, 'rb') as file:
     binaryData = file.read()
     ser.write(binaryData)
-print("All done, reseting uC and FPGAs")
-ser.write(("RESET\r").encode())
+print("All done, please reset uC and FPGAs")
+#ser.write(("RESET\r").encode())

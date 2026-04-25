@@ -3,7 +3,7 @@ import serial
 import time
 import sys
 
-port = sys.argv[2] if len(sys.argv) > 2 else '/dev/ttyUSB1'
+port = sys.argv[2] if len(sys.argv) > 2 else '/dev/ttyUSB0'
 
 ser = serial.Serial(port, 460800, timeout=0.1)
 ser.write(("FL3\r").encode())
