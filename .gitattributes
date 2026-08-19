@@ -1,0 +1,32 @@
+# Normalize line endings to LF in the repository
+* text=auto eol=lf
+
+# Explicit text files
+*.c     text eol=lf
+*.h     text eol=lf
+*.asm   text eol=lf
+*.vhd   text eol=lf
+*.v     text eol=lf
+*.xdc   text eol=lf
+*.ucf   text eol=lf
+*.cmd   text eol=lf
+*.mac   text eol=lf
+*.icf   text eol=lf
+*.ewp   text eol=lf
+*.ewd   text eol=lf
+*.eww   text eol=lf
+*.ewt   text eol=lf
+*.hcg   text eol=lf
+*.dil   text eol=lf
+*.xcl   text eol=lf
+*.bat   text eol=lf
+*.txt   text eol=lf
+*.log   text eol=lf
+
+# Binary files — no line-ending conversion
+*.bin   binary
+*.out   binary
+*.sim   binary
+*.pdf   binary
+*.bit   binary
+*.mcs   binary
