@@ -993,12 +993,12 @@ int CheckAndProcessDCS()
                     };
                     // Word number (bits 0-6 of the address, 00000111111) 
                     // int no = ( (add & 0xce0 ) >> 5 ); // [0, 31] // 
-                    int no = ( (add & 0x7f )); // [0, 63]
+                    int no = ( (add & 0x3f )); // [0, 63]
                     // Retrieve the pool index
                     int index = map[no];
                     // Get the word
-                    // Port number (bits 7-10 of the address, 11111) 
-                    int port = ((add & 0x0780) >> 7);
+                    // Port number (bits 7-11 of the address, 11111) 
+                    int port = ((add & 0x07c0) >> 6);
                     sprintf(tBuf,"POOLPAR %d %d", port, index);    
                        process(DCS, tBuf);
                     }   
@@ -1016,55 +1016,55 @@ int CheckAndProcessDCS()
             else if ((add & 0xf000) == 0x1000) // remote, FEB 
                 {
                  sprintf(tBuf,"LC WR %X %X", add, val);    
-                 process(DCS, tBuf);
+                 process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                 }
-            else if ((add & 0xf000) == 0x2000) // remote, FEB, broadcast 
+            else if ((add & 0xf000) == 0x3000) // remote, FEB, broadcast 
                 {
-                 sprintf(tBuf,"LCA WR %X %X", add, val);    
-                 process(DCS, tBuf);
+                 sprintf(tBuf,"LCB WR %X %X", add, val);    
+                 process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                 }
             else if ((add & 0x8000) == 0x8000) // uC functions 
                 {
                 if ((add & 0x1fff) == 0x0000)  // local, select port LP
                     {
                     sprintf(tBuf,"LP %d", val);
-                    process(DCS, tBuf);
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 else if ((add & 0x1fff) == 0x0006)
                     {
                     sprintf(tBuf,"LI");    
-                    process(DCS, tBuf);
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     } 
                 else if ((add & 0xfff) == 0x001) // RESET
                     {
                     if ((add & 0x1000) == 0x0000) // local
                         {
                         sprintf(tBuf,"RESET");    
-                        process(DCS, tBuf);
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                         }
                     else // remote
                         {
                         sprintf(tBuf,"LC RESET");    
-                        process(DCS, tBuf);
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                         }
                     }
                 else if ((add & 0x1fff) == 0x000a) // local, PWRRST
                     {
                     sprintf(tBuf,"PWRRST %d", val);    
-                    process(DCS, tBuf);
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 else if ((add & 0x0fff) == 0x000b) //  
                     {
                     if ((add & 0x1000) == 0x0000) // local
                         {
                         sprintf(tBuf,"TRIG %d", val);    
-                        process(DCS, tBuf);
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                         } else                    // remote 
                         {
                         if ((add & 0x2000) == 0x2000) 
-                            {sprintf(tBuf,"LCA TRIG %d", val);} // broadcast
+                            {sprintf(tBuf,"LCB TRIG %d", val);} // broadcast
                         else {sprintf(tBuf,"LC TRIG %d", val);}  // LC
-                        process(DCS, tBuf);
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                         }
                     }
                 //else if ((add & 0x1fff) == 0x0050) // local, UBs
@@ -1077,12 +1077,12 @@ int CheckAndProcessDCS()
                     if ((add & 0x1000) == 0x0000) // local
                         {
                         sprintf(tBuf,"DSAV");    
-                        process(DCS, tBuf);
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                         } else {
                         if ((add & 0x2000) == 0x2000) 
-                            {sprintf(tBuf,"LCA DSAV");} // broadcast
+                            {sprintf(tBuf,"LCB DSAV");} // broadcast
                         else {sprintf(tBuf,"LC DSAV");}  // LC
-                        process(DCS, tBuf);
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                         }
                     }
                 else if ((add & 0x1fff) == 0x0101) // local, DREV
@@ -1090,12 +1090,12 @@ int CheckAndProcessDCS()
                     if ((add & 0x1000) == 0x0000) // local
                         {
                         sprintf(tBuf,"DREC %d", val);    
-                        process(DCS, tBuf);
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                         } else {
                         if ((add & 0x2000) == 0x2000) 
-                            {sprintf(tBuf,"LCA DREC %d", val);} // broadcast
+                            {sprintf(tBuf,"LCB DREC %d", val);} // broadcast
                         else {sprintf(tBuf,"LC DREC %d", val);}  // LC
-                        process(DCS, tBuf);
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                         }
                     }
                 else if ((add & 0x0fff) == 0x0102) // local, FI
@@ -1103,68 +1103,68 @@ int CheckAndProcessDCS()
                     if ((add & 0x1000) == 0x0000) // local
                         {
                         sprintf(tBuf,"FI");    
-                        process(DCS, tBuf);
+                        process(NoPmt1, tBuf);
                         } else                    // remote 
                         {
                         if ((add & 0x2000) == 0x2000) 
-                            {sprintf(tBuf,"LCA FI");} // broadcast
+                            {sprintf(tBuf,"LCB FI");} // broadcast
                         else {sprintf(tBuf,"LC FI");}  // LC
-                        process(DCS, tBuf);
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                         }
                     }   
                 else if ((add & 0x1fff) == 0x1100) // remote, AFERESET f
                     {
                     if ((add & 0x2000) == 0x2000) 
-                         {sprintf(tBuf,"LCA AFERESET %d", val);} // broadcast
+                         {sprintf(tBuf,"LCB AFERESET %d", val);} // broadcast
                     else {sprintf(tBuf,"LC AFERESET %d", val);}  // LC
-                    process(DCS, tBuf);
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 else if ((add & 0x1fff) == 0x1101) // remote, PWR n
                     {
                     if ((add & 0x2000) == 0x2000) 
-                         {sprintf(tBuf,"LCA PWR %d", val);} // broadcast
+                         {sprintf(tBuf,"LCB PWR %d", val);} // broadcast
                     else {sprintf(tBuf,"LC PWR %d", val);}  // LC
-                    process(DCS, tBuf);
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 else if ((add & 0x1fff) == 0x1102) // remote, OVC write
                     {
                     if ((add & 0x2000) == 0x2000) 
-                         {sprintf(tBuf,"LCA OVC %d", val);} // broadcast
+                         {sprintf(tBuf,"LCB OVC %d", val);} // broadcast
                     else {sprintf(tBuf,"LC OVC %d", val);}  // LC
-                    process(DCS, tBuf);
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 else if ((add & 0x1fff) == 0x1103) // remote, MUX
                     {
                     if ((add & 0x2000) == 0x2000) 
-                         {sprintf(tBuf,"LCA MUX %d", val);} // broadcast
+                         {sprintf(tBuf,"LCB MUX %d", val);} // broadcast
                     else {sprintf(tBuf,"LC MUX %d", val);}  // LC
-                    process(DCS, tBuf);
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 else if ((add & 0x1fff) == 0x1104) // remote, GAIN
                     {
                     if ((add & 0x2000) == 0x2000) 
-                         {sprintf(tBuf,"LCA GAIN %d", val);} // broadcast
+                         {sprintf(tBuf,"LCB GAIN %d", val);} // broadcast
                     else {sprintf(tBuf,"LC GAIN %d", val);}  // LC
-                    process(DCS, tBuf);
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 else if ((add & 0x1fff) == 0x1105) // remote, LINK
                     {
                     if ((add & 0x2000) == 0x2000) 
-                         {sprintf(tBuf,"LCA LINK %d", val);} // broadcast
+                         {sprintf(tBuf,"LCB LINK %d", val);} // broadcast
                     else {sprintf(tBuf,"LC LINK %d", val);}  // LC
-                    process(DCS, tBuf);
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 else if ((add & 0x1fff) == 0x1106) // remote, CMBENA
                     {
                     if ((add & 0x2000) == 0x2000) 
-                         {sprintf(tBuf,"LCA CMBENA %d", val);} // broadcast
+                         {sprintf(tBuf,"LCB CMBENA %d", val);} // broadcast
                     else {sprintf(tBuf,"LC CMBENA %d", val);}  // LC
-                    process(DCS, tBuf);
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 else if ((add & 0x1fff) == 0x0107) // local, POOLENA
                     {
                     sprintf(tBuf,"POOLENA %d", val);
-                    process(DCS, tBuf);
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 }
             }
@@ -1391,9 +1391,22 @@ int PHY_LOADER_CONSOLE(char* paramPtr, int Sock, int PrtPOE, int echo, int broad
             }
         }
     
-    //command hdr data
-    movStr16_NOICDEST((unsigned short*)&ePHY_HDR_CON, IOPs[PrtPOE].ePHY11_BCAST_FILLFIFOp, PAC_CHLEN_MIN>>1); //min size to work          
-    ePHY_SEND(PrtPOE, broadCast);           //ePHY FIFO has now loaded, send it
+        //command hdr data
+        if(broadCast==1)
+        movStr16_NOICDEST((snvPTR)&ePHY_HDR_CON, &ePHY301_BCAST_DATA, PAC_CHLEN_MIN>>1); //wordCnt to send plus 1 wrd hdr
+        //movStr16_NOICDEST((snvPTR)&ePHY_HDR_uBReq, &ePHY301_BCAST_DATA, ubCnt); //wordCnt to send plus 1 wrd hdr
+        else
+        movStr16_NOICDEST((unsigned short*)&ePHY_HDR_CON, IOPs[PrtPOE].ePHY11_BCAST_FILLFIFOp, PAC_CHLEN_MIN>>1); //min size to work
+        if(broadCast==1)
+        {
+        *IOPs[1].ePHY0E_XMSKp= 0xFF; //enable all port
+        *IOPs[9].ePHY0E_XMSKp= 0xFF; //enable all port
+        *IOPs[17].ePHY0E_XMSKp=0xFF; //enable all port
+        //send now using ePhy link global_24 data (broadcast) xmit
+        ePHY302_BCAST_XMIT= 1; //global xmit broadcast
+        }
+        else
+        ePHY_SEND(PrtPOE, broadCast); //ePHY FIFO has now loaded, send it
     HappyBus.Socket= Sock;                  //HappyBus.ASCIIPrt ASCII xMIT I/O, ie SOCK,TTY,ePHY 
     HappyBus.CntRecd=0;
     if (echo==0)

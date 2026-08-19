@@ -36,7 +36,8 @@ int     EmptyAll_LVDS_FIFOs();
 int     GTP1_Rec_Trigs();
 
 #define S29JL064J_SECTOR0 (0x0)         //Actual S29JL064J ADR=0x0 @Sector 0
-#define S29JL064J_SECTOR40 (0x220000/2) //Actual S29JL064J ADR=0x110000 @Sector 41   
+#define S29JL064J_SECTOR40 (0x220000/2) //Actual S29JL064J ADR=0x110000 @Sector 41
+#define S29JL064J_SECTOR41 (0x220000/2) //Actual S29JL064J ADR=0x110000 @Sector 41
 
 //adding storage for FEB image file to be downloaded via ROC to FEBs
 //
