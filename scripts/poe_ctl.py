@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import re
+import socket
 import sys
 import time
 
@@ -405,6 +406,75 @@ def cmd_monitor(args):
         print("Monitor stopped.")
 
 
+STATUS_MAP = {"on": 1, "off": 0, "fault": -1, "warning": 2}
+
+
+def send_to_graphite(host, port, metrics):
+    payload = "".join(f"{path} {value} {ts}\n" for path, value, ts in metrics)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.settimeout(5)
+        sock.connect((host, port))
+        sock.sendall(payload.encode())
+    finally:
+        sock.close()
+
+
+def build_graphite_metrics(status, prefix, timestamp):
+    metrics = []
+    inj_id = status["injector_id"]
+    inj_prefix = f"{prefix}.injector{inj_id}"
+    if status["total_power_w"] is not None:
+        metrics.append((f"{inj_prefix}.total_power_w", status["total_power_w"], timestamp))
+    if status["voltage_v"] is not None:
+        metrics.append((f"{inj_prefix}.voltage_v", status["voltage_v"], timestamp))
+    if status["temperature_f"] is not None:
+        metrics.append((f"{inj_prefix}.temperature_f", status["temperature_f"], timestamp))
+    for port_num, p in status["ports"].items():
+        port_prefix = f"{inj_prefix}.port{int(port_num):02d}"
+        if "power_w" in p:
+            metrics.append((f"{port_prefix}.power_w", p["power_w"], timestamp))
+        if "status" in p:
+            metrics.append((f"{port_prefix}.status", STATUS_MAP.get(p["status"], -99), timestamp))
+    return metrics
+
+
+def cmd_push(args):
+    config = load_config(args.config)
+    graphite_cfg = config.get("graphite", {})
+    graphite_host = graphite_cfg.get("host", "localhost")
+    graphite_port = graphite_cfg.get("port", 2003)
+    prefix = graphite_cfg.get("prefix", "crv.poe")
+    injectors = get_injectors(config, args.id)
+    timestamp = int(time.time())
+    all_metrics = []
+    for inj in injectors:
+        inj_prefix = f"{prefix}.injector{inj.injector_id}"
+        try:
+            status = inj.get_status()
+            all_metrics.append((f"{inj_prefix}.reachable", 1, timestamp))
+            all_metrics.extend(build_graphite_metrics(status, prefix, timestamp))
+        except requests.RequestException as e:
+            all_metrics.append((f"{inj_prefix}.reachable", 0, timestamp))
+            now = time.strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{now}] Error contacting injector {inj.injector_id} ({inj.host}): {e}", file=sys.stderr)
+    if not all_metrics:
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
+        print(f"[{now}] No metrics collected.", file=sys.stderr)
+        return
+    if args.dry_run:
+        for path, value, ts in all_metrics:
+            print(f"{path} {value} {ts}")
+    else:
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            send_to_graphite(graphite_host, graphite_port, all_metrics)
+            print(f"[{now}] Sent {len(all_metrics)} metrics to {graphite_host}:{graphite_port}", file=sys.stderr)
+        except OSError as e:
+            print(f"[{now}] Error sending to Graphite ({graphite_host}:{graphite_port}): {e}", file=sys.stderr)
+            sys.exit(1)
+
+
 def add_common_args(parser):
     parser.add_argument(
         "--config", default=CONFIG_DEFAULT,
@@ -449,6 +519,11 @@ def create_parser():
                         help="polling interval in seconds (default: 60)")
     add_common_args(p_mon)
 
+    p_push = sub.add_parser("push", help="read status and send metrics to Graphite")
+    p_push.add_argument("--dry-run", action="store_true",
+                        help="print metrics to stdout instead of sending")
+    add_common_args(p_push)
+
     return parser
 
 
@@ -462,6 +537,7 @@ def main():
         "off": cmd_off,
         "cycle": cmd_cycle,
         "monitor": cmd_monitor,
+        "push": cmd_push,
     }
     commands[args.command](args)
 

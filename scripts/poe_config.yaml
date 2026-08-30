@@ -10,3 +10,8 @@ injectors:
 
 defaults:
   cycle_delay: 5
+
+graphite:
+  host: mu2e-dcs-01
+  port: 2003
+  prefix: crv.poe
