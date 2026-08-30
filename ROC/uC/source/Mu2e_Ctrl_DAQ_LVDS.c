@@ -205,10 +205,8 @@ int HappyBusCheck()
                 if (HappyBus.CntRecd== CmdLenB)
                     {
                     HappyBus.CntRecd=0;                 //done for this request 
-                    HappyBus.WaitCnt=3000;              //done, but maybe more being sent
+                    HappyBus.WaitCnt=10000;              //non-busy background loop takes ~2.5uS per pass)
                     }
-                else
-                    HappyBus.WaitCnt=3000;              //not done, but maybe more being sent
                 }
             }
         }

@@ -1272,7 +1272,7 @@ int loadFLASH_SOCK(int prt, char* eBufB_Sock, int fpga)  //rec data file, pgm fl
 {
     uint8_t d8;
     uint16 d16, key;   
-    int len, stat;
+    int len, stat; 
     extern int g_Done, g_Cnt;
     char* eBufB= eBufB_Sock; //(char*)eRecDatBuf[g_Sock];
     int valid= DWNLD_VALID;                     //always valid if we get here
@@ -1281,8 +1281,10 @@ int loadFLASH_SOCK(int prt, char* eBufB_Sock, int fpga)  //rec data file, pgm fl
     saddr = (snvPTR) flashBase;
     if(fpga==1)
         saddr += S29JL064J_SECTOR0;         //fpga1
-    else                        
-        saddr += S29JL064J_SECTOR40;        //fpga2
+    else if(fpga==2)                       
+        saddr += S29JL064J_SECTOR41;        //fpga2
+    else
+        saddr += S29JL064J_SECTOR71; 
     
     //sum=loadFLASH(S29JL064J_SECTOR40, prt);   //Actual S29JL064J address= 0x110000 @Sector 41
 	//sum=loadFLASH(S29JL064J_SECTOR0, prt);    //Actual S29JL064J address= 0x0 @Sector 0
@@ -1578,22 +1580,36 @@ int SendFile_SrcSector71(int prt, int poePrt, int count, u_16Bit cksum, u_32Bit 
     idx=2;                                  //2ints or 4 byte index into xmit buffer, first 2 words will be xmit header
     sndByteCnt=0;    
 
-    while(len>1)
+    while(len>0)
       {
       TimeOut=0;
       d16 = *srcData++;                     //Flash chip reads are 16bit
-      //1st byte
-      chksum += (d16>>8);                   //SDR_RD16SWP1;  //get data from fpga1 sdRam memory
-      PacSum += (d16>>8);                   //packet sum goes into header
       
+       if(len>1)
+      {
+      //1st byte
+      chksum += (d16>>8); //SDR_RD16SWP1; //get data from fpga1 sdRam memory
+      PacSum += (d16>>8); //packet sum goes into header
       //2nd byte
       chksum += d16&0xff;
-      PacSum += d16&0xff;;                  //packet sum goes into header
-
-      eBufWrds[idx++]= d16;                 //moving byte to xmit buffer 'eBuf15'
+      PacSum += d16&0xff;; //packet sum goes into header
+      eBufWrds[idx++]= d16; //moving byte to xmit buffer 'eBuf15'
       len-=2;
       totBytes+=2;
-      sndByteCnt+=2;                       //counter for packet xmit
+      sndByteCnt+=2; //counter for packet xmit
+      }
+      else
+      {
+      //1st byte
+      d16 >>= 8; //upper byte of 16bits has data
+      chksum += d16; //SDR_RD16SWP1; //get data from fpga1 sdRam memory
+      PacSum += d16; //packet sum goes into header
+      eBufWrds[idx++]= d16; //moving byte to xmit buffer 'eBuf15'
+      len--;
+      totBytes++;
+      sndByteCnt++; //counter for packet xmit
+      }
+      
       if(sndByteCnt>=BYTCNT250)            //one packet 250 bytes for PMT expected page size if using page pgm mode
           { 
           pacCnt++;
@@ -1667,10 +1683,10 @@ int SendFile_SrcSector71(int prt, int poePrt, int count, u_16Bit cksum, u_32Bit 
       {
       pacCnt++;  
       if(sndByteCnt&1)          //odd cnt bytes but we send on 16bit link registers
-          {
+      //    {
           sndByteCnt++;         //fix for even word xfer
-          eBufWrds[idx++]=0;    //mark extra data as zero som checksum is okay
-          }
+      //    eBufWrds[idx++]=0;    //mark extra data as zero som checksum is okay
+      //    }
                  
       //Binary packet to send on ePhy Port to FEB
       eBufWrds[0]= 0xA55A;               //POE 'ePhy' binary download preamble header added to each packet

@@ -1962,7 +1962,7 @@ int process(int prt, char *cmdPtr)
                     FRAM_RD(DWNLD_3_COUNT,(uint8*)&imageSz, 4); //read 4 bytes
                     FRAM_RD(DWNLD_3_CSUM, (uint8*)&cksum, 2);   //read 2 bytes
                                        
-                    imageSz &=0xfffffe;                     //even file size
+                    //imageSz &=0xfffffe;                     //even file size
                     if ((imageSz==0) || (imageSz>3000000))  //image size to small or large, normal around 2,192,012 bytes
                         return 1;
                     
@@ -2624,6 +2624,9 @@ int process(int prt, char *cmdPtr)
                     LDFLASH(prt);                              
                     break;                    
                    }                                                        
+
+                
+                //cleaned up ‘LC’ some
                 else if (!strcmp(tok, "LC"))            //Link Cmd, reqs data 1of24 connected FEBs
                    {
                     if (POE_PORTS_ACTIVE[HappyBus.PoeBrdCh]==0)
@@ -2632,72 +2635,125 @@ int process(int prt, char *cmdPtr)
                         putBuf(prt, tBuf,0);
                         genFlag &= ~ECHO_ACT_PORT;
                         break;
-                        }        
-                    
-                    HappyBus.FM_PAR = (uINT)IOPs[HappyBus.PoeBrdCh].FM41_PARp;                    
-                    REG16(HappyBus.FM_PAR)= FMRstBit8;  //BIT8, clear buffer, fpga                     
+                        }       
+                    HappyBus.FM_PAR = (uINT)IOPs[HappyBus.PoeBrdCh].FM41_PARp;                   
+                    REG16(HappyBus.FM_PAR)= FMRstBit8;  //BIT8, clear buffer, fpga                    
                     //buffer clear wait, its needed for some reason ??
-                    if(HappyBus.PoeBrdCh>1)
-                        mDelay(50);  
-                    else 
-                        mDelay(20);  
+                    //uDelay(50); 
 
-                    //lvLnk.PoolChkmSec=0;
                     genFlag |= ECHO_ACT_PORT;
                     HappyBus.CmdType= eCMD71_CONSOLE;                   
-                    //make it slow else wont pick up super slow cmd 'A0' data 1 sec per reads
-                    PHY_LOADER_CONSOLE(paramPtr, prt,  HappyBus.PoeBrdCh, eECHO_ON,0); //cmd,poeprt,echoON,broadCast=1)                                            
-                    HappyBus.WaitCnt= 10000;        //wait 5mS, ~500nS per HappyBusCheck() call
-                    iFlag |= iNoPrompt;             //flag as no prompt on terminal 
-                    break;                    
-                   }                                                        
+
+                    PHY_LOADER_CONSOLE(paramPtr, prt,  HappyBus.PoeBrdCh, eECHO_ON,0); //cmd,poeprt,echoON,broadCast=1)                    
+                    iFlag |= iNoPrompt;             //flag as no prompt on terminal
+                    break;                   
+                   }                                                       
+
+                //‘LCA’ added check for write command
                 else if (!strcmp(tok, "LCA"))       //remote lvds link command to all boards
-                    {                               //SEND CMD STRING ON ePHY port to FEB                      
-                     int pBits;                    
-                    pBits= ( (ACT_PORTS_HI<<16)+ ACT_PORTS_LO);
-                    //sprintf(tBuf,"** LC Cmd may cause DAQ uBunch Reqs Errors **\r\n");
-                    //putBuf(prt, tBuf,0);
+                    {                               //SEND CMD STRING ON ePHY port to FEB                     
+                    int actPorts, wrMode=0;                   
+                    actPorts= ( (ACT_PORTS_HI<<16)+ ACT_PORTS_LO);
+                   
+                    //example ROC write command "LCA WR 26 5678"
+                    //At initial entry          paramPtr-> "LCA WR 26 5678"
+                    //After strcmp(tok, "LCA" ) paramPtr-> "WR 26 5678"
+
+                    if ((*paramPtr=='W') && (*(paramPtr+1)=='R'))//check "WR" ocmmand type
+                        wrMode=1;                   //write command strin                   
                     
-                    if (HappyBus.SavePrt==0) 
+                    if (HappyBus.SavePrt==0)
                          HappyBus.SavePrt=1;        //just in case, force valid ptrs else 'boom'
 
-                    for(int i=1; i<25; i++)
+                    //if write mode skip clearing read buffers
+                    if (wrMode==0)
                         {
-                        HappyBus.FM_PAR = (uINT)IOPs[i].FM41_PARp;                    
-                        REG16(HappyBus.FM_PAR)= FMRstBit8; //BIT8, clear buffer, fpga                     
+                        //clear all lvds receive fifos
+                        *(uSHT*)IOPs[POE01].FM41_PARp= FMRstBit8;//FPGA2 lvds fifo buf and parErr clr             
+                        *(uSHT*)IOPs[POE09].FM41_PARp= FMRstBit8;//FPGA3 lvds fifo buf and parErr clr              
+                        *(uSHT*)IOPs[POE17].FM41_PARp= FMRstBit8;//FPGA4 lvds fifo buf and parErr clr              
                         }
-                    
+
                     for(int i=1,j=0; i<25; i++,j++)
                         {
-                        if((pBits&(1<<j))==0)
+                        if((actPorts&(1<<j))==0)        //does poe port have an active FEB
                             continue;
-                        sprintf(ReplyBuf80,"\r\n- Port %02d -\r\n",i);
+
+                        sprintf(ReplyBuf80,"-Port%02d\r\n",i); //prompt show port number
                         putBuf(prt,ReplyBuf80,0);
-                        assignLinkPort(i,0);        //no fifo reset, changes all lvds and ephy pointers to new port 1of24  
-                        HappyBus.PoeBrdCh= i;                        
+                        assignLinkPort(i,0);            //no fifo reset, changes all lvds and ephy pointers to new port 1of24 
+
+                        HappyBus.PoeBrdCh= i;                       
                         HappyBus.CmdType= eCMD71_CONSOLE;
 
-                        mDelay(10);
                         //make it slow else wont pick up super slow cmd 'A0' data 1 sec per reads
-                        PHY_LOADER_CONSOLE(paramPtr, prt,  HappyBus.PoeBrdCh, eECHO_ON,0); //cmd,poeprt,echoON,broadCast=1)                        
-                         
+                        PHY_LOADER_CONSOLE(paramPtr, prt,  HappyBus.PoeBrdCh, eECHO_ON,0); //cmd,poeprt,echoON,broadCast=1) 
+
+                        //skip the wait/reading of return data on writes
+                        if(wrMode)
+                            continue;                    //skip return data check
+
                         //return data word(s) have initial ASCII formatting delays, hard to know when its done
-                        //commands return data sizes from a 2 words to 2K words 
-                        HappyBus.WaitCnt= 30000;        //wait 15mS worst case, ~500nS per HappyBusCheck() call
-                        while (HappyBus.WaitCnt)        //muti blocks, use timer
-                            {
-                            if(*paramPtr=='A')          //cmd 'A0' Special case
-                            if(*(paramPtr+1)=='0')      //takes 100mSec per reading
-                                uDelay(100);            //allow extra delay
-                            //wait here for data reply (note: this is a slow command loop)
-                            HappyBusCheck();            //check status/get data, takes ~150nS                        
-                            }
+                        //commands return data sizes from a 2 words to 2K words
+
+                        HappyBus.WaitCnt= 10000;        //wait 500mS, ~2.5uS per background check on HappyBusCheck()
+                        while (HappyBus.WaitCnt)
+                            HappyBusCheck();            //check status/g4et data, takes ~200nS                       
                         }
+
                     HappyBus.WaitCnt=0;                 //done
-                    assignLinkPort(HappyBus.SavePrt, 1);  
+                    assignLinkPort(HappyBus.SavePrt, 1); 
+
+                    HappyBus.SlowReply=0;
+                    break;
+                    }              
+ 
+
+               //‘LCB’ added check for write command, changed some wait times
+                else if (!strcmp(tok, "LCB"))      //remote lvds link command to all boards
+                    {                               //SEND CMD STRING ON ePHY port to FEB                     
+                    int actPorts;                   
+                    actPorts= ( (ACT_PORTS_HI<<16)+ ACT_PORTS_LO);                   
+                    if (HappyBus.SavePrt==0)
+                         HappyBus.SavePrt=1;        //just in case, force valid ptrs else 'boom'
+
+                    //clear all lvds receive fifos
+                    *(uSHT*)IOPs[POE01].FM41_PARp= FMRstBit8;//FPGA2 lvds fifo buf and parErr clr             
+                    *(uSHT*)IOPs[POE09].FM41_PARp= FMRstBit8;//FPGA3 lvds fifo buf and parErr clr              
+                    *(uSHT*)IOPs[POE17].FM41_PARp= FMRstBit8;//FPGA4 lvds fifo buf and parErr clr              
+
+                    HappyBus.CmdType= eCMD71_CONSOLE;
+                    //make it slow else wont pick up super slow cmd 'A0' data 1 sec per reads
+                    PHY_LOADER_CONSOLE(paramPtr, prt,  HappyBus.PoeBrdCh, eECHO_ON,1); //cmd,poeprt,echoON,broadCast=1)                       
+
+                    //example ROC write command "LCB WR 26 5678"
+                    //At initial entry          paramPtr-> "LCB WR 26 5678"
+                    //After strcmp(tok, "LCA" ) paramPtr-> "WR 26 5678"
+
+                    if (!((*paramPtr=='W') && (*(paramPtr+1)=='R')))    //check "WR" ocmmand type
+                        {
+                        for(int i=1,j=0; i<25; i++,j++)
+                            {
+                            if((actPorts&(1<<j))==0)        //does poe port have an active FEB
+                                continue;
+
+                            //return data word(s) have initial ASCII formatting delays, hard to know when its done
+                            //commands return data sizes from a 2 words to 2K words
+
+                            assignLinkPort(i,0); //no fifo reset, changes all lvds and ephy pointers to new port 1of24
+                            HappyBus.PoeBrdCh= i;
+                            HappyBus.WaitCnt= 10000;       //wait 500mS, ~2.5uS per background check on HappyBusCheck()
+                            while (HappyBus.WaitCnt)        //muti blocks of slow data returns use timer
+                                HappyBusCheck();            //check status/get data, takes ~200nS                       
+                            }                      
+                        }
+
+                    HappyBus.WaitCnt=0;                 //done
+                    assignLinkPort(HappyBus.SavePrt, 1); 
                     HappyBus.SlowReply=0;
                     break;
                     }
+                
                 else if (!strcmp(tok, "LP"))                //remote lvds link PORT 
                     {                                       //Set Bus Board Numb 1-24, 0=all
                     int i=1;
@@ -4398,7 +4454,8 @@ int process(int prt, char *cmdPtr)
         if ((iFlag & iNoPrompt))
             iFlag &= ~iNoPrompt;                //one time flag, clear it
         else
-            newLinePrompt(prt);                 //Send newLine prompt with or without Port#
+            if(prt != DCS)
+                newLinePrompt(prt);                 //Send newLine prompt with or without Port#
     
 return 0;
 }
