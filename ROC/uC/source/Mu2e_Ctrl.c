@@ -2877,7 +2877,10 @@ int process(int prt, char *cmdPtr)
                     param2=arg_dec(&paramPtr,1);
                     sprintf (Buf1500, "%4X", stab_Pool[param1][param2]);
                     putBuf(prt, Buf1500, 0);
-                    putBuf(prt,"\r\n",0);
+                    if (prt != DCS)
+                    {
+                        putBuf(prt,"\r\n",0);
+                    }
                      break;
                 }
                     

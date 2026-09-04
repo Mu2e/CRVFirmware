@@ -8,7 +8,7 @@
 #ifndef _VER_IO
 #define _VER_IO
 
-#define MU2Ever   502
+#define MU2Ever   503
 //code version, Major(1), Minor(00)
 
 typedef	unsigned char   u_8Bit;                 //8-bit value
