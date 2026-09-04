@@ -1,0 +1,17 @@
+injectors:
+  1:
+    host: 192.168.157.111
+    username: admin
+    password: password
+  2:
+    host: 192.168.157.112
+    username: admin
+    password: password
+
+defaults:
+  cycle_delay: 5
+
+graphite:
+  host: mu2e-dcs-01
+  port: 2003
+  prefix: crv.poe
