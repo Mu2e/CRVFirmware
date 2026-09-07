@@ -43,13 +43,12 @@ int     SockKeyWait(int wait, uint16 sock, uint16 *key);
 int     KeyBoardWait(int wait);
 int     ClkDrvInit();
 
-int     LDFILE(int prt);
-int     LDFLASH(int prt);
-int     SEND_2_FEB(int prt, int xports);
 int     link_check(int prt);
 int     LvdsDataAvail(int* d16);
 int     PoolDataReq(int);
 int     loadFLASH_SOCK(int, char*, int);
+int     eraseFLASH_Sector71(int secCount, int start, int port); //stores backup FEB file
+uint16  ClrFmRecFIFO(void);
 
 int     SockKeyWait(int wait, uint16 sock, uint16 *key);
 
@@ -109,7 +108,6 @@ void    hDelayuS(uint32 del, uint32 wait );
 char*   getline(char *, int, int *);
 int     process(int, char *);
 int     FLSD(int prt);
-int     LDF(int, int, char*); 
 float   poePower(int poeprt);
 int     link_Init(int prt);
 void    InitFPGA_REGISTERS();
@@ -137,6 +135,10 @@ void    HexDump(char *addr, int len, int port);
 void    HexDump16(char *addr, int len);
 void    header1(int);
 void    appendTerm(int prt);
+
+int     rd16FPGA(uint16_t offset);
+void    wr16FPGA(uint16_t offset, uint16_t d16);
+
 
 #define putchar     __putchar
 #endif

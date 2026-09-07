@@ -92,8 +92,8 @@ int pfmget(int rg45Port)                    //clears buffer if data avail
 //
 // Data received here has a 3 word header
 //      Word 1 Port Number 1of24
-//      Word 3 Req Cmd Type
-//      Word 4 Return word Count
+//      Word 2 Req Cmd Type
+//      Word 3 Return word Count
 //      Then requested data
 //
 //How do we get into this lvds port checking routine
@@ -115,13 +115,15 @@ int HappyBusCheck()
     u_16Bit D16;
     int seq;
         
-    seq= HappyBus.PoeBrdCh;
+    seq= HappyBus.PoeBrdCh;                 //seq number is port number set in command 'LP'
     d16= *(u_16Bit*)IOPs[seq].FM40_STAp;    //check data avail status
     
     if ( (d16& IOPs[seq].ePHY_BIT)==0)      //0= data available
         { 
         HappyBus.CntRecd++;          
+        //*******************************************
         //1st check the normal 3 word header
+        //*******************************************
         if (HappyBus.CntRecd <4)            //new reply,save hdr params
             {
             d16= REG16(HappyBus.FM_DAT);    //get lvds data word
@@ -148,13 +150,18 @@ int HappyBusCheck()
                 }
             if(err)
                 HappyBus.FMRecvErr++;
-            HappyBus.WaitCnt= 20000;        //wait 10mS, ~500nS per HappyBusCheck() call
+            HappyBus.WaitCnt= 2500;        //wait 5mS(big rtn packets), ~200nS per HappyBusCheck()
             }
         //header checking done, now handle returned data
         else 
+            //*******************************************
+            //data check here
+            //*******************************************
+          
             //LVDS Data words from FEB in blocks up to 256 words
-            //     Delays of 250us or 800uS between blocks
-            //     Each word is 250nS on wire
+            //  Delays of 250us or 800uS between blocks
+            //  Each word is 250nS on wire
+            //
             //WaitCnt is a passcount of times we return to check data avail status
             //Break in data is greater than WaitCnt=400, assume packet is done
             //If packet timeout then next packet will include 3 word header before data
@@ -205,7 +212,7 @@ int HappyBusCheck()
                 if (HappyBus.CntRecd== CmdLenB)
                     {
                     HappyBus.CntRecd=0;                 //done for this request 
-                    HappyBus.WaitCnt=10000;              //non-busy background loop takes ~2.5uS per pass)
+                    HappyBus.WaitCnt= 10000;            //non-busy background loop takes ~2.5uS per pass)
                     }
                 }
             }

@@ -20,12 +20,15 @@
 #define eCMD72_STAB       0x72   
 #define eCMD73_LDRAMINIT  0x73   
 #define eCMD74_LDRAMFLUSH 0x74
-#define eCMD75_CONSOLEBIN 0x75   
+#define eCMD75_CONSOLEBIN 0x75
+
+
+#define eCMD77_BINARY_DAT 0x77          //FPGA binary File transfer Data type for download packets, added Apr2025
+#define ePayLdBinPreamble 0xA55A        //POE 'ePhy' binary download preamble header added to each packet
+
 //#define eCMD79_LINK_DAQ   0x76   
 //#define eCMD79_LINK_INIT  0x79   
 #define eCMD76_BINARY_EOF 0x76
-#define eCMD77_BINARY_DAT 0x77              //FPGA File Data type, Download packet, tek added Apr2025
-#define ePayLdBinPreamble 0xA55A            //POE 'ePhy' binary download preamble header added to each packet
 #define eECHO_ON          1
 #define eECHO_OFF         0
 
@@ -33,6 +36,8 @@
 #define ePayLdSizMinWrds 32             //payLoad Size minimum (does not include packet src,dest,siz, ucHeader)
 #define ePayLdMaxAndHdr ePayLdMax256+32 //add extra for packet ethernet overhead src,dest,len 'PayLdMaxAndHdr'
 #define ePayLdSizLimit256  ePayLdMax256 //payLoad Size limit, 512 words, Make sure FEB has rec buffer this size !!!
+
+#define eFebLdMax120    120             //payLoad Size Max 'PayLdMax' for FEB image downloads
 
 
 #define PAC_CHLEN_MIN   64+4            //minimum packet length for standard network receivers, add checksum(4chars)
@@ -46,16 +51,6 @@
 #define     sBLOCKSIZ   38              //ON FEBs
 #define     sSMALLSIZ   22              //ON FEBs
 
-#define DWNLD_3_VALID   0x0620              //2 BYTES fpga FEB image valid download
-#define DWNLD_3_COUNT   0x0624              //4 BYTES fpga FEB image byte cnt
-#define DWNLD_3_CSUM    0x0628              //2 BYTES fpga FEB image cksum
-
-
-// ROC POE FEB Flash Download 
-int PHY_LOADER_FLASH(char* paramPtr, int Sock, int PrtPOE, int echo, int broadCast, uint16 SndCnt);
-int PHY_LOADER_EOF(char* paramPtr, int Sock, int PrtPOE, int echo, int broadCast, uint16 SndCntByts);
-int PHY_LOADER_eCMD77(char* paramPtr, int Sock, int PrtPOE, int echo, int broadCast); 
-
 
 //#define LVDS_tOUT5000  5000             //lvds rec data timeout, used in 'Mu2e_Cntrl_DAQ_LVDS.c'
 
@@ -65,4 +60,13 @@ int assignLinkPort(int param1, int reset);
 int linkInitALL(int prt);
 int PHY_LOADER_LNK(int PrtPOE, int broadCast);
 int PhyXmitBsy(int PrtPOE);
+int GTP1_Rec_Trigs_Fake_uB_Request();      //cmd 'TRIG' handler
+
+
+// ROC POE FEB Flash Download 
+int PHY_LOADER_FLASH(char* paramPtr, int Sock, int PrtPOE, int echo, int broadCast, uint16 SndCnt);
+int PHY_LOADER_EOF(char* paramPtr, int Sock, int PrtPOE, int echo, int broadCast, uint16 SndCntByts);
+int PHY_LOADER_eCMD77(char* paramPtr, int Sock, int PrtPOE, int echo, int broadCast);
+
+
 #endif

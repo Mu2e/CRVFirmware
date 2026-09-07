@@ -1,14 +1,15 @@
 //*******************************************************************************
-// mu2e CRV Readout Controller 
+// mu2e Readout Controller (ROC)
 // 'ver_io.h'
-// Fermilab Terry Kiper 2016-2021
+// Fermilab Terry Kiper 2016-2025
 //
 //*******************************************************************************
 
 #ifndef _VER_IO
 #define _VER_IO
 
-#define MU2Ever   503
+#define MU2Ever   630
+
 //code version, Major(1), Minor(00)
 
 typedef	unsigned char   u_8Bit;                 //8-bit value
@@ -228,6 +229,8 @@ typedef void*           volatile vPTR;
 #define ePHY302_BCAST_XMIT *(sPTR)(fpgaBase0+(0x302*2))//ePhy link global_24 data (broadcast) xmit
 
 
+#define ePhyTxBufCnt  *(sPTR)(fpgaBase0+ (0x413*2))  //ephy transmit buffer word count
+
 
 //reg bit assignments
 #define FMRXENA     BIT3
@@ -262,6 +265,9 @@ typedef void*           volatile vPTR;
 #define DWNLD_2_COUNT   0x0614              //4 BYTES fpga2 byte cnt
 #define DWNLD_2_CSUM    0x0618              //2 BYTES fpga2 cksum
 #define fram_NERROR_CNT 0x061A              //2 BYTES nError counter
+#define DWNLD_3_VALID   0x0620              //2 BYTES fpga FEB image valid download
+#define DWNLD_3_COUNT   0x0624              //4 BYTES fpga FEB image byte cnt
+#define DWNLD_3_CSUM    0x0628              //2 BYTES fpga FEB image cksum
 
 
 //F-RAM
@@ -282,7 +288,7 @@ typedef void*           volatile vPTR;
 #define hDelay          0x0008              //delay flag nHet Delay function
 #define POE_CHECK_DUE   0x0010              //POE CHECK DUE via systick counter
 #define ZEST_ETM1_OK    0x0020              //Orange Tree gigabit ethernet active
-#define DAQREQ_2FEB     0x0040              //FEB DAQ data request
+#define DAQuB_Test      0x0040              //FEB DAQ fake data request
 #define DAQuB_Trig_OLD  0x0080              //uBunch trigger mode flag
 #define ECHO_ACT_PORT   0x0100              //echo link poe port number with newline prompt
 //#define POOL_Active     0x0200               //data req for link check active
@@ -295,15 +301,15 @@ typedef void*           volatile vPTR;
 
 
 #define ID_RegTime      4                   //link id number check time in Secs
-#define ReqPoolTime     30000               //link req pooled data time in mSecs
-#define GetPoolTime     (ReqPoolTime+500)   //link get pooled data after delay in mSecs
+#define ReqPoolTime30   30000               //link req pooled data time in mSecs
+#define GetPoolTime     (ReqPoolTime30+500) //link get pooled data after delay in mSecs
 
 
 // Flag Bits for Register (iFlag)
 #define CONFIGFAIL      0x0001              //FPGA config status
 #define OTREE_CONFIG    0x0002              //ORG TREE Zest board config error
 #define iNoPrompt       0x0004              //echo new line prompt
-#define iPHY_BINMODE   0x0008              //Sending binary file on saved data structure
+#define iPHY_BINMODE    0x0008              //Sending binary file on ePhy  link
 
 //flash variables
 #define adr555 (0x555 << 1)                 //flash chip command codes
@@ -311,7 +317,7 @@ typedef void*           volatile vPTR;
 #define VALID           0xaa55              //valid data mask for saved data structure
 
 //sector to erase in parallel flash
-#define SECTORES        40     
+#define SectorCnt36      36     
 
 #define putchar     __putchar
 #define cmdbufsiz       128                 //uart1 command line buffer size
@@ -352,6 +358,8 @@ typedef void*           volatile vPTR;
 #define     POECHs      4                   //Channels per'LTC4266A' chip
 #define     POECHsALL   POEChipCnt*POECHs   //Channels per'LTC4266A' chip * chip count
 
+//test code defines
+#define  dBufSz 258
 
 #define InBufSiz_512  512
 #pragma pack(4)                                 //force 32bit boundary on all types
@@ -366,7 +374,7 @@ struct vB {
 
 
 
-#pragma pack(4)                                 //force 32bit boundary on all types
+#pragma pack(4)                             //force 32bit boundary on all types
 struct uBuns {
             u_32Bit uDly;                          
             u_16Bit Port;
@@ -375,6 +383,8 @@ struct uBuns {
             u_16Bit Flag;
             u_16Bit errFLAG;                //ephy bcast link bsy error
             u_16Bit errRESYNC;
+            u_16Bit ReqCnt;
+            u_32Bit LoopCnt;
         };
 
 #pragma pack(2)                             //force 16bit boundary on all types
@@ -398,9 +408,9 @@ struct netinfo_s {
 //Ethernet/Wiznet power up defaults 
 //will be overwritten if user FLASH has valid data for these settings
 static const struct netinfo_s defNetInfo = {
-            {131, 225, 53, 82},             //local IP  default null setup 'HLSWH4'
-            {131, 225, 56, 200 },           //Gateway Wilson Hall
-            {255, 255, 255, 00 },           //Mask for all
+            {192, 168, 1, 100},             //IP local pc isolated network
+            {192, 168, 1, 1},               //Gateway local pc isolated network
+            {255, 255, 255, 0},             //Mask for all
             5000,                           //telnet0 port char based
             5001,                           //telnet1 port char based
             5002,                           //telnet2 port char based
@@ -466,7 +476,8 @@ struct msTimers{
                     gBusy_mSec,
                     g_wTicks,
                     tdcSpillGateCnt,
-                    SpillGateTimeout;
+                    SpillGateTimeout,
+                    FanTempTimer;
                     //FEB_Ld_toutSec;
             };
 
@@ -534,14 +545,14 @@ struct uC_Store_FRAM
 struct uC_Store
             {
             u_32Bit DwnLd_sCNT;             //4 bytes
-            u_16Bit DwnLd_sSUM;             //2 bytes
+            u_32Bit DwnLd_sSUM;             //4 bytes (store as 32bit, 16Bits valid)
             };
 
-//local storage of SOCKET download programming of FLASH
+//local general storage of SOCKET downloads vars
 struct uSums {
               u_32Bit DwnLd_sCNT;               //4 bytes count
-              u_16Bit DwnLd_sSUM;               //2 bytes chksum
-              u_16Bit FL_SOCK_CHKSUM;           //2 bytes FLASH load using socket checked sum
+              u_32Bit DwnLd_sSUM;               //4 bytes chksum (store as 32bit, 16Bits valid)
+              u_32Bit FL_SOCK_CHKSUM;           //4 bytes FLASH load using socket checked sum (store as 32bit, 16Bits valid)
               u_32Bit FL_SOCK_CHKSIZE;          //4 bytes FLASH load using socket checked filesize
 };
 
@@ -654,14 +665,18 @@ struct ePHYdaqS{
    unsigned short u_uBunchBuf[uBunSz256];  //int data size
 };
 
-#define PacSize 256+10
+
+
+
+#define PacSize     256+10
 //
 //Bin file download struct
 struct ePHY_BinFile{
-    unsigned short CMDTYP;           //xmit data cmdType 1 word 'eCMD77_FPGA_CNTRL'
-    unsigned short WrdCnt;           //xmit data words to send
-    unsigned short binBuf[PacSize];  //xmit data buffer
+   unsigned short CMDTYP;           //xmit data cmdType 1 word 'eCMD77_FPGA_CNTRL'
+   unsigned short WrdCnt;           //xmit data words to send
+   unsigned short binBuf[PacSize];  //xmit data buffer
 };
+
 
             
 //*********** HET1 OUTPUTS *************
@@ -685,20 +700,18 @@ struct ePHY_BinFile{
 //  Current forward=14ma  Grn
 //  Current forward=18ma  Blu
 
-//LED_BLUE          (V2) HET1_1
-#define     BLU     1    
-#define LED_BLU1      hetREG1->DCLR=  BIT1; //ON
-#define LED_BLU0      hetREG1->DSET=  BIT1; //OFF
+//LED_BLUE          (P1) HET1_24
+#define LED_BLU1      hetREG1->DCLR=  BIT24; //ON
+#define LED_BLU0      hetREG1->DSET=  BIT24; //OFF
 
-//LED_GRN           (P2) HET1_20
-#define     GRN     20    
-#define LED_GRN1      hetREG1->DCLR=  BIT20; //ON
-#define LED_GRN0      hetREG1->DSET=  BIT20; //OFF
+//LED_GRN           (V2) HET1_1
+#define LED_GRN1      hetREG1->DCLR=  BIT1; //ON
+#define LED_GRN0      hetREG1->DSET=  BIT1; //OFF
 
-//LED_RED           (P1) HET1_24
-#define     RED     24    
-#define LED_RED1      hetREG1->DCLR=  BIT24; //ON
-#define LED_RED0      hetREG1->DSET=  BIT24; //OFF
+//LED_RED           (P2) HET1_20
+#define LED_RED1      hetREG1->DCLR=  BIT20; //ON
+#define LED_RED0      hetREG1->DSET=  BIT20; //OFF
+
 //LED_OFF           (Px) HET1_13,20,24
 #define LEDs_OFF      hetREG1->DSET= (BIT1|BIT20|BIT24);
 

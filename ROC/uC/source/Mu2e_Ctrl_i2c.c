@@ -46,6 +46,7 @@ extern uint16 g_i2cErr;
 //i2c send/rec command/data temp array
 //extern uint8_t i2Data[10];
 extern uint32  genFlag;
+extern uint16_t POE_PORTS_ACTIVE[];     //24 port plus 1 to hold 'act port cnt'
 
 //interal data
 uint16_t    fpLEDs_STORE[POECHsALL];        //fnt pnl led state store
@@ -380,13 +381,19 @@ int i2c_rec_intr_mode()
         g_i2cTransfer_t.data= PtrCur++;     //load data prt into .data for intr roution to use
         i2cRecvData(PoeCursChipAddr[Port][0], PoeCursChipAddr[Port][1], 1, &i2cData[0], 1 ); 
         
-        //flag for rg45 LED on/off
-        
-        if (POE_VLT_ALL[Port] > 100)
-      //if (*g_i2cTransfer_t.data > 10)
-          fpLEDs_STORE[Port]= 1<<PoeVltsSlaveAdr[Port][3];  
+        //flag for rg45 LED on/off       
+    //tek April 2023 Tester version of code looks for active FM from port status array
+        //if (POE_VLT_ALL[Port] > 100)
+        //  fpLEDs_STORE[Port]= 1<<PoeVltsSlaveAdr[Port][3];  
+        //else
+        //  fpLEDs_STORE[Port]= 0<<PoeVltsSlaveAdr[Port][3];    
+
+        //tek April 2023 Tester version of code looks for active FM from port status array
+        if (POE_PORTS_ACTIVE[Port+1])          //store as active in array 1of24        
+          fpLEDs_STORE[Port]=1<<PoeVltsSlaveAdr[Port][3];
         else
-          fpLEDs_STORE[Port]= 0<<PoeVltsSlaveAdr[Port][3];
+          fpLEDs_STORE[Port]=0<<PoeVltsSlaveAdr[Port][3];
+        
         }
     else 
         {

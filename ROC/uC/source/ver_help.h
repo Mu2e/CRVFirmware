@@ -8,7 +8,7 @@
 #define _VER_HELP
 
 const   char HelpMenu[]={
-               "HELP H1:  --------------- Mu2E CRV Readout Controller -------------------\r\n\n"
+               "HELP H1:  --------------- Readout Controller (ROC) ------------------\r\n\n"
                "READ\r\n"
              //"  RDB1 & RDB2 Read Binary FEB DATA BLOCKS FPGA 1,2\r\n"
                //"  RDB WCnt    Read Spill Data(16bit BINARY), WCnt(H)= # Words to read\r\n"
@@ -19,6 +19,8 @@ const   char HelpMenu[]={
                "  RDM adr c i FPGA Read/NoIncr FPGA A16H,c=WrdCnt(D), i=WrdsPerline(def=8)\r\n"
                "  RDBR a c    Read any A16H(no Incr), Rtns Bin 16bit Data,c=#Wrds(H) to Rd\r\n"
                "              if Adr a=0, stop any active RDB or RDBR cmd\r\n"
+               "  RFI a c     Reads Flash with Increment, a=Byte Addr(32BitH), c=WrdCnt(H)\r\n"
+                 
                "\nWRITE\r\n"
                "  WR  a d     FPGA Write Addr16(H), Data16(H)\r\n"                 
                  
@@ -26,18 +28,25 @@ const   char HelpMenu[]={
                "  LP p        Assign 1of24 Ports for 'LC' cmd, List Act Ports, Adds New Prompt\r\n"
                "  LC          Link Command, send cmd to Pre-Selected FEB port\r\n"                 
                "  LCA         Link Command All, send cmd to ALL FEB ports, may causes DAQ Errs\r\n"                 
+               "  LCB         Link Command Broadcast, single broadcast command to all ports\r\n"                 
                "  LI          Link Init, Detects connected FEBs on POE ports using FPGA logic\r\n"                 
 
                "\nMISC\r\n"
                "  ADC n       Read uC ADC Chs and Temperature, n=1=noText\r\n"
                "  ID          Display code versions and serial number\r\n"
-               "  POOL        FEBs Pooled Data Display, see Help 'HT' for more Info\r\n" 
+               "  FAN m       Back Panel Fans ON/OFF Control, 1=On, 0=Off\r\n"
+               "  POOL c      Pooled Data View, c=1=clr, see Help 'HT' also Poolena 0=Off,1=On\r\n" 
                "  RESET       uC Reset, if USB fails on restart Dis/Connect USB cable\r\n"
                "  SN pwd s c  Set s=Ser#, c=Cntrl#, pwd=123, n=0-999, c=1-19, no input reads\r\n"
-               "  TRIG_OLD n  1=On,0=OFF, Fiber Data_Req_Buffer Xmits uBunch Req to FEB\r\n"
-               "  TRIG n      1=On,0=OFF, New vers of TRIG, sends 4 word uBun Reqs, faster\r\n"
+               "  TRIG_OLD n  1=On,0=Off, Ena Fiber RecBuffer Check, Send uBReq to FEB\r\n"
+               "  TRIG n      1=On,0=Off, Ena Fiber RecBuffer Check, Send uBReq to FEB, Faster\r\n"
 
-               "\nFLASH       See Help 'H2' or 'HF' for programming\r\n"
+               "\nFLASH        See Help 'HF' for programming, also 'RFI' command\r\n"
+
+               "FPGA\r\n"
+               "  FI          Flash Init, Resets all FPGAs using programB signal\r\n"
+               "  FT          Flash Transfer Data, Reloads all FPGAs\r\n"
+               "  FS          Flash Status, reads FPGA download Size, SumCheck, FLASH ID\r\n\n"
                  
                "\nPOE PORTS\r\n"
                "  PWR         Display POE Ports power readings\r\n"
@@ -46,7 +55,7 @@ const   char HelpMenu[]={
                "\nSAVE/RESTORE\r\n"
                "  DSAV        Save Device Setup registers to Flash\r\n"
                "  DREC p      Recall/load Device Setup Regs from Flash, p=0(default setup)\r\n"
-               "  FDUMP adr   Display FRAM (128 word block), fpga(1-4) adr=0,100,200,300\r\n"
+               "  FD adr      Read FRAM (128 word block), fpga(1-4) adr=0,100,200,300\r\n"
                  
                "\nSOCKET\r\n"
                "  SET         Network Setup Registers\r\n"
@@ -54,10 +63,149 @@ const   char HelpMenu[]={
                "  NETSAV      Network PORT Setup Save to Flash, NETRST restores defaults\r\n"
                "  CLOSE s     Close any active Network Socket, s=Socket 0-3\r\n"
                "  QUIT        Closes this active socket connection\r\n\n"
-               "HELP          HE(HELP1),H2(HELP2), HF(FLASH), HN(NETWORK), HT(TEST), HA(ADRMAP)\r\n\n"
+               "HELP          HE(HELP), H2(HELP2), HF(FLASH), HN(NETWORK), HT(TEST), HA(ADRMAP)\r\n\n"
                    
 };
 
+
+
+
+const   char HelpMenuFLASH[]={
+               "HELP HF: -------------- FLASH MEMORY LOADING/PROGRAMMING -------------------\r\n\n"
+
+               "FRAM  (SETUP)\r\n"
+               " FD adr      Read FRAM (128wrd display),adr=600 fpgas sizes,chksums (FDUMP)\r\n"
+               " FRERASE 1   Erase All 8Kbytes of FRAM\r\n"
+               " FRD a       Read  a=A16H(13bit) def=0, rtns data16  'FRS'=Chip Status\r\n"
+               " FWR a d     Write a=A16H(13bit), d=16bit(hex),note FDUMP cmd under Save\r\n"
+               " FRS         Status register read\r\n\n"
+                 
+               "FLASH Misc\r\n"
+               "  FZ c       Check/Display un-erased FLASH data, c=word cnt(H) to check\r\n"                 
+                 
+               "FLASH Load Using USB PORT\r\n"
+               " FL1         Erase, Program FPGA(1) File Xilinx binary file, user reboot\r\n"
+               " FL2         Erase, Program FPGAs(2-4) File Xilinx bin file, user reboot\r\n"
+               " FL3         Erase, Program Images for downloads to FEBs FPGA or Micro\r\n\n"
+
+               "FLASH Load using Socket Port\r\n"
+               " FLSOCK1     Erase and Program FPGA(1) FLASH with Xilinx bin file\r\n"
+               " FLSOCK2     Erase and Program FPGA(2-4) FLASH with Xilinx bin file\r\n"
+               " FLSOCK3     Erase, Program Images for downloads to FEBs FPGA or Micro\r\n\n"
+               "             RFI 000000 to display FL1 in FLASH Sector00\r\n"
+               "             RFI 220000 to display FL2 in FLASH Sector41\r\n"
+               "             RFI 400000 to display FL3 in FLASH Sector71\r\n"
+                
+               "FLASH Load FEB, Pgm 1 or all ports at once, cmd 'FS' view image file on ROC\r\n"                 
+               " FEBSEND p c Send FL3 image to FEB, p=1 cntrl port, c=cnt, ~54Secs\r\n"
+               "             option p=1-24, a single active cntrl port, use cmd 'LP' to check\r\n"
+               "             option c=1=single load a port or c=24=load all active ports\r\n\n"
+               "             Examples   Note FEBs busy time will be about 1 minute\r\n"
+               "                FEBSEND 1 1,  send to port1 using port1 as control port\r\n"
+               "                FEBSEND 4 1   send to port4 using port4 control port\r\n"
+               "                FEBSEND 6 24  send to all active ports, port6 control port\r\n"
+               "            See 'FEB cmd FC3BOOT' for Updating boot image, needs FL3 ChkSum\r\n\n"
+                 
+             //"            3 Steps with delays to Download and Verify\r\n"
+             //"            1st FEB CMD 'LC FEB2ERA' Erase FEB upper FLASH ~50Sec \r\n"
+             //"            1) ROC CMD 'FEBSEND p f' Send p=port, f=FEBs image file,~50Secs\r\n"
+             //"            2) FEB CMD 'LC FEB2EOF' FEB stores in FRAM image Size + ChkSum\r\n"
+             //"            3) FEB CMD 'LC FEB2FS'  Displays both boot and backup stats'\r\n\n"
+                 
+               "HELP        HE(HELP), H2(HELP2), HF(FLASH), HN(NETWORK), HT(TEST), HA(ADRMAP)\r\n\n"
+};
+
+
+
+const   char HelpMenuTest[]={
+               "HELP HT: ------ SDRAM TESTING and I/O LINKS (FIBER, LVDS, ePHY) Tests ------\r\n\n"
+               "SDram\r\n"
+               "  SD f s     SDram Memory Test, f=(2,3,4)  s=sizeWords(H) (def f=2,s=all)\r\n"
+               "             ..Max Size Words=0x3fffff0,   MT46H64M16LF (64Megx16)\r\n\n"
+               "FIBER_LINK TEST\r\n"
+               "  PINIT      1) Set up FPGA Regs to bypass FEBs Normal return data path\r\n"
+               "  LDFILE f   2) Load Data File to FPGA SDram 2,3,4 (@Adr 4xx,8xx,Cxx)\r\n"
+               "  PTRIG      3) 1 Packet Request, Load Preamble, Payload, ChkSum.. Triggers\r\n"
+               "  PTRIG n    4) n Packet Req times n, Load Preamble, Payload, ChkSum.. Trigs\r\n\n"
+
+               "LVDS_FM REC\r\n"
+               "  PFM p c    Read LVDS(FM) data from Port p (1of24), c=WCnt(D)(def p=1,c=all)\r\n"
+               "  POOL c     Display Pooled FEBs Data, 30Sec update,  c=1 Clears Pool Buffer\r\n" 
+               "  POOLENA m  Data Pooling, Ena=1, Dis=0, Forces new update within 2 secs\r\n" 
+               "             Use FEB Command 'CMBENA 1' to Enable AFE and CMB Data Reading\r\n\n" 
+                 
+               "PHY_RECV     Reads PHY Port Data if available\r\n"
+               "  PREC p c   PHY FIFO Read, p=1of24 ports(def=Active), c=wrdcnt(H),def=all\r\n\n"
+
+               "LINK COMMANDS\r\n"
+               "  LP p       Assign 1of24 Ports for 'LC' cmd, List Act Ports, Adds New Prompt\r\n"
+               "  LC cmd     LC cmd uses PHY Link to Send ASCII Cmd string to FEB\r\n"
+               "             FEB Replys Sending ASCII data on 'LVDS LINK'\r\n"
+               "             Controller will Auto Display this data, else cmd 'PFM p'\r\n\n"
+                 
+               "PHY PORT TESTING\r\n"
+               "  PSEND n    Sends cmd 'RDX nnnn'(H) to FEB, nnnn max 1000H, (def=100H) \r\n"
+               "             Returns Sequential data on 'PHY LINK' to the ports PHY FIFO\r\n"
+               "  PREC p c d Reads 'PHY LINK' REC FIFO data, p=1of24 ports(def=Active Port)\r\n"
+               "             c=word count(H), d=Display Wrds Per Line\r\n\n"
+
+               "EMPTY PHY_REC_FIFOs\r\n"
+               "  PRECALL    Reads all PHY FIFOs, Output same as 'PRECF', cmd 'PA' shortcut\r\n\n"                 
+                 
+               "READ PHY FIFOs uBunch Data\r\n"
+               "  PRECF p c d  Reads PHY FIFO (Formats data), p=1of24 ports(def=Active Port)\r\n"
+               "               c=wrd cnt to read, d=display wrds per line(def=12)\r\n\n"
+               "uBunch Data Request Testing, Requires Fiber Loopback\r\n"
+               "              On FEB see cmd 'HT' for help on debugging uBunch Request\r\n"
+               "  UB0         Stops any active uBunch Requests\r\n"
+               "  UB1 d       Changes Delay(uS) between uBun Req (Cmd UB3), (def=20uS)\r\n"
+               "  UB2 p l     Trig uBun Requests, p=1or2 Req/Packet, l=loop count(def==1(H))\r\n\n"
+               "  UB3         Uses FPGA Sequencer if code is active\r\n\n"
+               "  UB4 cnt     Repeats UB2 commands with a fixed 800uS delay between each\r\n\n"
+               "  Return_Hdr  4 Word Hdr  1(WordCnt)  2(Status)  3(ubReq#HI)  4(ubReq#LO)\r\n"
+               "  Return_Hdr  Status Bits=  8(FIFO Empty) 7654(OverFlow) 3210(uB Req Err)\r\n\n"
+               "Tester Mode\r\n"
+               "  TESTLVDS    Test LVDS Transmitters and Receivers section on ROCs\r\n"
+               "  TESTFIBER   Test FIBER Transmitters and Receivers section on ROCs\r\n"
+               "  TESTPHY     Test Ethernet Driver PHY Transmitter section on ROCs\r\n"              
+               "  TESTRAM     Test SDRAMs on FPGAs 2,3,4\r\n"              
+                 
+               "HELP          HE(HELP), H2(HELP2), HF(FLASH), HN(NETWORK), HT(TEST), HA(ADRMAP)\r\n\n"
+};
+
+
+
+
+
+const   char HelpMenu_ORG_TREE[]={
+               "HELP HN: ------------- ORANGE TREE ZestETM1 NETWORK TESTING ----------------\r\n\n"               
+               "ZEST 16Bit\r\n"
+               "  ZSOCK      Read Socket Regs for Ch 1-16 Base Memory, Get 1st 7 words/ch\r\n"
+               "  ZRD a      Read  Brd, a=A16\r\n"
+               "  ZWR a d    Write Brd, a=A16, d=D16\r\n"
+                 
+               "\nZEST SPI\r\n"
+               "  ZSRDI      SPI Read/Incr Memory, MailBox Memory @ 300(H)\r\n"
+               "  ZSWR a d   SPI Write Memory, a=A16, d=D16\r\n"
+               "  ZSN        SPI Read Zest Network Setup Info\r\n"
+                 
+               "\nNETWORK INITs\r\n"
+               "  PWROT     'Power Cycle Network Module ZestETM1 (production brds only)\r\n"
+               "  ZINIT      Re-Init network 'ZestETM1' module sockets\r\n"
+                 
+               "\nNETWORK-Windows Cmd 'arp'\r\n"
+               "             Use 'arp' to assigns IP number to MAC number\r\n"
+               "             arp -s 157.55.85.212   00-aa-00-62-c6-09  Adds a static entry\r\n\n"                 
+               "HELP          HE(HELP), H2(HELP2), HF(FLASH), HN(NETWORK), HT(TEST), HA(ADRMAP)\r\n\n"
+                 
+};
+
+
+const uint8  mu_BOOT_MSG1[]= {"\r\nREADOUT CONTROLLER (ROC)\r\n"};
+const uint8  mu_BOOT_MSG2[]= {"Network Setup InValid, Loading Defaults\r\n"};
+
+// resolution 1.206mV per bit (for 5v Ref at 12Bits)
+// resolution 1.000mV per bit (for 4.960v Ref at 12Bits)
 const   char HelpMenu2[]={
                "HELP H2:  ---------------- Mu2E CRV Readout Controller ------------------\r\n\n"
                                   
@@ -69,7 +217,6 @@ const   char HelpMenu2[]={
                  "FLASH MISC\r\n"
              //"  FERASE      Flash Erase All, takes 70 seconds\r\n"
                "  FZ c        Check/Display un-erased FLASH data, c=word cnt(H) to check\r\n"
-               "  FES s       Flash Erase Sector, s=sector number\r\n\n"
                "  RF  a       Read flash address A16H, returns=Data16\r\n"
                "  RFI a c     Read/Incr Flash address A16H, c=WrdCnt(H)\r\n"
                  
@@ -91,142 +238,6 @@ const   char HelpMenu2[]={
      //          "              ESM Monitor, (n=3) reset ESM error, F/F (1=Normal)\r\n"
                "\nHELP          HE(HELP1),H2(HELP2), HF(FLASH), HN(NETWORK), HT(TEST), HA(ADRMAP)\r\n\n"
 };
-
-
-const   char HelpMenuTest[]={
-               "HELP HT: ------ SDRAM TESTING and I/O LINKS (FIBER, LVDS, ePHY) Tests ------\r\n\n"
-               "SDram\r\n"
-               "  SD f s     SDram Memory Test, f=(2,3,4)  s=sizeWords(H) (def f=2,s=all)\r\n"
-               "             ..Max Size Words=0x3fffff0,   MT46H64M16LF (64Megx16)\r\n\n"
-               "FIBER_LINK TEST\r\n"
-               "  PINIT      1) Set up FPGA Regs to bypass FEBs Normal return data path\r\n"
-               "  LDFILE f   2) Load Data File to FPGA SDram 2,3,4 (@Adr 4xx,8xx,Cxx)\r\n"
-               "  PTRIG      3) 1 Packet Request, Load Preamble, Payload, ChkSum.. Triggers\r\n"
-               "  PTRIG n    3) 6 Packet Req times n, Load Preamble, Payload, ChkSum.. Trigs\r\n\n"
-
-               "LVDS_FM REC\r\n"
-               "  PFM p c    Read LVDS(FM) data from Port p (1of24), c=WCnt(D)(def p=1,c=all)\r\n"
-               "  POOL c     Display Pooled FEBs Data, 30Sec update,  c=1 Clears Pool Buffer\r\n" 
-               "  POOLENA m  Data Pooling, Ena=1, Dis=0, Forces new update within 2 secs\r\n\n" 
-                 
-                 
-                 
-               "PHY_RECV     Reads PHY Port Data if available\r\n"
-               "  PREC p c   PHY FIFO Read, p=1of24 ports(def=Active), c=wrdcnt(H),def=all\r\n\n"
-
-               "LINK COMMANDS\r\n"
-               "  LC cmd     LC cmd uses PHY Link to Send ASCII Cmd string to FEB\r\n"
-               "             FEB Replys Sending ASCII data on 'LVDS LINK'\r\n"
-               "             Controller will Auto Display this data, else cmd 'PFM p'\r\n\n"
-                 
-               "PHY PORT TESTING\r\n"
-               "  PSEND      Sends cmd 'RDX 100'(100H) to FEB (send on Active Port, cmd 'LP')\r\n"
-               "             Returns (last sampled) data on 'PHY LINK' to the ports PHY FIFO\r\n"
-               "  PREC p c d Reads 'PHY LINK' REC FIFO data, p=1of24 ports(def=Active Port)\r\n"
-               "             c=wrd cnt to read, d= display wrds per line\r\n\n"
-
-               "EMPTY PHY_REC_FIFOs\r\n"
-               "  PRECALL    Reads All 24 PHY FIFOs Buffers, or cmd 'PA'\r\n\n"                 
-                 
-               "READ PHY FIFOs uBunch Data\r\n"
-               "  PRECF p c d  Reads PHY FIFO (Formats data), p=1of24 ports(def=Active Port)\r\n"
-               "               c=wrd cnt to read, d=display wrds per line(def=12)\r\n\n"
-               "uBunch Data Request Testing, Requires Fiber Loopback\r\n"
-               "              On FEB see cmd 'HT' for help on debugging uBunch Request\r\n"
-               "  UB0 d       Stops any active uBunch Requests\r\n"
-               "  UB1 d       Set Delay between uB Requests, d=delay in uS, (Def=20uS)\r\n"
-               "  UB2 cnt     Trigs cnt*10 uBun Requests, Loads Reg (F,32,33 Hex) (def cnt=1)\r\n\n"
-               "  UB3 dly     Simular to UB2 but Re-triggers, d=delay in uS, (Def=20uS)\r\n"                                  
-               "  uB_Rtn_Hdr  4 Word Hdr  1(WordCnt)  2(Status)  3(ubReq#HI)  4(ubReq#LO)\r\n"
-               "  uB_Rtn_Hdr  Status Bits=  8(fifo non empty) 7654(ovrflow) 3210(uB Req Err)\r\n\n"
-                 
-               "HELP          HE(HELP1),H2(HELP2), HF(FLASH), HN(NETWORK), HT(TEST), HA(ADRMAP)\r\n\n"
-};
-
-
-
-const   char HelpMenu_ORG_TREE[]={
-               "HELP HN: ------------- ORANGE TREE ZestETM1 NETWORK TESTING ----------------\r\n\n"               
-               "ZEST 16Bit\r\n"
-               "  ZSOCK      Read Socket Regs for Ch 1-16 Base Memory, Get 1st 7 words/ch\r\n"
-               "  ZRD a      Read  Brd, a=A16\r\n"
-               "  ZWR a d    Write Brd, a=A16, d=D16\r\n"
-                 
-               "\nZEST SPI\r\n"
-               "  ZSRDI      SPI Read/Incr Memory, MailBox Memory @ 300(H)\r\n"
-               "  ZSWR a d   SPI Write Memory, a=A16, d=D16\r\n"
-               "  ZSN        SPI Read Zest Network Setup Info\r\n"
-                 
-               "\nNETWORK INITs\r\n"
-             //"  PWROT     'PWR' Power cycle 'OT' Orange Tree ZestETM1 Network Module\r\n"
-               "  ZINIT      Re-Init network 'ZestETM1' module interrupts\r\n"
-               "  ZINIT1     Re-Init network 'ZestETM1' module sockets\r\n"
-                 
-               "\nNETWORK-Windows Cmd 'arp'\r\n"
-               "             Use 'arp' to assigns IP number to MAC number\r\n"
-               "             arp -s 157.55.85.212   00-aa-00-62-c6-09  Adds a static entry\r\n\n"                 
-               "HELP         HE(HELP1),H2(HELP2), HF(FLASH), HN(NETWORK), HT(TEST), HA(ADRMAP)\r\n\n"
-                 
-};
-
-
-const   char HelpMenuFLASH[]={
-               "HELP HF: -------------- FLASH MEMORY LOADING/PROGRAMMING -------------------\r\n\n"
-
-               "FLASH Load Using USB PORT\r\n"
-               " FL1         Erase, Program FPGA(1) File Xilinx binary file, no reboot\r\n"
-               " FL2         Erase, Program FPGAs(2-4) File Xilinx bin file, no reboot\r\n"
-               " FL3         Erase, Program FEBs FPGA Xilinx bin file to unused Sector71+\r\n\n"
-
-               "FLASH Load using Socket Port\r\n"
-               " FLSOCK1     Erase and Program FPGA(1) FLASH with Xilinx bin file\r\n"
-               " FLSOCK2     Erase and Program FPGA(2-4) FLASH with Xilinx bin file\r\n"
-               " FLSOCK3     Erase, Program FEBs FPGA Xilinx bin file to unused Sector71+\r\n\n"
-                
-               "FLASH Load FEB using PHY link, Pgm 1 or all FEB Ports, cmd 'FS' view image file\r\n"                 
-               " FEBSEND p c Send 'FLSOCK3' stored image to FEB, p=1 cntrl port, c=cnt, ~54Secs\r\n"
-               "             option p=1-24, a single active cntrl port, use cmd 'LP' to check\r\n"
-               "             option c=1=single load a port or c=24=load all active ports\r\n\n"
-               "             Examples   Note FEBs busy time will be about 1 minute\r\n"
-               "                FEBSEND 1 1 , send to port1 using port1 as control port\r\n"
-               "                FEBSEND 4 1 , send to port4 using port4 control port\r\n"
-               "                FEBSEND 6 24, send to all active ports, port6 control port\r\n\n"                
-               "SOCKET PORT Programs ROC FLASH using SD_RAM, FPGAs must already be Configured\r\n" 
-               "   LDFILE 2    Step1, Download Data to FPGA2 SD_RAM (DAQ Inactive)\r\n"
-               "   LDFLASH     Step2, Programs FLASH with option for FPGA1 or FPGA2-4\r\n\n"
-
-                 
-               "FEB FLASH Programming using USB or SOCKET, '2 Steps'\r\n"
-               "   LDFILE 2    Step1, Download Data to FPGA2 SD_RAM (DAQ Inactive)\r\n"
-               "   LDPGMFEB n  Step2, Send file(2secs),PGMs if Xfer Good,(20sec),n=1,n=24(All)\r\n"
-               "               Use cmd 'LC LDSTAT' or 'LCA LDSTAT' to see FEB Load/Pgm Status\r\n\n\n\n"
-                 
-               "-------------- FAKE TEST DATA LOADING TO CONTROLLER ------------------------\r\n"
-               "Controller Only, USB or SOCKET\r\n"
-               "   LDFILE n    Loads Data to 2=SD_RAM2_4xx, 3=SD_RAM3_8xx, 4=SD_RAM4_Cxx\r\n\n\n\n"
-                 
-               "-------------- FAKE TEST DATA LOADING TO FEB, FLASH PGM OPTION -------------\r\n"
-               "Controller to FEB, USB or SOCKET, 4 Steps\r\n"
-               "   1) LDFEB n  LOADs FILE\r\n"
-               "               Loads Data File SD_RAM2 and Sends data to FEB (@Adr 4xx)\r\n"
-               "               If n=1 sends data to default port, if n=24 use all ports\r\n"
-               "               Busy time ~3 Seconds per Mbyte\r\n"
-               "   2) LC LDFE  ERASE FLASH\r\n"
-               "               FEB Erases Fake Data Sectors in Flash, uses Default Port\r\n"
-               "               Busy time ~65 Secs, CMD 'LCA LDFE' for all ports\r\n"
-
-               "   3) LC LDFP  PROGRAMS FLASH, UPPER MEMORY SECTORS\r\n"
-               "               FEB Programs Fake data Flash Addr 200000(H)\r\n"
-               "               Busy time ~10 Secs, CMD 'LCA LDFP' for all ports\r\n"
-
-               "   4) LC LDFC  FEB Copys Fake Data from FLASH to SD_RAM1-4\r\n"
-               "               Busy time ~60 Secs, CMD 'LCA LDFC' for all ports\r\n"
-                 
-               "\nHELP           HE(HELP1),H2(HELP2), HF(FLASH), HN(NETWORK), HT(TEST), HA(ADRMAP)\r\n\n"
-};
-
-
-
 
 const   char HelpMenuADRMAP[]={
 
@@ -363,15 +374,6 @@ const   char HelpMenuADRMAP[]={
 "0x500..0x57F: Phy SMI data registers\r\n"
 };
 
-
-
-
-
-const uint8  mu_BOOT_MSG1[]= {"\r\nMU2E CRV READOUT CONTROLLER\r\n"};
-const uint8  mu_BOOT_MSG2[]= {"Network Setup InValid, Loading Defaults\r\n"};
-
-// resolution 1.206mV per bit (for 5v Ref at 12Bits)
-// resolution 1.000mV per bit (for 4.960v Ref at 12Bits)
 const   char *adcName[]= {"1.2v_Pos=", "1.8v_Pos=", "2.5v_Pos=",  "3.3v_Pos=", "Temp_(C)=" };
 const   float adcScale[]={  .0010,      .0010,     .0010,       .0010 };
 const   int   netVars[]= {4, 4, 4, 6, 1,1,1};   //byte count for "GateWay","NetMask","MacAddr","ipAddr", sock0, sock1,sock2
@@ -380,7 +382,46 @@ const   int   netVars[]= {4, 4, 4, 6, 1,1,1};   //byte count for "GateWay","NetM
 const   int    offPHYDATAPORT[] = {0x00, 0x20, 0x21, 0x22, 0x23,  0x24, 0x25, 0x26, 0x27 };
 const   int    oFMData30[]      = {0x00, 0x30, 0x31, 0x32, 0x33,  0x34, 0x35, 0x36, 0x37 };
 //const   int    oFMWrdCnt38[]    = {0x00, 0x38, 0x39, 0x3a, 0x3b,  0x3c, 0x3d, 0x3e, 0x3f };
-const   int    PHYSTATUSBIT[]   = {0X00, BIT0, BIT1, BIT2, BIT3,  BIT4, BIT5, BIT6, BIT7 };
+const   int    PHYSTATUSBIT[]   = {0X00, BIT0, BIT1, BIT2, BIT3,  BIT4, BIT5, BIT6, BIT7, 
+                                         BIT0, BIT1, BIT2, BIT3,  BIT4, BIT5, BIT6, BIT7, 
+                                         BIT0, BIT1, BIT2, BIT3,  BIT4, BIT5, BIT6, BIT7 };
+
+
+
+//testcode additions
+
+                  int ptrig[]=   {0x1c01,    0, 0x8010, 0x224b,   0x12,    0,    0,    0,  0x100, 0,//0x224b,
+                                  0x1c02,    0, 0x8020, 0xf517,   0x12,    0,    0,    1,    0,   0,//0xf517,
+                                  0x1c01,    0, 0x8010, 0x7cf4,   0x12,    0,    0,    0,    0,   0,//0x7cf4,
+                                  0x1c02,    0, 0x8020, 0xb0fe,   0x12,    0,    0,    0,    0,   0,//0xb0fe,
+                                  0x1c01,    0, 0x8010, 0x57ac,   0x12,    0,    0,    0,    0,   0,//0x57ac,
+                                  0x1c01,    0, 0x8010, 0x2ed3,   0x12,    0,    0,    0,    0,   0 //0x2ed3
+                                  };
+                 
+
+                  int ptrg0[]=   {0x1c01,    0, 0x0010, 0x0001,   0x00,    0,    0,    0,    0,   0, //starts uB# 0x0000,0x0010,0x0001
+                                  0x1c02,    0, 0x0010, 0x0002,   0x00,    0,    0,    0,    0,   0,
+                                  0x1c01,    0, 0x0010, 0x0003,   0x00,    0,    0,    0,    0,   0,
+                                  0x1c02,    0, 0x0010, 0x0004,   0x00,    0,    0,    0,    0,   0,
+                                  0x1c01,    0, 0x0010, 0x0005,   0x00,    0,    0,    0,    0,   0,
+                                  0x1c02,    0, 0x0010, 0x0006,   0x00,    0,    0,    0,    0,   0,
+                                  };
+                  
+                  int ptrg00[]=   {0x1c01,    0, 0x8010, 0x0000,   0x00,    0,    0,    0,  0x100, 0,//0x224b,  //starts uB# 0000
+                                  0x1c02,    0, 0x8020, 0x0001,   0x00,    0,    0,    1,    0,   0,//0xf517,
+                                  0x1c01,    0, 0x8010, 0x0002,   0x00,    0,    0,    0,    0,   0,//0x7cf4,
+                                  0x1c02,    0, 0x8020, 0x0003,   0x00,    0,    0,    0,    0,   0,//0xb0fe,
+                                  0x1c01,    0, 0x8010, 0x0004,   0x00,    0,    0,    0,    0,   0,//0x57ac,
+                                  0x1c01,    0, 0x8010, 0x0005,   0x00,    0,    0,    0,    0,   0 //0x2ed3
+                                  };
+
+                  int ptrg1[]=   {0x1c01,    0, 0x8010, 0x224b,   0x12,    0,    0,    0,  0x100, 0,//0x224b,
+                                  0x1c02,    0, 0x8020, 0xf517,   0x12,    0,    0,    1,    0,   0,//0xf517,
+                                  0x1c01,    0, 0x8010, 0x7cf4,   0x12,    0,    0,    0,    0,   0,//0x7cf4,
+                                  0x1c02,    0, 0x8020, 0xb0fe,   0x12,    0,    0,    0,    0,   0,//0xb0fe,
+                                  0x1c01,    0, 0x8010, 0x57ac,   0x12,    0,    0,    0,    0,   0,//0x57ac,
+                                  0x1c01,    0, 0x8010, 0x2ed3,   0x12,    0,    0,    0,    0,   0 //0x2ed3
+                                  };
 
 
 #endif

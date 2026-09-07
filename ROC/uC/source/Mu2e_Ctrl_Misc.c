@@ -51,6 +51,7 @@ Bank4  Sector   SectorAddr A21–A12      Addr16 (not byte addr)
 #include "sys_dma.h"
 #include "reg_spi.h"
 #include "spi.h"
+#include "reg_sci.h"  //using uart putchar direct
 
 #include "fram.h"
 #include "ver_io.h"
@@ -66,6 +67,8 @@ extern  char    tBuf[400];
 
 extern struct   msTimers mStime; 
 extern struct   ePHY_STRUCT ePHY_PORT;
+extern struct   uBuns uBReq;                //uBunch related vars
+extern struct   uSums uPhySums;
 
 extern struct   uC_Store u_SRAM;
 extern struct   vB USB_Rec;
@@ -76,10 +79,10 @@ extern  int     getBufBin();
 extern  u_8Bit  revB_byte(u_8Bit);          //reverse 8 bits
 extern  void    putBuf(int prt, char* sBuf,  int len);
 
-int     g_Cnt, g_Done,cSum;
+int             g_Cnt, g_Done,cSum;
 
-extern struct  sLVDS_ePHY_REG IOPs[];       //testing link assignment regs structure
-
+extern struct   sLVDS_ePHY_REG IOPs[];       //testing link assignment regs structure
+extern uint32   iFlag;
 
 
 //load FPGA with data from USB input port
@@ -221,7 +224,6 @@ int loadSpartan6_FPGA(int chip)
     //reads of 0xffff data (required) on additional clocks
     for (int i=0;i<8;i++)
         d16= *pFlash;      
-
     
     //DONE indicates configuration is complete. Can be held Low externally to
     //synchronize startup with other FPGAs. 
@@ -304,9 +306,6 @@ int getBufBin()
 
 
 
-
-
-
 //flash programming
 //Programming is a four-bus-cycle operation. The program command sequence is initiated 
 //by writing two unlock write cycles, followed by the program set-up command. The program
@@ -316,7 +315,6 @@ int getBufBin()
 //programmed from 0 back to a 1. Attempting to do so may cause that bank to set DQ5 = 1, 
 //or cause the DQ7 and DQ6 status bits to indicate the operation was successful. However, 
 //a succeeding read will show that the data is still 0. Only erase op can convert a 0 to a 1.
-
 
 /* 
 Sector erase is a six bus cycle operation. The sector erase command sequence 
@@ -333,7 +331,6 @@ Chip Erase Word Commands
   2AA 55
   555 10
 
-
 Chip  Program Word Commands
   add data
   555 AA 
@@ -342,8 +339,10 @@ Chip  Program Word Commands
   Add Data (program addr, data)  //program time typ 6uS
 */
 
+
 //Ready/Busy... low (Busy), the device is actively erasing or programming
 //Program/Erase Valid to RY/BY# Delay 90nS
+//Read FLAHS Chip Status Register
 int flashStatus(int prt)
 {
     int ret;
@@ -381,8 +380,8 @@ int flashStatus(int prt)
 
 
 
-#include "reg_sci.h"  //using uart putchar direct
 //Flash Load from USB port using binary data file
+//
 int loadFLASH(int ADDR, int prt)
 {
     uint8_t d8;
@@ -394,24 +393,19 @@ int loadFLASH(int ADDR, int prt)
     g_Cnt=0;
     g_Done=0;
     
-//tek, remove when fpga all work    
-  //PROGx_LO                            //min 300nS
-    
     while(FLASH_RDY==0)
         {
         putBuf(prt,"loadFLASH: Flash not ready\r\n",0); //send to current active port
         mDelay(1000);
         return 1;
         }
-    sprintf(tBuf,"loadFLASH: Begin Load Flash\r\n");
+    sprintf(tBuf,"loadFLASH: Begin Load \r\n");
     putBuf(prt, tBuf,0);
     
     //flash set unprotect mode, (V6) HET1_5
     FLASH_WP_HI
     saddr = (snvPTR) flashBase;
     saddr += ADDR;
-
-    sPTR sdRam = (sPTR) fpgaBase0+0x407;
     
     while(cont==1)
        {
@@ -421,50 +415,32 @@ int loadFLASH(int ADDR, int prt)
             d8 = getBufBin();           //read binary data
             //revB_byte(d8);            //reverse bit order in Byte
             d16= (d8<<8);
-            //if (g_Done)
-            //    break;
             d8 = getBufBin();           //read binary data
             //d8= revB_byte(d8);        //reverse bit order in Byte
             d16= (d16 + d8);            //make it upper byte
             if (g_Done)
                 break;
             }
-        else
-            {
-            d16= *sdRam; //SDR_RD16SWP1;  //get data from fpga1 sdRam memory
-            cSum += (d16>>8);
-            cSum += d16&0xff;
-            g_Cnt+=2;
-            if (g_Cnt>=u_SRAM.DwnLd_sCNT)
-                break;
-            }
-
-//tek, remove when fpga all work    
-//PROGx_LO                              //min 300nS
 
         //RM48 Hercules device supports the little-endian [LE] format
         //reverse data done in sendFPGA(), send LSB first
         //d16= revB_byte(d16);            //reverse bit order
-
         *(snvPTR) (flashBase+adr555)= 0xAA;
         *(snvPTR) (flashBase+adr2aa)= 0x55;
         *(snvPTR) (flashBase+adr555)= 0xA0;
-   // hHI_TP47        
         *saddr++= d16;
-   // uDelay(1);
+
         stat=0;
         while(FLASH_RDY==0)
             {
             if (stat++ > 0xfffff)
                 {
-                putBuf(prt, "loadFLASH: Exit loader, Chip Not Erased Before Load???\r\n",0);
+                putBuf(prt, "loadFLASH: Exit loader, Chip Not Erased\r\n",0);
                 cont=0;
                 mDelay(1000);
                 break;
                 }
             }
-        //if (DONE0 == 1)           //1=config done. (C2) GIOA1
-        //    break;
         
         if (g_Cnt > 3000000)        //was 900000 using upper flash to store FEB image file thats 2.1MByte
             {
@@ -477,11 +453,8 @@ int loadFLASH(int ADDR, int prt)
       //if ((g_Cnt % 0x3000)==0) 
       //    scilinREG->TD = '.'; //UART
         }
-    CSI_B0_HI                           
-    CSI_B1_HI                           
-    CSI_B2_HI                           
-    CSI_B3_HI                           
-    
+
+    cSum = cSum & 0xFFFF;                               //16bit valid
     sprintf(tBuf,"loadFLASH: End Load Flash,  Rec'd byte cnt= %d, CkSum= %X\r\n",g_Cnt,cSum&0xffff);
     putBuf(prt, tBuf,0);
     mDelay(100);
@@ -498,21 +471,21 @@ int loadFLASH(int ADDR, int prt)
         }
     else if(ADDR==0)
         {
-        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_1_COUNT, (uint8_t*)&g_Cnt,4);    //write 4 bytes
-        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_1_CSUM, (uint8_t*)&cSum,4);      //write 4 bytes
-        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
+        FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_1_COUNT, (uint8_t*)&g_Cnt,4);    //write 4 bytes FRAM Offset 0x600+
+        FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_1_CSUM, (uint8_t*)&cSum,4);      //write 4 bytes FRAM Offset 0x600+
+        FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
         var32= DWNLD_VALID;
         FRAM_WR(DWNLD_1_VALID, (uint8_t*)&var32,4);    //write 4 bytes
         }
-    else
+    else 
         {
-        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_2_COUNT, (uint8_t*)&g_Cnt,4);    //write 4 bytes
-        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_2_CSUM, (uint8_t*)&cSum,4);      //write 4 bytes
-        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
+        FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_2_COUNT, (uint8_t*)&g_Cnt,4);    //write 4 bytes FRAM Offset 0x600+
+        FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_2_CSUM, (uint8_t*)&cSum,4);      //write 4 bytes FRAM Offset 0x600+
+        FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
         var32= DWNLD_VALID;
         FRAM_WR(DWNLD_2_VALID, (uint8_t*)&var32,4);    //write 4 bytes
         }
@@ -525,7 +498,8 @@ int loadFLASH(int ADDR, int prt)
 
 
 
-//flash load from USB port using binary data file
+//flash chip total erase of all sectors
+//
 int eraseFLASH()
 {
     int stat;
@@ -536,7 +510,6 @@ int eraseFLASH()
     stat= FLASH_RDY;                
     if (stat==0)
       return 1;     //busy then exit
-
     //flash set unprotect mode, (V6) HET1_5
     FLASH_WP_HI                     
 
@@ -569,23 +542,31 @@ int eraseFLASH()
     //NULL status var
     stat=0;
     FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
-    FRAM_WR(DWNLD_1_VALID, (uint8_t*)&stat,2); //write 2 bytes
+    FRAM_WR(DWNLD_1_VALID, (uint8_t*)&stat,4);  //write 4 bytes
     FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
-    FRAM_WR(DWNLD_1_COUNT, (uint8_t*)&stat,4); //write 4 bytes
+    FRAM_WR(DWNLD_1_COUNT, (uint8_t*)&stat,4);  //write 4 bytes
     FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
-    FRAM_WR(DWNLD_1_CSUM, (uint8_t*)&stat,4);  //write 4 bytes
+    FRAM_WR(DWNLD_1_CSUM, (uint8_t*)&stat,4);   //write 4 bytes
 
     FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
-    FRAM_WR(DWNLD_2_VALID, (uint8_t*)&stat,2); //write 2 bytes
+    FRAM_WR(DWNLD_2_VALID, (uint8_t*)&stat,4);  //write 4 bytes
     FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
-    FRAM_WR(DWNLD_2_COUNT, (uint8_t*)&stat,4); //write 4 bytes
+    FRAM_WR(DWNLD_2_COUNT, (uint8_t*)&stat,4);  //write 4 bytes
     FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
-    FRAM_WR(DWNLD_2_CSUM, (uint8_t*)&stat,4);  //write 4 bytes
+    FRAM_WR(DWNLD_2_CSUM, (uint8_t*)&stat,4);   //write 4 bytes
+    
+    FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
+    FRAM_WR(DWNLD_3_COUNT, (uint8_t*)&stat,4);  //write 4 bytes
+    FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
+    FRAM_WR(DWNLD_3_CSUM, (uint8_t*)&stat,4);   //write 4 bytes
+    FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
+    FRAM_WR(DWNLD_3_VALID, (uint8_t*)&stat,4);  //write 4 bytes 
     
     //ready flash
     flashStatus(tty);
     return 0;
 }
+
 
 //S29JL064J
 //In the pre-programming step Erase algorithm, all bytes programmed to 00h 
@@ -604,9 +585,8 @@ int eraseFLASH()
 int eraseFLASH_Sector(int secCount, int start, int port)
 {
     sPTR saddr;
-    int sector=0, cnt=0;
-    if(start> 0)
-      cnt=9999;
+    int sector=0;
+
     //flash low (Busy), the device erasing or programming  
     if (FLASH_RDY==0)       //Ready/Busy... low (Busy)      
       return 1;             //busy then exit
@@ -622,77 +602,126 @@ int eraseFLASH_Sector(int secCount, int start, int port)
     saddr= (snvPTR)flashBase+ start;
     //send all erase commands 1st
     while (1)
-        {
-//tek, remove when fpga all work    
-  //PROGx_LO                            //min 300nS
-          
-        //note: CYCLES SA7--SA8 HAS ADDRESS JUMP
-        //could modify code to jump from SA7(0000000111) to SA7(0000001xxx)', it then skips 8 null cycles
-          
-        //set address
-         if (cnt< 16)
-           saddr += 0x1000/2;
-         else if (cnt==9999)
-            {
-           saddr= (snvPTR)flashBase+ start;
-           cnt=17;
-            }
-         else if (cnt==16)
-           saddr= (snvPTR)flashBase+ 0x10000/2;   //this may not be needed, we are here after 16 cycles
-         else if (cnt>16)
-            saddr +=0x8000/2;
-         cnt++; 
-   
-   
+        {          
          //erase sector code sequence
         *(snvPTR) (flashBase+adr555)= 0xAA;
         *(snvPTR) (flashBase+adr2aa)= 0x55;
         *(snvPTR) (flashBase+adr555)= 0x80;
         *(snvPTR) (flashBase+adr555)= 0xAA;
         *(snvPTR) (flashBase+adr2aa)= 0x55;
-        *saddr= 0x30;                           //erase command  
+        *saddr= 0x30;               //Sector erase data=0x30 @ address 'saddr'
+
+       // sprintf(tBuf,"\r\ns=%02d addr=%6X", sector, saddr );
+       // putBuf(port, tBuf,0);
+
+        //set address next pass
+        if (sector< 8)              //erases smaller sectors 0-7 decimal
+          saddr += 0x1000;
+        else
+          saddr += 0x8000;          //as word addr pointer on bus this increments by 0x8000
         
         //wait for erase to finish, whole chip takes ~70 seconds
         uDelay(300);
         while(FLASH_RDY==0)
             {
-            uDelay(100);
+            uDelay(25);
+            //warning: no breakout
             }
-        putBuf(port, ".",1);
-        if (sector++ > secCount)
+        putBuf(port, ".",1);        
+        if (++sector>= secCount)
             break;
         }
+        
     //flash set to protect mode, (V6) HET1_5
     FLASH_WP_LO  
 
-    //NULL cnt var
-    //clear FRAM status on last FLASH load
-    cnt=0;
-    if(start==0)
+    //zero out old flashed status
+    if(start==0)        //maybe zero this out here after erase
         {
         FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_1_VALID, (uint8_t*)&cnt,2);  //write 2 bytes
+        FRAM_WR(DWNLD_1_VALID, (uint8_t*)&sector,2);//write 2 bytes
         FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_1_COUNT, (uint8_t*)&cnt,4);  //write 4 bytes
+        FRAM_WR(DWNLD_1_COUNT, (uint8_t*)&sector,4);//write 4 bytes
         FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_1_CSUM, (uint8_t*)&cnt,4);   //write 4 bytes
+        FRAM_WR(DWNLD_1_CSUM, (uint8_t*)&sector,4); //write 4 bytes
         }
     else
         {
         FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_2_VALID, (uint8_t*)&cnt,2);  //write 2 bytes
+        FRAM_WR(DWNLD_2_VALID, (uint8_t*)&sector,2);//write 2 bytes
         FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_2_COUNT, (uint8_t*)&cnt,4);  //write 4 bytes
+        FRAM_WR(DWNLD_2_COUNT, (uint8_t*)&sector,4);//write 4 bytes
         FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_2_CSUM, (uint8_t*)&cnt,4);   //write 4 bytes
-        }
-      
+        FRAM_WR(DWNLD_2_CSUM, (uint8_t*)&sector,4); //write 4 bytes
+        }      
       
     sprintf(tBuf,"\r\nS29JL064J: Final Sector Addr= %8X\r\n",saddr);
     putBuf(port, tBuf,0);
-     //ready flash
+    //ready flash
     return 0;
 }
+
+
+
+
+    
+//flash load from USB port using binary data file
+int eraseFLASH_Sector71(int secCount, int start, int port)
+{
+    sPTR saddr;
+    int sector=0, cnt=0, var32;
+    //flash low (Busy), the device erasing or programming  
+    if (FLASH_RDY==0)       //Ready/Busy... low (Busy)      
+      return 1;             //busy then exit
+    uDelay(500);
+    sprintf(tBuf,"S29JL064J: First Sector Addr(B)= %6X\r\n", start*2 );//use addr as wptr
+    putBuf(port, tBuf,0);
+    
+    //flash set unprotect mode, (V6) HET1_5
+    FLASH_WP_HI 
+    uDelay(100);      
+    saddr= (snvPTR)flashBase+ start;
+    //send all erase commands 1st
+    while (1)
+        {
+        //erase sector code sequence
+        *(snvPTR) (flashBase+adr555)= 0xAA; //using word addr
+        *(snvPTR) (flashBase+adr2aa)= 0x55;
+        *(snvPTR) (flashBase+adr555)= 0x80;
+        *(snvPTR) (flashBase+adr555)= 0xAA;
+        *(snvPTR) (flashBase+adr2aa)= 0x55;
+        *saddr= 0x30;               //Sector erase data=0x30 @ address 'saddr'
+        saddr +=0x10000/2;           //as word addr pointer on bus this increments by 0x8000
+        
+        //wait for erase to finish, whole chip takes ~70 seconds
+        uDelay(300);
+        while(FLASH_RDY==0)         //sector erase 0.5 to 5 Seconds
+            {
+            uDelay(100);
+            }
+        putBuf(port, ".",1);
+        if (++sector > secCount)
+            break;
+        }
+    
+    //flash set to protect mode, (V6) HET1_5
+    FLASH_WP_LO  
+    //NULL cnt var
+    //clear FRAM status on last FLASH load
+    FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
+    FRAM_WR(DWNLD_3_COUNT, (uint8_t*)&cnt,4);   //write 4 bytes
+    FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
+    FRAM_WR(DWNLD_3_CSUM, (uint8_t*)&cSum,4);   //write 4 bytes
+    FRAM_WR_ENABLE();                           //WREN op-code, issued prior to Wr_Op
+    var32= DWNLD_VALID;
+    FRAM_WR(DWNLD_3_VALID, (uint8_t*)&var32,4); //write 4 bytes
+      
+    start= ((int)saddr & 0xffffff);             //last addressed sector erased
+    sprintf(tBuf,"\r\nS29JL064J: Final Sector Addr(B)= %6X\r\n", start );
+    putBuf(port, tBuf,0);
+    return 0;
+}
+
 
 
 #define File_wSIZsm  780000/2       //binary file size in words (may be less than real size)   
@@ -743,7 +772,7 @@ int flashXFER(int chip, int prt)
             }
         else
             g_Cnt= File_wSIZmax;
-        sAddr += (S29JL064J_SECTOR40);         //Actual S29JL064J address= 0x110000 @Sector 41   
+        sAddr += (S29JL064J_SECTOR41);         //Actual S29JL064J address= 0x110000 @Sector 41   'RFI 220000'
         }
 
     
@@ -1134,410 +1163,7 @@ void pwmSetDuty_full(hetRAMBASE_t * hetRAM, uint32 pwm, uint32 fuse_pwmDuty, uin
 
 
 
-//rec data file from tty or sock port, store in 1of3 FPGA SDRAM
-//Load File to sdRam
-int LDF(int prt, int fpga, char* eBufB_Sock)               //rec data file, store in FPGA_1 SDRAM
-{
-    uint8_t d8;
-    uint16 key, d16;
-    int len, count=0, sum=0, offset;
-    extern int g_Done, g_Cnt;
-    char* eBufB= eBufB_Sock; //(char*)eRecDatBuf[g_Sock];
-    
-    //fpga1 upper level fpga, has no sdRam
-    //set write address for sdRam(s) 1,2,3 in actual fpga(2,3,4) 
-    if(fpga==1)
-        {offset=0x000; }        //chip offset  1of4 fpgas
-    if(fpga==2)
-        {offset=0x400*2; }      //*** using REG16() so double addr here ***
-    else if(fpga==3)
-        {offset=0x800*2; }      //*** using REG16() so double addr here ***
-    else if(fpga==4)
-        {offset=0xC00*2; }      //*** using REG16() so double addr here ***
 
-    //set write sdRAM Addr via special sequence
-    SET_SDADDR_WRx(offset/2,0,0);   //addr gets double at function, divide here 1st
-
-    if (prt==tty)
-        {
-        sprintf(tBuf,"SDram: waiting for data file (10 seconds) ...\r\n");
-        putBuf(prt, tBuf,0);
-        g_Cnt=0;        //must zero for 1st chr wait to work
-        g_Done=0;       //must zero to prevent early exit
-        while(1)
-           {
-            //read binary data (with timeout) and send to Altera Cyclone
-            d16 = getBufBin();              //read usb data port
-            if (g_Done)
-                break;
-            d8 = getBufBin();               //read usb data port
-            //add up chksum
-            sum += d16;
-            sum += d8;
-            //bytes->word
-            d16 <<= 8;
-            d16 += d8;
-            count+=2;                            
-            //set write fpga Addr to sdRam2,3,4 (no sdRam0)
-            REG16((fpgaBase0+offset)+(0x07*2))= d16;  //SDR_RD16 (non swap data) 
-           }
-        }
-    else
-        {
-        sprintf(tBuf,"SDram: waiting for data file (10 seconds)...  (uTelnet use key '|')\r\n");
-        putBuf(prt, tBuf,0);
-        //wait for data
-        len= SockKeyWait(60000, prt, &key); //CharCnt=SockKeyWait(mSecWait, Port#, 1st Char in RecBuf)
-        if(len==0)
-            {
-            sprintf(tBuf,"uC_Dram: Len=0, 'RDF' wait on file 60 Second timeout\r\n");
-            putBuf(prt, tBuf,0);
-            }
-        else while(len>0)
-            {
-            if(len==1)
-                {
-                count++;
-                d16= *eBufB++; //store 1st of two words
-                //get more data
-                len= SockKeyWait(500, prt, &key); //CharCnt=SockKeyWait(mSecWait, Port#, 1st Char in RecBuf)
-                if(len==0)
-                    {
-                    sprintf(tBuf,"SDram: Len=0\r\n");
-                    putBuf(prt, tBuf,0);
-                    break;
-                    }
-                //eBufW= (uSHT*)eRecDatBuf[g_Sock];
-                eBufB= eBufB_Sock;  //(char*)eRecDatBuf[g_Sock];
-                d8= *eBufB++;       //store 2nd of two words
-                sum += d16;
-                sum += d8;
-                d16= (d16<<8)+d8;
-            //set write fpga Addr to sdRam2,3,4 (no sdRam0)
-            REG16((fpgaBase0+offset)+(0x07*2))= d16;  //SDR_RD16 (non swap data) 
-                count++;
-                len--;
-                }
-            else
-                {
-                d16= *eBufB++;  //get byte
-                d8 = *eBufB++;  //get byte
-                sum += d16;
-                sum += d8;
-                d16= (d16<<8)+d8;
-                
-            //set write fpga Addr to sdRam2,3,4 (no sdRam0)
-            REG16((fpgaBase0+offset)+(0x07*2))= d16;  //SDR_RD16 (non swap data)                   
-                count+=2;
-                len -=2;
-                }
-            if(len==0)
-                {
-                len= SockKeyWait(500, prt, &key); //CharCnt=SockKeyWait(mSecWait, Port#, 1st Char in RecBuf)
-                //eBufW= (uSHT*)eRecDatBuf[g_Sock];
-                eBufB= eBufB_Sock; //(char*)eRecDatBuf[g_Sock];
-                }
-            }
-        }
-    //send extra bytes to force SDram Buffer Burst Write Cycle
-    for(int i=0; i<32; i++)
-        {
-        REG16((fpgaBase0+offset)+(0x07*2))= 0x1234; 
-        uDelay(1);
-        }
-    u_SRAM.DwnLd_sCNT= count;
-    u_SRAM.DwnLd_sSUM= sum&0xffff;
-    
-    //allow writes to finish
-    uDelay(1);
-    //set read sdRAM Addr via special sequence
-    SET_SDADDR_RDx(offset/2,0,0);   //addr gets double at function, divide here 1st  
-    sprintf(tBuf,"uC_Dram: Recd %d Bytes, ChkSum=%04X\r\n", count,sum&0xffff);
-    putBuf(prt, tBuf,0);
-    return count;
-}                    
-
-
-
-extern struct      uSums uPhySums;
-
-//*****************  BEGIN NET LDFILE *****************************************************
-//*****************************************************************************************
-//*****************************************************************************************
-//Naming as used on FEB
-//sum= loadFLASH(S29JL064J_SECTOR0,holdprt);  //Actual S29JL064J address= 0x0 @Sector 0
-//int loadFLASH(int ADDR, int prt) USE THIS NAME SAME AS 
-
-int loadFLASH_SOCK(int prt, char* eBufB_Sock, int fpga)  //rec data file, pgm flash for fpga1or2
-{
-    uint8_t d8;
-    uint16 d16, key;   
-    int len, stat; 
-    extern int g_Done, g_Cnt;
-    char* eBufB= eBufB_Sock; //(char*)eRecDatBuf[g_Sock];
-    int valid= DWNLD_VALID;                     //always valid if we get here
-    
-    sPTR saddr;    
-    saddr = (snvPTR) flashBase;
-    if(fpga==1)
-        saddr += S29JL064J_SECTOR0;         //fpga1
-    else if(fpga==2)                       
-        saddr += S29JL064J_SECTOR41;        //fpga2
-    else
-        saddr += S29JL064J_SECTOR71; 
-    
-    //sum=loadFLASH(S29JL064J_SECTOR40, prt);   //Actual S29JL064J address= 0x110000 @Sector 41
-	//sum=loadFLASH(S29JL064J_SECTOR0, prt);    //Actual S29JL064J address= 0x0 @Sector 0
-
-    //flash set unprotect mode, (V6) HET1_5
-    FLASH_WP_HI
-    
-    sprintf(tBuf,"FLASH_PGM: Select Binary file. TeraTerm MENU File,SendFile Bin[yes]\r\n");
-    putBuf(prt, tBuf,0);
-    sprintf(tBuf,"FLASH_PGM: TeraTerm may not work sending Binary files, check online\r\n");
-    putBuf(prt, tBuf,0);          
-    sprintf(tBuf,"FLASH_PGM: Waiting for data file (60 seconds)...  (uTelnet use key '|')\r\n");
-    putBuf(prt, tBuf,0);
-    //wait for data
-    len= SockKeyWait(60000, prt, &key); //CharCnt=SockKeyWait(mSecWait, Port#, 1st Char in RecBuf)
-    if(len==0)
-        {
-        sprintf(tBuf,"FLASH_PGM: Len=0, 'RDF' wait on file 60 Second timeout\r\n");
-        putBuf(prt, tBuf,0);
-        }
-    else while(len>0)
-        {
-        if(len==1)
-            {
-            uPhySums.FL_SOCK_CHKSIZE++;
-            d16= *eBufB++; //store 1st of two words
-            
-            //get more data
-            len= SockKeyWait(500, prt, &key); //CharCnt=SockKeyWait(mSecWait, Port#, 1st Char in RecBuf)
-            if(len==0)
-                {
-                sprintf(tBuf,"SDram: Len=0\r\n");
-                putBuf(prt, tBuf,0);
-                break;
-                }
-            //eBufW= (uSHT*)eRecDatBuf[g_Sock];
-            eBufB= eBufB_Sock;  //(char*)eRecDatBuf[g_Sock];
-            d8= *eBufB++;       //store 2nd of two words
-            uPhySums.FL_SOCK_CHKSUM += d16;
-            uPhySums.FL_SOCK_CHKSUM += d8;
-            d16= (d16<<8)+d8;
-         
-            //*********************************************
-            // PGM FLASH ONE WORD AT A TIME     
-            //*********************************************
-            //RM48 Hercules device supports the little-endian [LE] format
-            //reverse data done in sendFPGA(), send LSB first
-            //d16= revB_byte(d16);            //reverse bit order
-            *(snvPTR) (flashBase+adr555)= 0xAA;
-            *(snvPTR) (flashBase+adr2aa)= 0x55;
-            *(snvPTR) (flashBase+adr555)= 0xA0;
-            *saddr++= d16;
-            stat=0;
-            while(FLASH_RDY==0)
-                {
-                if (stat++ > 0xfffff)
-                    {
-                    putBuf(prt, "loadFLASH: Exit loader, Chip Not Erased Before Load???\r\n",0);
-                    len=0;      //force break out
-                    mDelay(1000);
-                    break;
-                    }
-                }
-           //*********************************************
-           // PGM FLASH END
-           //*********************************************
-            uPhySums.FL_SOCK_CHKSIZE++;
-            len--;
-            }
-        else
-            {
-            d16= *eBufB++;  //get byte
-            d8 = *eBufB++;  //get byte                
-            uPhySums.FL_SOCK_CHKSUM += d16;
-            uPhySums.FL_SOCK_CHKSUM += d8;
-            d16= (d16<<8)+d8;                
-            //*********************************************
-            // PGM FLASH ONE WORD AT A TIME     
-            //*********************************************
-            //RM48 Hercules device supports the little-endian [LE] format
-            //reverse data done in sendFPGA(), send LSB first
-            //d16= revB_byte(d16);            //reverse bit order
-            *(snvPTR) (flashBase+adr555)= 0xAA;
-            *(snvPTR) (flashBase+adr2aa)= 0x55;
-            *(snvPTR) (flashBase+adr555)= 0xA0;
-            *saddr++= d16;
-            stat=0;
-            while(FLASH_RDY==0)
-               {
-                if (stat++ > 0xfffff)
-                   {
-                    putBuf(prt, "loadFLASH: Exit loader, Chip Not Erased Before Load???\r\n",0);
-                    len=0;      //force break out
-                    mDelay(1000);
-                    break;
-                    }
-                }
-           //*********************************************
-           // PGM FLASH END
-           //*********************************************
-             uPhySums.FL_SOCK_CHKSIZE+=2;
-             len -=2;
-            }
-        if(len==0)
-            {
-            len= SockKeyWait(500, prt, &key); //CharCnt=SockKeyWait(mSecWait, Port#, 1st Char in RecBuf)
-            eBufB= eBufB_Sock; //(char*)eRecDatBuf[g_Sock];
-            }
-        
-        u_SRAM.DwnLd_sCNT= uPhySums.FL_SOCK_CHKSIZE;
-        u_SRAM.DwnLd_sSUM= uPhySums.FL_SOCK_CHKSUM &0xffff;
-        }
-   
-    if(fpga==1)
-        {    
-        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_1_VALID, (uint8_t*)&valid,2);     //write 2 bytes
-        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_1_COUNT, (uint8*)&u_SRAM.DwnLd_sCNT,4);    //write 4 bytes
-        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_1_CSUM, (uint8*)&u_SRAM.DwnLd_sSUM,4);      //write 4 bytes
-        }
-    else
-        {    
-        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_2_VALID, (uint8_t*)&valid,2);     //write 2 bytes
-        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_2_COUNT, (uint8*)&u_SRAM.DwnLd_sCNT,4);    //write 4 bytes
-        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
-        FRAM_WR(DWNLD_2_CSUM, (uint8*)&u_SRAM.DwnLd_sSUM,4);      //write 4 bytes
-        }
-    
-    sprintf(tBuf,"FLASH_PGM: Recd %d Bytes, ChkSum=%04X\r\n", u_SRAM.DwnLd_sCNT, u_SRAM.DwnLd_sSUM);
-    putBuf(prt, tBuf,0);
-    return uPhySums.FL_SOCK_CHKSIZE;
-}                    
-//*****************  END NET LDFILE *******************************************************
-//*****************************************************************************************
-//*****************************************************************************************
-
-//flash load from USB port using binary data file
-
-int eraseFLASH_Sector71(int secCount, int start, int port)
-
-{
-
-    sPTR saddr;
-
-    int sector=0, cnt=0, var32;
-
-    //flash low (Busy), the device erasing or programming 
-
-    if (FLASH_RDY==0)       //Ready/Busy... low (Busy)     
-
-      return 1;             //busy then exit
-
-    sprintf(tBuf,"S29JL064J: Erasing %d Sectors\r\n",secCount);
-
-    putBuf(port, tBuf,0);
-
-    uDelay(500);
-
-    sprintf(tBuf,"S29JL064J: First Sector Addr= %8X\r\n",(snvPTR)flashBase+ start);
-
-    putBuf(port, tBuf,0);
-
-   
-
-    //flash set unprotect mode, (V6) HET1_5
-
-    FLASH_WP_HI
-
-    uDelay(100);     
-
-    saddr= (snvPTR)flashBase+ start;
-
-    //send all erase commands 1st
-
-    while (1)
-
-        {
-
-        //erase sector code sequence
-
-        *(snvPTR) (flashBase+adr555)= 0xAA;
-
-        *(snvPTR) (flashBase+adr2aa)= 0x55;
-
-        *(snvPTR) (flashBase+adr555)= 0x80;
-
-        *(snvPTR) (flashBase+adr555)= 0xAA;
-
-        *(snvPTR) (flashBase+adr2aa)= 0x55;
-
-        *saddr= 0x30;               //erase command 
-
-        saddr +=0x8000/2;           //next sector
-
-       
-
-        //wait for erase to finish, whole chip takes ~70 seconds
-
-        uDelay(300);
-
-        while(FLASH_RDY==0)
-
-            {
-
-            uDelay(100);
-
-            }
-
-        putBuf(port, ".",1);
-
-        if (sector++ > secCount)
-
-            break;
-
-        }
-
-   
-
-    //flash set to protect mode, (V6) HET1_5
-
-    FLASH_WP_LO 
-
-    //NULL cnt var
-
-    //clear FRAM status on last FLASH load
-
-    FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
-
-    FRAM_WR(DWNLD_3_COUNT, (uint8_t*)&cnt,4);    //write 4 bytes
-
-    FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
-
-    FRAM_WR(DWNLD_3_CSUM, (uint8_t*)&cSum,4);      //write 4 bytes
-
-    FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
-
-    var32= DWNLD_VALID;
-
-    FRAM_WR(DWNLD_3_VALID, (uint8_t*)&var32,4);    //write 4 bytes
-
-    
-
-    sprintf(tBuf,"\r\nS29JL064J: Final Sector Addr= %8X\r\n",saddr);
-
-    putBuf(port, tBuf,0);
-
-    return 0;
-
-}
 
 //*****************************************************************************************
 //******************    ROC to FEB FPGA Binary File vis Sockets       *********************
@@ -1559,11 +1185,10 @@ extern struct   HappyBusReg HappyBus;       //cmdlen, brdNumb, cmdtype, cntrecd,
 //may roll this buffer back to Buf1500[] after initial debugging
 uint16  eBufWrds[(BYTCNT250/2)+10];         //local buffer added, may not be needed 125words or 250bytes
 
-
 //FEBv2 timing
 //PGM FLASH ONE WORD AT A TIME  
 //(scope check 1.8mS for 250/2 words)
-//(scope check 15uS per word)
+//(scope check 15uS for per word)
 //
 //
 //Send preloaded FLASH memory image to FEB via ROCs Phy Link
@@ -1583,39 +1208,38 @@ int SendFile_SrcSector71(int prt, int poePrt, int count, u_16Bit cksum, u_32Bit 
     while(len>0)
       {
       TimeOut=0;
-      d16 = *srcData++;                     //Flash chip reads are 16bit
-      
-       if(len>1)
-      {
-      //1st byte
-      chksum += (d16>>8); //SDR_RD16SWP1; //get data from fpga1 sdRam memory
-      PacSum += (d16>>8); //packet sum goes into header
-      //2nd byte
-      chksum += d16&0xff;
-      PacSum += d16&0xff;; //packet sum goes into header
-      eBufWrds[idx++]= d16; //moving byte to xmit buffer 'eBuf15'
-      len-=2;
-      totBytes+=2;
-      sndByteCnt+=2; //counter for packet xmit
-      }
+      d16 = *srcData++;                         //Flash chip reads are 16bit
+      if(len>1)
+          {
+        //1st byte
+        chksum += (d16>>8);                   //SDR_RD16SWP1;  //get data from fpga1 sdRam memory
+        PacSum += (d16>>8);                   //packet sum goes into header
+        //2nd byte
+        chksum += d16&0xff;
+        PacSum += d16&0xff;;                  //packet sum goes into header
+        eBufWrds[idx++]= d16;                 //moving byte to xmit buffer 'eBuf15'
+        len-=2;
+        totBytes+=2;
+        sndByteCnt+=2;                        //counter for packet xmit
+        }
       else
-      {
-      //1st byte
-      d16 >>= 8; //upper byte of 16bits has data
-      chksum += d16; //SDR_RD16SWP1; //get data from fpga1 sdRam memory
-      PacSum += d16; //packet sum goes into header
-      eBufWrds[idx++]= d16; //moving byte to xmit buffer 'eBuf15'
-      len--;
-      totBytes++;
-      sndByteCnt++; //counter for packet xmit
-      }
-      
-      if(sndByteCnt>=BYTCNT250)            //one packet 250 bytes for PMT expected page size if using page pgm mode
+        {
+        //1st byte
+        d16 >>= 8;                            //upper byte of 16bits has data
+        chksum += d16;                        //SDR_RD16SWP1;  //get data from fpga1 sdRam memory
+        PacSum += d16;                        //packet sum goes into header
+        eBufWrds[idx++]= d16;                 //moving byte to xmit buffer 'eBuf15'
+        len--;
+        totBytes++;
+        sndByteCnt++;                         //counter for packet xmit
+        }
+        
+      if(sndByteCnt>=BYTCNT250)               //one packet 250 bytes for PMT expected page size if using page pgm mode
           { 
           pacCnt++;
           //Binary packet to send on ePhy Port to FEB
           eBufWrds[0]= ePayLdBinPreamble;   //POE 'ePhy' binary download preamble header added to each packet
-          eBufWrds[1]= (eCMD77_BINARY_DAT+((sndByteCnt+4)<<8));  //total_bytes - this_packetsize  reverse byte order      
+          eBufWrds[1]= (eCMD77_BINARY_DAT+((sndByteCnt+4)<<8));  //total_bytes - this_packetsize reverse byte order      
          
           PHY_LOADER_FLASH((char*)eBufWrds, prt,  poePrt, eECHO_ON,0, sndByteCnt+4); //add 4 byte header  
           
@@ -1668,9 +1292,13 @@ int SendFile_SrcSector71(int prt, int poePrt, int count, u_16Bit cksum, u_32Bit 
                       
            if ((TimeOut) || (rSumErr))          //break on error
                {
+               //if any errors keep reading incoming buffer until the download image is finished
                int bytecnt= (pacCnt-1) * (BYTCNT250);  //last packet was not acknowledged
                sprintf(tBuf,"\r\nROCSOCK: No FEB Reply, Abort FEBSEND at PacCnt=%d  ByteCnt=%d  0x%x\r\n", pacCnt,bytecnt,bytecnt);
                putBuf(tty, tBuf, 0);
+               //len= SockKeyWait(3000, prt, &key);   //read/wait for socket data to arrive
+               //while(len!=0)
+               //     len= SockKeyWait(3000, prt, &key); 
                break;
                }
            mDelay(2);        //Add extra time since multi feb may be programming and this is only checking one        
@@ -1683,10 +1311,10 @@ int SendFile_SrcSector71(int prt, int poePrt, int count, u_16Bit cksum, u_32Bit 
       {
       pacCnt++;  
       if(sndByteCnt&1)          //odd cnt bytes but we send on 16bit link registers
-      //    {
+    //    {
           sndByteCnt++;         //fix for even word xfer
-      //    eBufWrds[idx++]=0;    //mark extra data as zero som checksum is okay
-      //    }
+    //    eBufWrds[idx++]=0;    //mark extra data as zero som checksum is okay
+    //    }
                  
       //Binary packet to send on ePhy Port to FEB
       eBufWrds[0]= 0xA55A;               //POE 'ePhy' binary download preamble header added to each packet
@@ -1707,15 +1335,180 @@ int SendFile_SrcSector71(int prt, int poePrt, int count, u_16Bit cksum, u_32Bit 
     putBuf(tty, tBuf, 0);      
     return TimeOut;
 }
+//*********************************************************************************************************
+//*********************************************************************************************************
 
 
-extern struct   HappyBusReg HappyBus;
 
-//data pool update
-int g_DataPoolReq(int prt)
+
+//*****************  BEGIN NET LDFILE *****************************************************
+//*****************************************************************************************
+//*****************************************************************************************
+//Naming as used on FEB
+//sum= loadFLASH(S29JL064J_SECTOR0,holdprt);  //Actual S29JL064J address= 0x0 @Sector 0
+//int loadFLASH(int ADDR, int prt) USE THIS NAME SAME AS 
+
+int loadFLASH_SOCK(int prt, char* eBufB_Sock, int fpga)  //rec data file, pgm flash for fpga1or2
 {
-    //request data pool update 'LSTAB'
-    //if not busy   
-    return 0;
-}
+    uint8_t d8;
+    uint16 d16, key;   
+    int len, stat; 
+    extern int g_Done, g_Cnt;
+    char* eBufB= eBufB_Sock; //(char*)eRecDatBuf[g_Sock];
+    int valid= DWNLD_VALID;                     //always valid if we get here
+    
+    sPTR saddr;    
+    saddr = (snvPTR) flashBase;
+    if(fpga==1)
+        saddr += S29JL064J_SECTOR0;         //fpga1  RFI 000000'
+    else if(fpga==2)                       
+        saddr += S29JL064J_SECTOR41;        //fpga2 'RFI 220000'
+    else                        
+        saddr += S29JL064J_SECTOR71;        //fpga'FEB' SectAddr71 Actual S29JL064J Word ADR=0x400000  'RFI 400000' 
+    
+    //flash set unprotect mode, (V6) HET1_5
+    FLASH_WP_HI
+    
+    sprintf(tBuf,"FLASH_PGM: Slow FLASH program time, Server has to throttle packets to ROC\r\n");
+    putBuf(prt, tBuf,0);          
+    sprintf(tBuf,"FLASH_PGM: If uTelnet app, enter key '|' to send app startup specified file\r\n");
+    putBuf(prt, tBuf,0);          
+    sprintf(tBuf,"FLASH_PGM: Select Binary file Now  (Initial 90sec wait for data, else exit)\r\n");
+    putBuf(prt, tBuf,0);
+    //wait for data
+    len= SockKeyWait(90000, prt, &key); //CharCnt=SockKeyWait(mSecWait, Port#, 1st Char in RecBuf)
+    if(len==0)
+        {
+        sprintf(tBuf,"FLASH_PGM: Len=0, 'RDF' wait on file 90 Second timeout\r\n");
+        putBuf(prt, tBuf,0);
+        }
+    else while(len>0)
+        {
+        if(len==1)
+            {
+            d16= *eBufB++; //store 1st of two words
+            len--;
+            uPhySums.FL_SOCK_CHKSIZE++;
+            uPhySums.FL_SOCK_CHKSUM += d16;            
+            //2nd byte if another packet is received, else 'end of file'
+            len= SockKeyWait(500, prt, &key); //CharCnt=SockKeyWait(mSecWait, Port#, 1st Char in RecBuf)
+            eBufB= eBufB_Sock;              //(char*)eRecDatBuf[g_Sock];
+            if(len)//if another data byte add to 1st and program 
+                {
+                d8= *eBufB++;               //store 2nd of two words
+                uPhySums.FL_SOCK_CHKSIZE++;
+                uPhySums.FL_SOCK_CHKSUM += d8;
+                len--;                
+                }
+            else            
+                d8=0xff;   //no more bytes, dont add to cheksum but pgm to flash as 0xff           
+            d16= (d16<<8)+d8;
+         
+            //*********************************************
+            // PGM FLASH ONE WORD AT A TIME     
+            //*********************************************
+            //RM48 Hercules device supports the little-endian [LE] format
+            //reverse data done in sendFPGA(), send LSB first
+            //d16= revB_byte(d16);            //reverse bit order
+            *(snvPTR) (flashBase+adr555)= 0xAA;
+            *(snvPTR) (flashBase+adr2aa)= 0x55;
+            *(snvPTR) (flashBase+adr555)= 0xA0;
+            *saddr++= d16;
+            stat=0;
+            while(FLASH_RDY==0)
+                {
+                if (stat++ > 0xfffff)
+                    {
+                    putBuf(prt, "loadFLASH: Exit loader, Chip Not Erased Before Load???\r\n",0);
+                    len=0;      //force break out
+                    mDelay(1000);
+                    break;
+                    }
+                }
+           //*********************************************
+           // PGM FLASH END
+           //*********************************************
+            }
+        else
+            {
+            d16= *eBufB++;  //get byte
+            d8 = *eBufB++;  //get byte                
+            uPhySums.FL_SOCK_CHKSUM += d16;
+            uPhySums.FL_SOCK_CHKSUM += d8;
+            d16= (d16<<8)+d8;                
+            //*********************************************
+            // PGM FLASH ONE WORD AT A TIME     
+            //*********************************************
+            //RM48 Hercules device supports the little-endian [LE] format
+            //reverse data done in sendFPGA(), send LSB first
+            //d16= revB_byte(d16);            //reverse bit order
+            *(snvPTR) (flashBase+adr555)= 0xAA;
+            *(snvPTR) (flashBase+adr2aa)= 0x55;
+            *(snvPTR) (flashBase+adr555)= 0xA0;
+            *saddr++= d16;
+            stat=0;
+            while(FLASH_RDY==0)
+               {
+                if (stat++ > 0xfffff)
+                   {
+                    putBuf(prt, "loadFLASH: Exit loader, Chip Not Erased Before Load???\r\n",0);
+                    len=0;      //force break out
+                    mDelay(1000);
+                    break;
+                    }
+                }
+           //*********************************************
+           // PGM FLASH END
+           //*********************************************
+             uPhySums.FL_SOCK_CHKSIZE+=2;
+             len -=2;
+            }
+        if(len==0)
+            {
+            len= SockKeyWait(500, prt, &key); //CharCnt=SockKeyWait(mSecWait, Port#, 1st Char in RecBuf)
+            eBufB= eBufB_Sock; //(char*)eRecDatBuf[g_Sock];
+            }
+        
+        u_SRAM.DwnLd_sCNT= uPhySums.FL_SOCK_CHKSIZE;
+        u_SRAM.DwnLd_sSUM= uPhySums.FL_SOCK_CHKSUM &0xffff;
+        }
+   
+    if(fpga==1)
+        {    
+        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_1_VALID, (uint8_t*)&valid,4);     //write 4 bytes
+        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_1_COUNT, (uint8*)&u_SRAM.DwnLd_sCNT,4);    //write 4 bytes
+        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_1_CSUM, (uint8*)&u_SRAM.DwnLd_sSUM,4);      //write 4 bytes
+        }
+    else if (fpga==2)
+        {    
+        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_2_VALID,(uint8_t*)&valid,4);      //write 4 bytes
+        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_2_COUNT,(uint8*)&u_SRAM.DwnLd_sCNT,4);    //write 4 bytes
+        FRAM_WR_ENABLE();                               //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_2_CSUM, (uint8*)&u_SRAM.DwnLd_sSUM,4);      //write 4 bytes
+        }
+    
+    else if (fpga==3)
+        {
+        FRAM_WR(DWNLD_3_VALID,(uint8_t*)&valid,4);     //write 4 bytes
+        FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_3_COUNT,(uint8_t*)&u_SRAM.DwnLd_sCNT,4);    //write 4 bytes
+        FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
+        FRAM_WR(DWNLD_3_CSUM, (uint8_t*)&u_SRAM.DwnLd_sSUM,4);      //write 4 bytes
+        FRAM_WR_ENABLE();                              //WREN op-code, issued prior to Wr_Op
+        }
+    
+    sprintf(tBuf,"FLASH_PGM: Recd %d Bytes, ChkSum=%04X\r\n", u_SRAM.DwnLd_sCNT, u_SRAM.DwnLd_sSUM);
+    putBuf(prt, tBuf,0);
+    return uPhySums.FL_SOCK_CHKSIZE;
+}                    
+
+
+//*****************  END NET LDFILE *******************************************************
+//*****************************************************************************************
+//*****************************************************************************************
 

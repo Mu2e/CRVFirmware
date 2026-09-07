@@ -272,6 +272,7 @@ void _c_int00(void)
         { 
         d_nErrBoot++;  
         }/* Wait */                 
+/* USER CODE END */
 /* USER CODE BEGIN (25) */
 /* USER CODE END */
     }

@@ -4,7 +4,7 @@
 //  Fermilab Terry Kiper 2016-2021
 //  see revision list below
 //
-//  mu2e CRV Readout Controller 
+//  mu2e CRV Readout Controller (ROC) (also used by SBND)
 //  RM48 Micro Controller ARM Cortex-R4F Floating-Point
 //  RM48 CPU 220mhz
 //  RM48 RAM 256KB
@@ -17,7 +17,6 @@
 //  Program and Read Spansion Inc S29JL064J 64 Megabit 
 //                  (8M x 8-Bit/4M x 16-Bit) Flash Memory
 //  Program and Read FRAM memory chip 'FM25CL64B'
-//  Program SILABS M CLOCK GEN (uses I2C Programming interface)
 
 //  The RM48L952 device integrates the ARM Cortex-R4F Floating-Point CPU which 
 //  offers an efficient 1.66 DMIPS/MHz, and has configurations which can run 
@@ -50,7 +49,6 @@
 #include "mu2e_Ctrl_i2c.h"      //mu2e i2c link functions
 #include "ZestETM1_SPI.h"       //mu2e Orange Tree SPI Interface
 #include "fram.h"               //u2e fram 
-
 
 //Using V1 hardware
 //tek 03-16-16: Ver101 Initial V1 code 
@@ -147,9 +145,54 @@
 //tek 05-05-20  Ver491 limit testing ub Req to 2 per packet, mods to 'PRECF,PREC,PFM'
 //tek 05-15-20  Ver492 added help address map 
 //tek 07-07-20  Ver493 wrrst for FEBs update and 'ZestETM1 O-Tree Power On/Off reset'
-//tek 03-09-20  Ver493 'ZestETM1 Power Reset will not be supported on production boards, hardware mod needed
-//tek 03-25-21  Ver494 Updated comments and help page text
 
+
+
+
+
+//tek 03-09-20  Ver493 'ZestETM1 Power Reset will not be supported on production boards, UNLESS Hardware Modified
+//tek 03-25-21  Ver494 Updated comments and help page text
+//tek 04-27-21  Ver495 added fifo clear before requesting FEB pooled data, uses lvds returns
+//tek 05-18-21  Ver496 UB3 test mode retrigger fix.
+//tek 11-04-21  Ver497 Modified command 'PRECALL' to select all POE ports
+//tek 12-07-21  Ver498 Help menu cleanup cmd 'PRECALL' fix on socks 1,2
+//tek 12-08-21  Ver499 Mods to 'TRIG' and 'TRIG_OLD' uB packet former
+//tek 12-09-21  Ver500 Mods to 'GTP1_Rec_Trigs' PHY uB packets tranmitter 50uS backtoback xmit cap
+//tek 11-21-22  Ver501 Added Testing mod Fake uB Req code since FPGA uBunch Sequencer not working, see 'GTP1_Rec_Trigs_Fake_uB_Request()'
+//tek 11-21-22  Ver501 This mu2e code does not use new SBND ROC SPI code for Orange Tree Network interfacing (only needed if FPGA completely controls Otree)
+//.................
+//tek 12-09-22  Ver600 Modified code to support ROC Testing see 'GTP1_Rec_Trigs_Fake_uB_Request' 
+//tek 02-16-23  Ver601 Modified command 'LCA' and 'LC' LVDS xmit/rec wait times, added ROC tester mode code under command 'TESTLVDS'
+//tek 02-24-23  Ver602 Tester function 'TESTLVDS' and 'TESTPHY' now functional.
+//tek 04-14-23  Ver603 CLKINITDATA Reg11 change from 8 to 9 to select IN2 buffer, new hardware layout
+//tek 04-25-23  Ver604 FP LEDs on/off now by active FM Signal vs Current draw
+//tek 05-04-23  Ver605 Fiber Test routine finished, GTP0 read of test data has extra data at times. GTP1 test data always good
+//tek 08-18-23  Ver606 Fiber Test param fix
+//tek 08-23-23  Ver607 Added Front Panel Leds to lvds testing, fixed bit ordering on FP Triple LED
+//tek 09-05-23  Ver608 Added ChkSum to 'TESTPHY' function
+//tek 09-06-23  Ver609 Updated 'TESTPHY' test
+//tek 11-20-23  Ver610 Updated 'TESTLVDS' test
+//tek 11-30-23  Ver611 Updated 'TESTLVDS' test
+//tek 11-30-23  Ver612 Updated 'TESTLVDS' test
+//tek 12-11-23  Ver613 Updated 'TESTLVDS' better display when getting random errors on all channels
+//tek 07-15-24  Ver614 Added reg19 adf4001 enable with Reg19=0, back fans always on, use cmd 'FAN' to control after powerup
+//tek 07-15-24  Ver615 Setting 20mhz LVDS bus clock on power, tester function 'TESTLVDS' uses 25Mhz then restores to 20Mhz
+//tek 02-17-25  Ver615 InitFPGA_REGISTERS() 'WR 0xC00,0x29'
+//tek 03-27-25  Ver616 Modified micro bunch testing commands UB3,UB4 
+//tek 04-29-25  Ver617 Adding ROC to FEB FPGA file transfer to FEB FLASH
+//tek 05-20-25  Ver618 New command 'FLDFEB' sends fpga binary file to FEB
+//tek 05-27-25  Ver619 Cleanup on ROC to FEB downloads, see help 'HF' FLDFEB
+//tek 06-24-25  Ver620 more Cleanup on ROC to FEB downloads
+//tek 07-18-25  Ver621 mods for code downloads to feb all ports
+//tek 08-14-25  Ver622 mods for code downloads to FEB pgms 8ch group for now
+//tek 08-27-25  Ver623 mods for feb image code download
+//tek 09-05-25  Ver624 mods for feb image code download again
+//tek 09-09-25  Ver624 added ROC controller number to pool data req to FEB 'see PHY_LOADER_POOL_BCAST' file Mu2e_Cntrl_DAQ_PHY.c
+//tek 09-12-25  Ver625 added FRAM vars for 3rd fpga image file storeage 'FEB File'
+//tek 09-17-25  Ver626 clean up of fpga file downloads using Phy links in command 'febsend'
+//tek 09-24-25  Ver627 UB2 test code enhanced 1or2 Request per packet and loop count option
+//tek 01-22-26  Ver628 updated text messages related to FLSOCK3 binary file loading
+//tek 01-23-26  Ver628 eraseFLASH_Sector() erase code cleanup, some mods functions 'fl1-fl3, flsock1-flsock3'
 
 //Testing may at times disable i2c port when using jtag debugger see 'i2c_rec_intr_mode()'
 //
@@ -161,7 +204,7 @@
 //  done  Use Netgear Switch GS108T to filter incoming packets to known good IPs
 
 
-//RM48 Flash File Names Related to uC Hardware Specs
+//RM48 Flash File Names Related to uC Hardware Specs 
 //F05 is our 180nm process node, 
 //F035 is our 130nm process node,
 //F021 is our 65nm process node.
@@ -502,15 +545,12 @@ struct ePHYregS ePHY_HDR= {
 
 struct      vB USB_Rec;
 struct      ePHY_STRUCT ePHY_PORT;
-struct      netinfo_s netInfo;          //Net info struct
-struct      uC_Store u_SRAM= {0,0};     //DwnLdSdRamCnt, DwnLdSdRamSum
+struct      netinfo_s netInfo;          //Ethernet Network info struct
+struct      uC_Store u_SRAM= {0,0};     //checksum and size info on command 'RDF' downloads to sdRAM
+
 
 struct      uSums uPhySums;             //local storage of SOCKET download programming of FLASH
-
-
-struct      uC_Store_FRAM u_FRAM= {0};  //nError
-
-
+struct      uC_Store_FRAM u_FRAM= {0};  //nError FPGA status
 struct      sLVDS_ePHY_REG IOPs[25];    //testing link assignment regs structure
 
 //testing internal fpga logic uBunch xmits
@@ -572,6 +612,13 @@ uint8_t	ePHYAdd[12U] = { 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6,
 //Buffers
 #pragma pack(4)
 uint16      lvdsBuf128[128];
+#pragma pack(4)
+char        phyBuf128[132];
+uint16      phyBuf128i[128];
+#pragma pack(4)
+uint16      phyTest[16] ={0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80,
+                          0x100, 0x200, 0x400, 0x800, 0x1000, 0x2000, 0x4000, 0x8000 };
+#pragma pack(4)
 char        g_lineBuf[100];
 char        tBuf[600];
 char        Buf1500[1500];
@@ -610,7 +657,7 @@ int         g_Sock=0, g_wait;
 int         cmdIndex=0, d_nErr=0, d_nErrBoot=0;
 
 uint32      volatile iFlag=0, genFlag=0, BootFlag=0, g_dat32;
-uint16      g_i2cErr=0, g_dat16;
+uint16      g_i2cErr=0, g_dat16, global_pass=0, g_errorcnt, g_errNDR=0, g_PhyPrts;
 
 char*       cbufptr= g_lineBuf;
 char*       g_paramPtr;
@@ -621,6 +668,10 @@ div_t       divR;                       //struc for div() quot,rem
 unsigned int Ris2Fall, Fall2Ris;        //temperature stuff
 
 struct uBuns uBReq;                     //uBunch related vars
+
+
+//tester code inits
+unsigned short revBits16(short int c);
 
 
 //************* Ethernet Packet Preamble *****************
@@ -644,7 +695,7 @@ struct uBuns uBReq;                     //uBunch related vars
 #define DATA_LESS14 DATA_CNT-20
 
 
-//FPGA (Bsee 0) write (addr,data16)
+//FPGA (Base 0) write (addr,data16)
 void wr16FPGA(uint16_t offset, uint16_t d16)
     {
     sPTR saddr = (sPTR) fpgaBase0;
@@ -674,7 +725,7 @@ return 0;
 
 
 //16bit moves, cnt is in word count
-//Move 16bits per count, Incr Src Req Only
+//Move 16bits per count, Incr Src Reg Only
 uint16 movStr16_NOICDEST(unsigned short *src, unsigned short *dst, long int cnt)
 {
 asm ("PUSH {r0-r3}\n"               //dont need to push on reg0-3 ???
@@ -847,8 +898,6 @@ void main_mu2e(void)
     if(d_nErrBoot)   //file 'sys_startup.c' ESM Group3 error check sets d_nErrBoot
         putBuf(tty, "ERROR ESM Group3, Group3 Only Drives the nERROR pin low\r\n\n", 0);
     
-    
-    
     //load fpga with individual calls with flash data
     for(int i=0,j; i<4; i++)
         {
@@ -861,6 +910,12 @@ void main_mu2e(void)
     //ready flash chip
     flashStatus(tty);                      //show flash status
        
+    //set fm lock to 20Mhz
+    //modified SN14 for 'Yongyi at IERC room G291'
+    //tek 7-16-24 now standard for all, 20Mhz
+    sprintf(tBuf,"Reset ROC Transmit LVDS Clock\r\n");
+    putBuf(tty, tBuf,0);                      
+    wr16FPGA(0x000, 0x10);          //default is 25Mhz, set to normal 20Mhz
 
     //Flashed Startup Params for Network
     //copy flash data to Ram vars (network, baud, ser#)
@@ -919,21 +974,32 @@ void main_mu2e(void)
     //esmInit(); //tek mod feb5,2016 to maybe stop ramdon nError reset on board
     
     //set POE RJ45 connector LEDs
-    for(int i=0;i<10;i++)
+    for(int i=0;i<15;i++)
         {
         if (i%2==1)
             RG45LEDS(0x5555);   //set rj45 leds
         else
             RG45LEDS(0xaaaa);   //set rj45 leds
+
+        LED_BLU1;  //GRN
         mDelay(100);
+        LED_BLU0
+          
+        LED_RED1;  //BLU
+        mDelay(100);
+        LED_RED0
+
+        LED_GRN1;  //RED
+        mDelay(100);
+        LED_GRN0
         }
     RG45LEDS(0);                //set rj45 leds
     
     //Init CDCUN1208LPRHBR Clock Fanout Buffer via FPGA Configured SPI Port  
     InitFPGA_REGISTERS();       //setup PLL and clk driver 'ClkDrvInit()'
                                 
-    FAN1_HI;                    //turn 5v fan on
-    FAN2_HI;
+    FAN1_HI;                    //turn 5v fan on as test
+    FAN2_HI;                    //side fan, keep on all the time
 
     gioEnableNotification(gioPORTA, BIT5) ; //ETHERNET INTERRUPT ENABLE ETHERNET ZEST BRD 
     gioEnableNotification(gioPORTA, BIT4) ; //ETHERNET INTERRUPT ENABLE FPGA LOGIC
@@ -946,7 +1012,8 @@ void main_mu2e(void)
     sprintf(tBuf,"\r\nZESTETM1 LNK: Orange-Tree Network Brd PwrUp Time Max 8 Sec\r\n");
     putBuf(tty,tBuf,0);                
 
-    
+    //FAN1_LO;                        //FAN test off
+       
     //read sio port connection to otree to see when its ready.
     //test Zest Parallel port link via fpga, if fpga doesnt load, no Zest Ethernet
     //read addr Zest '0x214' WEB SERVERPORT normally 0x53 (80 dec) 
@@ -976,7 +1043,7 @@ void main_mu2e(void)
             break;
             }
         }
-
+    
     //OTree MUST BE set up for NOT 'Auto-Open Settings via web page'
     //OTree Web Page Setup, 16bitReg , 2Bytes r/w, 'SPI slave',...
     //'TrigToUser', 'TrigTypeSingle', 'CLK DIR InputFromUser'
@@ -1045,6 +1112,9 @@ void main_mu2e(void)
   //show message when i2c is disabled see 'i2c_rec_intr_mode()'
   //putBuf(tty,"I2C has been disable for 'Remote Login' testing/debugging with breakpoints\r\n>",0); 
     
+    //Force CSR Reg0 to 20Mhz lvds fm clock, as testing code FPGA version used 26mhz clock
+    wr16FPGA(0,0x10);               //Reg0 csr 20Mhz lvds fm clock
+
     //tek Sept2018, intial daq setup, may need to delete at some point
     REG16((fpgaBase0+ (0x27*2))) = 0x300;
     REG16((fpgaBase0+ (0x300*2)))= 0x8;
@@ -1054,10 +1124,10 @@ void main_mu2e(void)
     link_ID_Chk(tty);
     
     //Enable data pooling now
-    lvLnk.PoolMode=1;               //pool enable
-    lvLnk.PoolChkmSec=0;            //pool update req timer init
-
+    lvLnk.PoolMode=1;                   //pool enable
+    lvLnk.PoolChkmSec=ReqPoolTime30-5;  //pool update, normal 30Sed, 1st pass in 5 seconds
     
+     
 //******************************************************************************
 //*******                  Main Loop Starts Here                       *********
 //*******                  Main Loop Starts Here                       *********
@@ -1106,18 +1176,19 @@ void main_mu2e(void)
         //******                                                ********
         //**************************************************************               
 
-    //todo tek, 03-25-20 use just trig_NEW ver as testing proves it works and is faster
-        if(uBReq.Flag & DAQuB_Trig_NEW) //daq uBunch decode active use short packet size reqs(min 6 bytes packet)
+        //todo tek, 03-25-20 
+        //Use NEW ver that sends short 3 Word Packets to FEB
+        if(uBReq.Flag & DAQuB_Trig_NEW)         //daq uBunch decode active use short packet size reqs(min 6 bytes packet)
             {
-            GTP1_Rec_Trigs();           //check GTP Receive FIFO for uBun Requests
+            GTP1_Rec_Trigs();                   //check GTP Receive FIFO for uBun Requests
             }
-        else if(uBReq.Flag & DAQuB_Trig_OLD)//daq uBunch decode active, use standard pack size req (min 64+ bytes packet)
+        else if(uBReq.Flag & DAQuB_Trig_OLD)    //daq uBunch decode active, use standard pack size req (min 64+ bytes packet)
             {
-            GTP1_Rec_Trigs();           //check GTP Receive FIFO for uBun Requests
+            GTP1_Rec_Trigs();                   //check GTP Receive FIFO for uBun Requests
             }
-        else if (uBReq.Flag & DAQREQ_2FEB)  //test mode setup by command 'UB2'
+        else if (uBReq.Flag & DAQuB_Test)       //test mode setup by command 'UB2'
             {
-            GTP1_Rec_TEST();            //check GTP Receive FIFO for uBun Requests
+            GTP1_Rec_Trigs_Fake_uB_Request();   //fake ub req since FPGA uB Sequencer may not be working
             }
 
         
@@ -1157,8 +1228,8 @@ void main_mu2e(void)
         //******     takes 50uS                                 ********
         //**************************************************************    
         //
-//temp may disable while remote login testing
-//any debug breakpoints tend to hang up i2c uC hardware block        
+//may temporary disable while remote login testing
+//any debug breakpoints tend to hang up i2c uC hardware block, needs pwr cycle        
         if (genFlag & POE_CHECK_DUE)       
             i2c_rec_intr_mode(); 
         
@@ -1275,18 +1346,17 @@ void main_mu2e(void)
 //xMit USB (UART) data string
 void sciUartSendText(sciBASE_t *sci, uint8 *text,uint32 length)
 {
-    unsigned timer=0;
+    //unsigned timer=0;
     while(length)
         {
         //warning, code has no breakout
-        while ((UART->FLR & 0x4) == 4)        //wait until busy
+        while ((UART->FLR & 0x4) == 4)        //wait until non busy
         {
-         uDelay(10);                          //wait some
-         if (timer++> 1000)
-             {
-             sciSendByte(UART,0);             // send NUll char, may prevent "FLR status hangup on boot"
-             break;        //requires power cycle, give up
-             }
+         //if (timer++> 100000)
+         //    {
+              sciSendByte(UART,0);             // send NUll char, may prevent "FLR status hangup on boot"
+              break;        //requires power cycle, give up
+         //    }
         }        
         sciSendByte(UART,*text++);              /* send out text   */
         length--;        
@@ -1493,14 +1563,13 @@ int putchar(int  c)
 }
 
 
-#define uBunMax         10
-#define uBunIDsMax      8*uBunMax*2
-
-extern uSHT uBunJumboPac[];           //uBun Req Packet Concentrator
-extern uSHT uBunIDs[];               //store to compare to rtn data
+//#define uBunMax         10
+//#define uBunIDsMax      8*uBunMax*2
+//extern uSHT uBunJumboPac[];           //uBun Req Packet Concentrator
+//extern uSHT uBunIDs[];                //store to compare to rtn data
 
 #define CmdSiz20         20                     //limit repeat command line size
-static  char  tBufHold[CmdSiz20+1];             //store command for quick repeat option
+//static  char  tBufHold[CmdSiz20+1];             //store command for quick repeat option
 
 //Check if rec'd command is valid and handle it.
 int process(int prt, char *cmdPtr)
@@ -1513,13 +1582,13 @@ int process(int prt, char *cmdPtr)
     paramPtr = cmdPtr;                                  //ptr to data buffer
     
     //Save input string for possible repeat command
-    if (*cmdPtr)
-        {
-          if ((*cmdPtr!=']') && (*cmdPtr!='\n'))
-            memcpy(tBufHold, cmdPtr, CmdSiz20);         //store cmd for repeat option (20 char limit)
-        else
-            memcpy(cmdPtr, tBufHold, CmdSiz20);         //limit command line size
-        }    
+    //if (*cmdPtr)
+    //    {
+    //      if ((*cmdPtr!=']') && (*cmdPtr!='\n'))
+    //        memcpy(tBufHold, cmdPtr, CmdSiz20);         //store cmd for repeat option (20 char limit)
+    //    else
+    //        memcpy(cmdPtr, tBufHold, CmdSiz20);         //limit command line size
+    //    }    
     
     tok = mytok(paramPtr, &paramPtr);                   //find 1st token, should be acsii 'CMD'
     if (!tok)
@@ -1673,7 +1742,7 @@ int process(int prt, char *cmdPtr)
                         }
                      break;
                     }
-                if ( !strcmp(tok, "CLR") || !strcmp(tok, "CLS"))  //Clear Screen
+                else if ( !strcmp(tok, "CLR") || !strcmp(tok, "CLS"))  //Clear Screen
                     {
                     //char ClrScr[]= {0x1B,0x5B,0x32,0x4A,0};     //escape sequence for clear screen 
                     //putBuf(prt,ClrScr,0);                       //clear the the screen and scroll data both. 
@@ -1700,6 +1769,7 @@ int process(int prt, char *cmdPtr)
                     }
                 else  {parErr=0xf;   break; }
         case 'F':
+          /*
                 if (!strcmp(tok, "FD"))             //FPGA Load, direct from USB
                    {
                     if (prt!=tty)
@@ -1710,7 +1780,8 @@ int process(int prt, char *cmdPtr)
                     loadSpartan6_FPGA(param1);
                     break;
                     }
-                else if (!strcmp(tok, "FERASE"))    //FLASH erase all
+          */
+                if (!strcmp(tok, "FERASE"))    //FLASH erase all
                    {
                     sprintf(tBuf,"TOTAL FLASH Erase, Enter cmd as 'FEA 1'\r\n");
                     putBuf(prt, tBuf,0);
@@ -1720,33 +1791,10 @@ int process(int prt, char *cmdPtr)
                     eraseFLASH();                
                     break;
                     }
-                else if (!strcmp(tok, "FE1"))        //FLASH erase FPGA1 SECTORs 0-40 
-                   {
-                    sprintf(tBuf,"TOTAL FLASH Erase, Enter cmd as 'FE1 1'\r\n");
-                    putBuf(prt, tBuf,0);
-                    param1=arg_dec(&paramPtr,0);    //now get 1st param U39B
-                    if(param1!= 1)
-                     break;
-                    eraseFLASH_Sector(SECTORES, 0,prt);           
-                    break;
-                    }
-                else if (!strcmp(tok, "FES"))        //FLASH erase sectors
-                   {
-                    sprintf(tBuf,"FLASH Erase nn Sectors, Begins @ Base, CMD--> 'FES 1 nn'\r\n");
-                    putBuf(prt, tBuf,0);
-                    param1=arg_dec(&paramPtr,0);    //now get 1st param U39B
-                    if(param1!= 1)
-                     break;
-                    param2=arg_dec(&paramPtr,SECTORES);    //now get 1st param U39B
-                    sprintf(tBuf,"FLASH Erase Sectors %d\r\n", param2);
-                    putBuf(prt, tBuf,0);
-                    eraseFLASH_Sector(param2, 0, prt);
-                    break;
-                    }
                 else if (!strcmp(tok, "FL1"))       //FLASH Load of FPGA File via USB
                    {
                     if (prt!=tty)
-                      break;                        //sockets use cmds 'LDFILE 2', 'LDFLASH'
+                      break;                        //tty only
                     sprintf(tBuf,"S29JL064J: FPGA1 Flash Loader\r\n");
                     putBuf(prt, tBuf,0);
                     PROGx_LO                    
@@ -1756,19 +1804,20 @@ int process(int prt, char *cmdPtr)
                     flashStatus(prt);               //displays status
                     uDelay(100);  
                     
-                    eraseFLASH_Sector(SECTORES, 0,prt);
-                    sprintf(tBuf,"S29JL064J: Total sector erased %d (%d Bytes)\r\n", SECTORES, (SECTORES-7)*0x7fff);
+                    eraseFLASH_Sector(SectorCnt36, 0,prt);
+                    sprintf(tBuf,"S29JL064J: Total sector erased=%d (%d Bytes)\r\n", SectorCnt36, ((SectorCnt36-7)*0x10000)); //Sec0-7(0x1000), then SecSiz(0x10000))
                     putBuf(prt, tBuf,0);
-                    sprintf(tBuf,"S29JL064J: Select Binary file. (MTTY Shortcut Key F5)\r\n");
+                    sprintf(tBuf,"S29JL064J: Select Binary file now (enable DSR/DTR)\r\n");
                     putBuf(prt, tBuf,0);
                     loadFLASH(S29JL064J_SECTOR0, prt);  //Actual S29JL064J address= 0x0 @Sector 0
-                    //flashXFER(4, prt);            //forces fpga to reload from updated Flash 
+                    sprintf(tBuf,"FL1_Load : Finished, reset board for complete update\r\n");
+                    putBuf(prt, tBuf,0);
                     break;
                     }
                 else if (!strcmp(tok, "FL2"))       //FLASH Load of FPGA File via USB
                    {
                     if (prt!=tty)
-                      break;                        //sockets use cmds 'LDFILE 2', 'LDFLASH'
+                      break;                        //tty only
                     sprintf(tBuf,"S29JL064J: FPGA234 Flash Loader\r\n");
                     putBuf(prt, tBuf,0);
                     PROGx_LO                    
@@ -1778,14 +1827,16 @@ int process(int prt, char *cmdPtr)
                     flashStatus(prt);               //displays status
                     uDelay(100);                   
                     
-                    eraseFLASH_Sector(40, S29JL064J_SECTOR40, prt); //Actual S29JL064J address= 0x110000 @Sector 41                    
-                    sprintf(tBuf,"S29JL064J: Total sector erased %d (%d Bytes)\r\n", SECTORES, (SECTORES-7)*0x7fff);
+                    eraseFLASH_Sector(SectorCnt36, S29JL064J_SECTOR41, prt); //Actual S29JL064J address= 0x110000 @Sector 41                    
+                    sprintf(tBuf,"S29JL064J: Total sector erased=%d (%d Bytes)\r\n", SectorCnt36, (SectorCnt36*0x10000) );
                     putBuf(prt, tBuf,0);
-                    sprintf(tBuf,"S29JL064J: Select Binary file. (MTTY Shortcut Key F5)\r\n");
+                    sprintf(tBuf,"S29JL064J: Select Binary file now (enable DSR/DTR)\r\n");
                     putBuf(prt, tBuf,0);
-                    loadFLASH(S29JL064J_SECTOR40, prt); //Actual S29JL064J address= 0x110000 @Sector 41
+                    loadFLASH(S29JL064J_SECTOR41, prt); //Actual S29JL064J address= 0x110000 @Sector 41 'RFI 220000'
+                    sprintf(tBuf,"FL2_Load : Finished, reset board for complete update\r\n");
+                    putBuf(prt, tBuf,0);
                     break;
-                    }
+                    }                
                 else if (!strcmp(tok, "FL3"))        //FLASH Load of FPGA File via USB
                    {
                     if (prt!=tty)
@@ -1801,14 +1852,17 @@ int process(int prt, char *cmdPtr)
                     //SectAddr71 Actual S29JL064J Word ADR=0x200000 (FEB BackUp image storeage) 
                     //"RFI 400000 to display"
                     eraseFLASH_Sector71(FileSectCntH, SectAddr71, prt);  //SectorsToErase, SectorStartAddr, DisplayPrt
+                    sprintf(tBuf,"S29JL064J: Total sector erased=%d (%d Bytes)\r\n", FileSectCntH, (FileSectCntH*0x10000) );
+                    putBuf(prt, tBuf,0);
+                    
                     //FLASH erase done
                     sprintf(tBuf,"S29JL064J: Select Binary File Now (enable DSR/DTR)\r\n");
                     putBuf(prt, tBuf,0);
                     //Begin FLASH load using USB
                     loadFLASH(SectAddr71, prt);         //Actual S29JL064J Word ADR=0x200000 "RFI 400000 to display" (upper BackUp image)  
                     break;
-		  }
-                else if (!strcmp(tok, "FLSOCK1"))       //FLASH Load via SOCKETs FPGA1
+                    }                
+                else if (!strcmp(tok, "FLSOCK1"))       //FLASH Load via SOCKETs ROC FLASH Sector0=ROC Image1 (fpga1)
                    {
                     //disable watchdog timer, file notifications.c
                     if(prt==tty)
@@ -1818,61 +1872,61 @@ int process(int prt, char *cmdPtr)
                         }          
                     while(FLASH_RDY==0)
                         {
-                        putBuf(prt,"loadFLASH: Flash not ready\r\n",0); //send to current active port
+                        putBuf(prt,"FL1_SOCK : Flash not ready\r\n",0); //send to current active port
                         break;
                         }
                     
-                    sprintf(tBuf,"S29JL064J: Flash Loader FPGA1\r\n");
+                    sprintf(tBuf,"FL1_SOCK : Flash Loader FPGA1\r\n");
                     putBuf(prt, tBuf,0);
                     flashStatus(prt);                   //fills Buf1500 with ascii msgs
                     putBuf(prt, tBuf,0);
                     uDelay(100);                   
                     
-                    sprintf(tBuf,"FLASH_PGM: FLASH Erase Now\r\n");
+                    sprintf(tBuf,"FL1_SOCK : FLASH Erase Now\r\n");
                     putBuf(prt, tBuf,0);
-                    eraseFLASH_Sector(SECTORES, 0, prt);
-                    sprintf(tBuf,"S29JL064J: Total sector erased %d (%d Bytes)\r\n", SECTORES, (SECTORES-7)*0x7fff);
+                    eraseFLASH_Sector(SectorCnt36, 0, prt);
+                    sprintf(tBuf,"FL1_SOCK : Total Bytes erased = %u\r\n", ((SectorCnt36-7)*0x10000));
                     putBuf(prt, tBuf,0);
                     uPhySums.FL_SOCK_CHKSIZE= 0;
                     uPhySums.FL_SOCK_CHKSUM=0;
                     
                     loadFLASH_SOCK(prt,(char*)eRecDatBuf[g_Sock],1);    //ref fpga1
-                    sprintf(tBuf,"FLASH_PGM: Finished, use cmd 'FT' to reload FPGAs\r\n");
+                    sprintf(tBuf,"FL1_SOCK : Finished, reset board for complete update\r\n");
                     putBuf(prt, tBuf,0);
                     uDelay(200);  
                     //flashXFER(4, prt);                //forces fpga to reload from updated Flash 
                     break;
                     }
-                else if (!strcmp(tok, "FLSOCK2"))       //FLASH Load via SOCKETs FPGA2
+                else if (!strcmp(tok, "FLSOCK2"))       //FLASH Load via SOCKETs ROC FLASH Sector41=ROC Image2 (fpga2-4)
                    {
                     //disable watchdog timer, file notifications.c
                     if(prt==tty)
                         {
-                        putBuf(prt,"Use Socket ports only\r\n",0);              //tty usb okay
+                        putBuf(prt,"FL2_SOCK : Flash not ready\r\n",0); //send to current active port
                         break;
                         }          
                     while(FLASH_RDY==0)
                         {
-                        putBuf(prt,"loadFLASH: Flash not ready\r\n",0); //send to current active port
+                        putBuf(prt,"FL2_SOCK : Flash not ready\r\n",0); //send to current active port
                         break;
                         }
                     
-                    sprintf(tBuf,"S29JL064J: Flash Loader FPGA2\r\n");
+                    sprintf(tBuf,  "FL2_SOCK : Flash Loader FPGA2\r\n");
                     putBuf(prt, tBuf,0);
                     flashStatus(prt);                           //fills Buf1500 with ascii msgs
                     putBuf(prt, tBuf,0);
                     uDelay(100);                   
                     
-                    sprintf(tBuf,"FLASH_PGM: FLASH Erase Now\r\n");
+                    sprintf(tBuf,  "FL2_SOCK : FLASH Erase Now\r\n");
                     putBuf(prt, tBuf,0);
-                    eraseFLASH_Sector(SECTORES, S29JL064J_SECTOR40, prt);
-                    sprintf(tBuf,"S29JL064J: Total sector erased %d (%d Bytes)\r\n", SECTORES, (SECTORES-7)*0x7fff);
+                    eraseFLASH_Sector(SectorCnt36, S29JL064J_SECTOR41, prt);  //RFI 220000'
+                    sprintf(tBuf,  "FL2_SOCK : Total Bytes erased = %u\r\n", (SectorCnt36*0x10000));
                     putBuf(prt, tBuf,0);
                     uPhySums.FL_SOCK_CHKSIZE= 0;
                     uPhySums.FL_SOCK_CHKSUM=0;
                     
                     loadFLASH_SOCK(prt,(char*)eRecDatBuf[g_Sock],2);  //ref fpga2
-                    sprintf(tBuf,"FLASH_PGM: Finished, use cmd 'FT' to reload FPGAs\r\n");
+                    sprintf(tBuf,"FL2_SOCK : Finished, reset board for complete update\r\n");
                     putBuf(prt, tBuf,0);
                     uDelay(200);                   
                     //flashXFER(4, prt);                //forces fpga to reload from updated Flash 
@@ -1883,7 +1937,7 @@ int process(int prt, char *cmdPtr)
                     //disable watchdog timer, file notifications.c
                     if(prt==tty)
                         {
-                        putBuf(prt,"FL3_SOCK : Flash not ready\r\n",0); //send to current active port
+                        putBuf(prt,"FL3_SOCK : Flash Socket command only\r\n",0); //send to current active port
                         break;
                         }          
                     while(FLASH_RDY==0)
@@ -1900,35 +1954,23 @@ int process(int prt, char *cmdPtr)
                     sprintf(tBuf,  "FL3_SOCK : FLASH Erase Now\r\n");
                     putBuf(prt, tBuf,0);
 					
-                    //SectAddr71 Actual S29JL064J Word ADR=0x200000 (FEB BackUp image storeage) 
+                    //SectAddr71 Actual S29JL064J Byte ADR=0x400000 (FEB BackUp image storeage) 
                     //"RFI 400000 to display"
                     eraseFLASH_Sector71(FileSectCntH, SectAddr71, prt);  //SectorsToErase, SectorStartAddr, DisplayPrt
 					//erase done
-                    sprintf(tBuf,"FL3_SOCK : Total sector erased%d (%d Bytes)\r\n", SECTORES, SECTORES*0x8000);
+                    sprintf(tBuf,"FL3_SOCK : Total Bytes erased = %u\r\n", FileSectCntH*0x10000);
                     putBuf(prt, tBuf,0);
                     uPhySums.FL_SOCK_CHKSIZE= 0;
                     uPhySums.FL_SOCK_CHKSUM=0;
                     //flash load begin
-                    loadFLASH_SOCK(prt,(char*)eRecDatBuf[g_Sock],3);  //3==SectAddr71
-                    sprintf(tBuf,"FL3_SOCK : Finished, reset board for complete update\r\n");
-                    putBuf(prt, tBuf,0);
-                    uDelay(200);                   
+                    loadFLASH_SOCK(prt,(char*)eRecDatBuf[g_Sock],3);  //3==SectAddr71 (feb file)
+                    //sprintf(tBuf,"FL3_SOCK : Finished, reset board for complete update\r\n");
+                    //putBuf(prt, tBuf,0);
+                    //uDelay(200);                   
                     //flashXFER(4, prt);                //forces fpga to reload from updated Flash 
                     break;
-                    }
-                else if (!strcmp(tok, "FT"))            //FLASH Load of FPGA File via USB
-                   {
-                    sprintf(tBuf,"FLASH xFer to FPGAs 0,1,2,3\r\n");
-                    putBuf(prt, tBuf,0);
-                    for(int i=0,j; i<4; i++)
-                        {
-                        j=flashXFER(i, tty);
-                        if (j==-1)
-                            iFlag |= CONFIGFAIL;
-                        }
-                    InitFPGA_REGISTERS();
-                    break;
-                    }
+                    }                            
+                
                 else if (!strcmp(tok, "FEBSEND"))       //Send FPGA file via ePhy Link from ROC to FEB (expect FEB ready, see FEB cmd 'HF')
                    {
                     //disable watchdog timer, file notifications.c
@@ -1962,11 +2004,11 @@ int process(int prt, char *cmdPtr)
                     FRAM_RD(DWNLD_3_COUNT,(uint8*)&imageSz, 4); //read 4 bytes
                     FRAM_RD(DWNLD_3_CSUM, (uint8*)&cksum, 2);   //read 2 bytes
                                        
-                    //imageSz &=0xfffffe;                     //even file size
+                  //imageSz &=0xfffffe;                     //even file size
                     if ((imageSz==0) || (imageSz>3000000))  //image size to small or large, normal around 2,192,012 bytes
                         return 1;
                     
-                    //using process() function to disable data pooling 
+                    //using main process() function to disable data pooling 
                     sprintf(tBuf,"FEBSEND: Disable data pool\r\n");
                     putBuf(prt, tBuf,0);  
                     sprintf(tBuf,"POOLENA 0");      //command to erase single active FEB
@@ -2008,9 +2050,9 @@ int process(int prt, char *cmdPtr)
                     else
                         {
                         //enable 1 Phy to transmit
-                        *IOPs[1].ePHY0E_XMSKp= 0;        //enable all port   
-                        *IOPs[9].ePHY0E_XMSKp= 0;        //enable all port   
-                        *IOPs[17].ePHY0E_XMSKp=0;        //enable all port   
+                        *IOPs[1].ePHY0E_XMSKp= 0;        //disable all port   
+                        *IOPs[9].ePHY0E_XMSKp= 0;        //disble all port   
+                        *IOPs[17].ePHY0E_XMSKp=0;        //disble all port   
                         *IOPs[poePort].ePHY0E_XMSKp= IOPs[poePort].ePHY_BIT; //enable single phy port
                         }
                     
@@ -2038,9 +2080,12 @@ int process(int prt, char *cmdPtr)
                     
                     //Use process(), cmd FEBs to store last download size and checksum to FEB FRAM and read flash status
                     //
+                    u_16Bit d16;
+                    FRAM_RD(DWNLD_3_CSUM, (uint8*)&d16, 2); //read 2 bytes FL3 checksum
+                    
                     if(PgmCount==24)
                         {
-                        sprintf(tBuf,"LCA FL3EOF");     //command store FL3 load size and chksum
+                        sprintf(tBuf,"LCA FL3EOF %X", d16);     //command store FL3 load size and chksum
                         process(prt, tBuf);                    
                         putBuf(prt,"\r\n",0);
                         sprintf(tBuf,"LCA FS");         //command for flash status                      
@@ -2048,7 +2093,7 @@ int process(int prt, char *cmdPtr)
                         }
                     else
                         {
-                        sprintf(tBuf,"LC FL3EOF");      //command store FL3 load size and chksum
+                        sprintf(tBuf,"LC FL3EOF %X",d16);      //command store FL3 load size and chksum
                         process(prt, tBuf);                         
                         //wait and display returned data
                         while (HappyBus.WaitCnt)        //muti blocks, use timer
@@ -2061,11 +2106,25 @@ int process(int prt, char *cmdPtr)
                         while (HappyBus.WaitCnt)        //muti blocks, use timer
                             HappyBusCheck();            //check status/get data, takes ~200nS                        
                         }
+                    
                    
                     putBuf(prt,"\r\n",0);
                     //restore hBus link
                     mDelay(200);                        //wait for hBus reply
                     assignLinkPort(HappyBus.SavePrt,1);                    
+                    break;
+                    }               
+                else if (!strcmp(tok, "FT"))            //Flash reLoad to FPGA
+                   {
+                    sprintf(tBuf,"Reset ROC after command 'FEBSEND' to fix any link problems\r\n");
+                    putBuf(prt, tBuf,0);
+                    for(int i=0,j; i<4; i++)
+                        {
+                        j=flashXFER(i, tty);
+                        if (j==-1)
+                            iFlag |= CONFIGFAIL;
+                        }
+                    InitFPGA_REGISTERS();
                     break;
                     }
                 else if (!strcmp(tok, "FS"))            //FLASH Status
@@ -2073,17 +2132,25 @@ int process(int prt, char *cmdPtr)
                     //int chip=1;
                     u_16Bit D16;
                     u_32Bit D32;
-                    flashStatus(prt);                   //displays status
-                    FRAM_RD(DWNLD_1_COUNT,(uint8*)&D32, 4);    //read 4 bytes
+                    flashStatus(prt);                       //displays status
+                    FRAM_RD(DWNLD_1_COUNT,(uint8*)&D32, 4); //read 4 bytes
                     FRAM_RD(DWNLD_1_CSUM, (uint8*)&D16, 2);
                     sprintf(Buf1500,"Flash1 BytCt: %d\r\n",D32);
                     sprintf(tBuf,   "Flash1 SumCk: %04X\r\n",D16);
                     strcat (Buf1500,tBuf);
-                    FRAM_RD(DWNLD_2_COUNT,(uint8*)&D32, 4);     //read 4 bytes
-                    FRAM_RD(DWNLD_2_CSUM, (uint8*)&D16, 2);     //read 2 bytes
+                    FRAM_RD(DWNLD_2_COUNT,(uint8*)&D32, 4); //read 4 bytes
+                    FRAM_RD(DWNLD_2_CSUM, (uint8*)&D16, 2); //read 2 bytes
                     sprintf(tBuf   ,"Flash2 BytCt: %d\r\n",D32);
                     strcat (Buf1500,tBuf);
                     sprintf(tBuf,   "Flash2 SumCk: %04X\r\n",D16);
+                    strcat (Buf1500,tBuf);
+
+                    //FLASH Sector71 reserved for downloadable FEB image file
+                    FRAM_RD(DWNLD_3_COUNT,(uint8*)&D32, 4); //read 4 bytes
+                    FRAM_RD(DWNLD_3_CSUM, (uint8*)&D16, 2);   //read 2 bytes
+                    sprintf(tBuf   ,"FEBFL3 BytCt: %d\r\n",D32);
+                    strcat (Buf1500,tBuf);
+                    sprintf(tBuf,   "FEBFL3 SumCk: %04X\r\n",D16);
                     strcat (Buf1500,tBuf);
                     putBuf(prt, Buf1500,0);
                     
@@ -2101,15 +2168,20 @@ int process(int prt, char *cmdPtr)
                    {
                     //if (prt!=tty)
                     //  break;
-                    sprintf(tBuf,"fpga reset to all 4 chips using PROGRAM_B\r\n");
+                    sprintf(tBuf,"fpga reset to fpga2-4 using PROGRAM_B, not fpga1\r\n");
                     putBuf(prt, tBuf,0);
                     //reset fpga(s)
-                    PROGx_LO                        //min 300nS
-                    uDelay(5);
-                    PROGx_HI                    
+                    //PROGx_LO                      //not fpga0, hangs network
+                    PROG1_LO                        //reset fpag1-3
+                    PROG2_LO
+                    PROG3_LO
+                    uDelay(5);                      //min 300nS
+                    //PROGx_HI                      //not fpga0, hangs network                  
+                    PROG1_HI
+                    PROG2_HI
+                    PROG3_HI
                     break;
-                    }
-                
+                    }                
                 else if (!strcmp(tok, "FZ"))         //testing flash non 0xffff check
                    {
                     param1=arg_hex(&paramPtr,0x800); //now get 1st param (range to check)
@@ -2151,7 +2223,7 @@ int process(int prt, char *cmdPtr)
                     FRAM_WR(param1, (uint8*)&param2, 2);        //16bit writes (write 2 bytes)
                     break;
                     }
-                else if (!strcmp(tok,"FDUMP")) //'FDUMP' read flash status register
+                else if ((!strcmp(tok,"FD")) || (!strcmp(tok,"FDUMP")))//'FDUMP' or 'FD' read flash status register
                     {
                     uint16_t Adr;
                     uint16_t D16BufIn[10];
@@ -2214,26 +2286,15 @@ int process(int prt, char *cmdPtr)
                     putBuf(prt, Buf1500,0);             //send to current active port
                     break;
                     }
-                if (!strcmp(tok, "FELD"))               //Send FEB command 'LDFE' flash erase
+                else if  (!strcmp(tok, "FAN"))          //FAN ON/OFF CONTRL
                     {
-                    uint16 key, len;
-                    sprintf(tBuf,"Wait 65 Seconds\r\n");   
-                    putBuf(prt, tBuf, 0);
-                    
-                    sprintf(tBuf,"LCA LDFE");   putBuf(prt,tBuf,0); 
-                    if (prt!=tty)               putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-                    len= SockKeyWait(65000, prt, &key);  //CharCnt=SockKeyWait(mSecWait, Port#, 1st Char in RecBuf)
-                    if(len)
-                        sprintf(tBuf,"User breakout of wait\r\n");   
+                    param1=arg_hex(&paramPtr,-1);       //get 1st param FAN 
+                    if (param1==1)                       //1==ON else OFF
+                        FAN1_HI
                     else
-                        sprintf(tBuf,"Ready\r\n");   
-                    putBuf(prt, tBuf, 0);
-                    sprintf(tBuf,"LCA LDSTAT"); putBuf(prt,tBuf,0); 
-                    if (prt!=tty)               putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-                    break; 
-                   }          
+                        FAN1_LO
+                    break;
+                    }                
                 else  {parErr=0xf;   break; }
         case 'H':
                 if ((!strcmp(tok, "H1")) || (!strcmp(tok, "HE")))
@@ -2285,7 +2346,7 @@ int process(int prt, char *cmdPtr)
                     struct time ti;
                     sPTR zAdr = (sPTR) ZestETM1;    //get Phy Link Status
                     param1=arg_dec(&paramPtr,0);
-                    sprintf(Buf1500,"Module Type : Mu2e CRV FEB Controller\r\n");
+                    sprintf(Buf1500,"Module Type : FEB Controller ROC Tester Version\r\n");
                     zAdr = (sPTR) ZestETM1;                 
                     i= *(zAdr+(0x200/2));
                     j= *(zAdr+(0x202/2));
@@ -2373,7 +2434,7 @@ int process(int prt, char *cmdPtr)
                 else if (!strcmp(tok, "IRD"))               //I2C1 Port READ testing 'POE'
                     {
                     int retVal;
-                    static int datL; //datH;
+                    static int datL, datH;
                     if ( (param1=arg_hex(&paramPtr,-1)) ==-1) //get POE Chip 1of6
                         { parErr++;  break; }
                     if ( (param2=arg_hex(&paramPtr,-1)) ==-1) //get reg addr to read
@@ -2381,7 +2442,7 @@ int process(int prt, char *cmdPtr)
                     //READ LSB 1ST
                      retVal= i2cRecvData(PoeAddr[param1],param2, 1, (uint8_t*) &datL, 0);
                     //READ MSB
-                    //retVal= i2cRecvData(PoeAddr[param1], param2, 1, (uint8_t*) &datH, 0 );
+                    retVal= i2cRecvData(PoeAddr[param1], param2, 1, (uint8_t*) &datH, 0 );
                     if(retVal)
                         sprintf(tBuf,"i2c error\r\n");
                     else
@@ -2474,159 +2535,34 @@ int process(int prt, char *cmdPtr)
                     }
                 else  {parErr=0xf;   break; }
         case 'L':
-                if (!strcmp(tok, "LDFILE"))             //Load binary file to 1of3 FPGAs(2,3,4) SDRAM
+                if (!strcmp(tok, "LC77"))            //Link Cmd, reqs data 1of24 connected FEBs
                    {
-                    param1= arg_dec(&paramPtr,0);
-                    if ((param1<2) || (param1>4))       //use fpga sdRam 2,3 or 4
-                        { parErr++;  break; }                               
-                    LDF(prt, param1, (char*)eRecDatBuf[g_Sock]); 
-                    break; 
-                   }
-                else if (!strcmp(tok, "LDFEB"))         //Xfer file to FEB and Program data to FLASH (takes ~20 Secs)
-                   {
-                    int dat16, retVal, sSUM=0, sCNT=0;
-
-                    param1= arg_dec(&paramPtr,1);       //febs to load 1 or 24(all)
-                    if((param1!=1)&&(param1!=24))       //2 choices 1or24
-                        { parErr++;  break; }   
-                    
-                    //delay pool data req
-                    lvLnk.PoolChkmSec=0;                   
-                    param2=2;                           //always use sdRam 2
-                    //param2= arg_dec(&paramPtr,0);
-                    //if ((param2<2) || (param2>4))     //use fpga sdRam 2,3 or 4
-                    //    { parErr++;  break; }    
-                    //Load file to controllers SD_Ram
-                    LDF(prt, param2, (char*)eRecDatBuf[g_Sock]); 
-
-                    //set write fpga Addr via special sequence
-                    SET_SDADDR_RDx(fPtrOffset2,0,0);    //set sdRam2 RD ADDR
-                    //reCheck data in memory before downloading
-                    //compute checkSum for valid data             
-                    for (int i=0; i<u_SRAM.DwnLd_sCNT/2; i++)
+                    if (POE_PORTS_ACTIVE[HappyBus.PoeBrdCh]==0)
                         {
-                        dat16 = f1_RD16;                //using fpga(2of4) sdRam
-                        sSUM += ((dat16>>8)&0xff);
-                        sSUM += (dat16&0xff);
-                        sCNT+=2;
-                        }  
-
-                    if ((u_SRAM.DwnLd_sCNT!= sCNT) || (u_SRAM.DwnLd_sSUM!=(0xffff& sSUM) ) || sCNT==0)
-                        {
-                        sprintf(tBuf,"CNTRL: ReLoad File, SdRam Data Error ChkSum=%X\r\n", 0xffff& sSUM );   
-                        putBuf(prt, tBuf, 0);
+                        sprintf(tBuf,"Port %d may be InActive\r\n", HappyBus.PoeBrdCh);
+                        putBuf(prt, tBuf,0);
+                        genFlag &= ~ECHO_ACT_PORT;
                         break;
-                        }                       
+                        }        
                     
-                    //delay pool data req aqain
-                    lvLnk.PoolChkmSec=0;
-                    //empty lvds fifos, old data
-                    EmptyAll_LVDS_FIFOs();
-                    
-                    //***********************************************************                    
-                    //******    Send data file to FEB uisng ePHY port    ********                    
-                    //***********************************************************                    
-                    sprintf(Buf1500,"CNTRL: FILE =%-d BYTES\r\n",u_SRAM.DwnLd_sCNT);
-                    putBuf(prt, Buf1500,0);                                        
-                    //assign port before calling PGMFEB()
-                    
-                    //Send data to FEB using ePHY port(param1),1=single, 24=all
-                    retVal= SEND_2_FEB(prt, param1);    //Sends cmd 'LDRAM', pgms FEBs
+                    HappyBus.FM_PAR = (uINT)IOPs[HappyBus.PoeBrdCh].FM41_PARp;                    
+                    REG16(HappyBus.FM_PAR)= FMRstBit8;  //BIT8, clear buffer, fpga                     
+                    //buffer clear wait, its needed for some reason ??
+                    if(HappyBus.PoeBrdCh>1)
+                        uDelay(50);  
+                    else 
+                        uDelay(50);  
 
-                    //check for good xfer
-                    if (retVal==1) 
-                        {
-                        //*************************************************************                    
-                        //****            File download passed                     ****                    
-                        //*************************************************************                            
-                          sprintf(tBuf,"CNTRL: File Xfer to FEB was Good\r\n"); 
-                        putBuf(prt, tBuf, 0);
-                        iFlag |= iNoPrompt;                      //flag as no prompt on terminal 
-                        }
-                    else
-                        {
-                        //file download failed
-                        sprintf(tBuf,"CNTRL: File Xfer to FEB was Failed\r\n");   
-                        putBuf(prt, tBuf, 0);
-                        }
-                    break;                    
-                   }  
-                                
-                else if (!strcmp(tok, "LDPGMFEB"))    //Xfer file to FEB and Program data to FLASH (takes ~20 Secs)
-                   {                                  //send commands "LDRAM" and "LDFLASH" to FEB                    
-                    //should stop data pooling before getting here
-                    //added to prevent cycle lookout of happy bus if 'Pool Data' didnt finish correctly
-                    int dat16, retVal, sSUM=0, sCNT=0;
-                    param1= arg_dec(&paramPtr,1);       //febs to load 1 or 24(all)
-                    if((param1!=1)&&(param1!=24))       //2 choices 1or24
-                        { parErr++;  break; }   
-                    
-                    lvLnk.PoolChkmSec=0;                //timer reset 
-                    genFlag &= ~(PoolReqNow | PoolReqGetData); //clear all pool flags
-            
-                    //set write fpga Addr via special sequence
-                    SET_SDADDR_RDx(fPtrOffset2,0,0);    //set sdRam2 RD ADDR
-                    //reCheck data in memory before downloading
-                    //compute checkSum for valid data             
-                    for (int i=0; i<u_SRAM.DwnLd_sCNT/2; i++)
-                        {
-                        dat16 = f1_RD16;                //using fpga(2of4) sdRam
-                        sSUM += ((dat16>>8)&0xff);
-                        sSUM += (dat16&0xff);
-                        sCNT+=2;
-                        }  
-
-                    if ((u_SRAM.DwnLd_sCNT!= sCNT) || (u_SRAM.DwnLd_sSUM!=(0xffff& sSUM) ) || sCNT==0)
-                        {
-                        sprintf(tBuf,"CNTRL: ReLoad File, SdRam Data Error ChkSum=%X\r\n", 0xffff& sSUM );   
-                        putBuf(prt, tBuf, 0);
-                        break;
-                        }                       
-                    
-                    //***********************************************************                    
-                    //******    Send data file to FEB uisng ePHY port    ********                    
-                    //***********************************************************                    
-                    sprintf(Buf1500,"CNTRL: FILE =%-d BYTES\r\n",u_SRAM.DwnLd_sCNT);
-                    putBuf(prt, Buf1500,0);                    
-                    
-                    //assign port before calling PGMFEB() 0==1 single port load, cmd "LP" is port
-                    retVal= SEND_2_FEB(param1,0);           //(socket, poePort) sends cmd 'LDRAM', pgms FEBs
-
-                    //check for good xfer
-                    if (retVal==1) // && (dat16==ACK_))
-                        {
-                        sprintf(tBuf,"\r\nCNTRL: File Xfer to FEB was Good\r\nCNTRL: Now Programming, Takes ~20 Seconds\r\nCNTRL: Wait, Then use cmd 'LC LDSTAT' for PGM STATUS (also 'LCA')\r\n"); 
-                        putBuf(prt, tBuf, 0);
-                        iFlag |= iNoPrompt;                 //flag as no prompt on terminal 
-                        //*************************************************************************                    
-                        //**** File download passed, now send FLASH programming command to FEB ****                    
-                        //*************************************************************************                    
-                        linkCmdFunc(prt, "LDFLASH");        //now do a local command 'LDFLASH'
-                        //FEB processes the LDFLASH command as follows
-                        //Check for valid data already loaded to FEB sdRam
-                        //If valid data erases FEB FLASH and re-programs it with new sdRam data
-                        //sprintf(tBuf,"CNTRL: Use cmd 'LC LDSTAT' for single board, or 'LCA LDSTAT' for all boards\r\n");   
-                        //putBuf(prt, tBuf, 0);
-                        }
-                    else
-                        {
-                        //file download failed
-                        sprintf(tBuf,"CNTRL: File Xfer to FEB was Error\r\n");   
-                        putBuf(prt, tBuf, 0);
-                        }
-                    break;                    
-                   }    //end "LDPGMFEB" 
-                
-                else if (!strcmp(tok, "LDFLASH"))       //Socket only
-                   {
-                    //Program Controllers FLASH with data stored in FPGA2_SDram
-                    //Using FPGA2_sdRam2 data, assume *.bin file already
-                    LDFLASH(prt);                              
+                    //lvLnk.PoolChkmSec=0;
+                    genFlag |= ECHO_ACT_PORT;
+                    HappyBus.CmdType= eCMD77_BINARY_DAT;                   
+                    //make it slow else wont pick up super slow cmd 'A0' data 1 sec per reads
+                    PHY_LOADER_eCMD77(paramPtr, prt,  HappyBus.PoeBrdCh, eECHO_ON,0); //cmd,poeprt,echoON,broadCast=1)                                            
+                    HappyBus.WaitCnt= 10000;        //wait 5mS, ~500nS per HappyBusCheck() call
+                    iFlag |= iNoPrompt;             //flag as no prompt on terminal 
                     break;                    
                    }                                                        
-
                 
-                //cleaned up ‘LC’ some
                 else if (!strcmp(tok, "LC"))            //Link Cmd, reqs data 1of24 connected FEBs
                    {
                     if (POE_PORTS_ACTIVE[HappyBus.PoeBrdCh]==0)
@@ -2635,32 +2571,28 @@ int process(int prt, char *cmdPtr)
                         putBuf(prt, tBuf,0);
                         genFlag &= ~ECHO_ACT_PORT;
                         break;
-                        }       
-                    HappyBus.FM_PAR = (uINT)IOPs[HappyBus.PoeBrdCh].FM41_PARp;                   
-                    REG16(HappyBus.FM_PAR)= FMRstBit8;  //BIT8, clear buffer, fpga                    
+                        }        
+                    HappyBus.FM_PAR = (uINT)IOPs[HappyBus.PoeBrdCh].FM41_PARp;                    
+                    REG16(HappyBus.FM_PAR)= FMRstBit8;  //BIT8, clear buffer, fpga                     
                     //buffer clear wait, its needed for some reason ??
-                    //uDelay(50); 
+                    //uDelay(50);  
 
                     genFlag |= ECHO_ACT_PORT;
                     HappyBus.CmdType= eCMD71_CONSOLE;                   
-
-                    PHY_LOADER_CONSOLE(paramPtr, prt,  HappyBus.PoeBrdCh, eECHO_ON,0); //cmd,poeprt,echoON,broadCast=1)                    
-                    iFlag |= iNoPrompt;             //flag as no prompt on terminal
-                    break;                   
-                   }                                                       
-
-                //‘LCA’ added check for write command
+                    PHY_LOADER_CONSOLE(paramPtr, prt,  HappyBus.PoeBrdCh, eECHO_ON,0); //cmd,poeprt,echoON,broadCast=1)                     
+                    iFlag |= iNoPrompt;             //flag as no prompt on terminal 
+                    break;                    
+                   }                                                        
                 else if (!strcmp(tok, "LCA"))       //remote lvds link command to all boards
-                    {                               //SEND CMD STRING ON ePHY port to FEB                     
-                    int actPorts, wrMode=0;                   
+                    {                               //SEND CMD STRING ON ePHY port to FEB                      
+                    int actPorts, wrMode=0;                    
                     actPorts= ( (ACT_PORTS_HI<<16)+ ACT_PORTS_LO);
-                   
-                    //example ROC write command "LCA WR 26 5678"
-                    //At initial entry          paramPtr-> "LCA WR 26 5678"
+                    
+                    //example ROC write command "LCA WR 26 5678" 
+                    //At initial entry          paramPtr-> "LCA WR 26 5678" 
                     //After strcmp(tok, "LCA" ) paramPtr-> "WR 26 5678"
-
                     if ((*paramPtr=='W') && (*(paramPtr+1)=='R'))//check "WR" ocmmand type
-                        wrMode=1;                   //write command strin                   
+                        wrMode=1;                   //write command strin                    
                     
                     if (HappyBus.SavePrt==0)
                          HappyBus.SavePrt=1;        //just in case, force valid ptrs else 'boom'
@@ -2669,83 +2601,75 @@ int process(int prt, char *cmdPtr)
                     if (wrMode==0)
                         {
                         //clear all lvds receive fifos
-                        *(uSHT*)IOPs[POE01].FM41_PARp= FMRstBit8;//FPGA2 lvds fifo buf and parErr clr             
-                        *(uSHT*)IOPs[POE09].FM41_PARp= FMRstBit8;//FPGA3 lvds fifo buf and parErr clr              
-                        *(uSHT*)IOPs[POE17].FM41_PARp= FMRstBit8;//FPGA4 lvds fifo buf and parErr clr              
+                        *(uSHT*)IOPs[POE01].FM41_PARp= FMRstBit8;//FPGA2 lvds fifo buf and parErr clr              
+                        *(uSHT*)IOPs[POE09].FM41_PARp= FMRstBit8;//FPGA3 lvds fifo buf and parErr clr               
+                        *(uSHT*)IOPs[POE17].FM41_PARp= FMRstBit8;//FPGA4 lvds fifo buf and parErr clr               
                         }
 
                     for(int i=1,j=0; i<25; i++,j++)
                         {
                         if((actPorts&(1<<j))==0)        //does poe port have an active FEB
                             continue;
-
                         sprintf(ReplyBuf80,"-Port%02d\r\n",i); //prompt show port number
                         putBuf(prt,ReplyBuf80,0);
-                        assignLinkPort(i,0);            //no fifo reset, changes all lvds and ephy pointers to new port 1of24 
-
-                        HappyBus.PoeBrdCh= i;                       
+                        assignLinkPort(i,0);            //no fifo reset, changes all lvds and ephy pointers to new port 1of24  
+                        HappyBus.PoeBrdCh= i;                        
                         HappyBus.CmdType= eCMD71_CONSOLE;
 
                         //make it slow else wont pick up super slow cmd 'A0' data 1 sec per reads
-                        PHY_LOADER_CONSOLE(paramPtr, prt,  HappyBus.PoeBrdCh, eECHO_ON,0); //cmd,poeprt,echoON,broadCast=1) 
-
+                        PHY_LOADER_CONSOLE(paramPtr, prt,  HappyBus.PoeBrdCh, eECHO_ON,0); //cmd,poeprt,echoON,broadCast=1)  
+                        
                         //skip the wait/reading of return data on writes
                         if(wrMode)
-                            continue;                    //skip return data check
-
+                            continue;                   //skip return data check
+                        
                         //return data word(s) have initial ASCII formatting delays, hard to know when its done
-                        //commands return data sizes from a 2 words to 2K words
-
+                        //commands return data sizes from a 2 words to 2K words 
                         HappyBus.WaitCnt= 10000;        //wait 500mS, ~2.5uS per background check on HappyBusCheck()
                         while (HappyBus.WaitCnt)
-                            HappyBusCheck();            //check status/g4et data, takes ~200nS                       
+                            HappyBusCheck();            //check status/g4et data, takes ~200nS                        
                         }
-
                     HappyBus.WaitCnt=0;                 //done
-                    assignLinkPort(HappyBus.SavePrt, 1); 
-
+                    assignLinkPort(HappyBus.SavePrt, 1);  
                     HappyBus.SlowReply=0;
                     break;
-                    }              
- 
-
-               //‘LCB’ added check for write command, changed some wait times
+                    }
                 else if (!strcmp(tok, "LCB"))      //remote lvds link command to all boards
-                    {                               //SEND CMD STRING ON ePHY port to FEB                     
-                    int actPorts;                   
-                    actPorts= ( (ACT_PORTS_HI<<16)+ ACT_PORTS_LO);                   
-                    if (HappyBus.SavePrt==0)
+                    {                               //SEND CMD STRING ON ePHY port to FEB                      
+                    int actPorts;                    
+                    actPorts= ( (ACT_PORTS_HI<<16)+ ACT_PORTS_LO);                    
+                    if (HappyBus.SavePrt==0) 
                          HappyBus.SavePrt=1;        //just in case, force valid ptrs else 'boom'
-
-                    //clear all lvds receive fifos
-                    *(uSHT*)IOPs[POE01].FM41_PARp= FMRstBit8;//FPGA2 lvds fifo buf and parErr clr             
-                    *(uSHT*)IOPs[POE09].FM41_PARp= FMRstBit8;//FPGA3 lvds fifo buf and parErr clr              
-                    *(uSHT*)IOPs[POE17].FM41_PARp= FMRstBit8;//FPGA4 lvds fifo buf and parErr clr              
-
+                    
+                    if (wrMode==0)
+                        {
+                        //clear all lvds receive fifos
+                        *(uSHT*)IOPs[POE01].FM41_PARp= FMRstBit8;//FPGA2 lvds fifo buf and parErr clr              
+                        *(uSHT*)IOPs[POE09].FM41_PARp= FMRstBit8;//FPGA3 lvds fifo buf and parErr clr               
+                        *(uSHT*)IOPs[POE17].FM41_PARp= FMRstBit8;//FPGA4 lvds fifo buf and parErr clr               
+                        }
+                    
                     HappyBus.CmdType= eCMD71_CONSOLE;
                     //make it slow else wont pick up super slow cmd 'A0' data 1 sec per reads
-                    PHY_LOADER_CONSOLE(paramPtr, prt,  HappyBus.PoeBrdCh, eECHO_ON,1); //cmd,poeprt,echoON,broadCast=1)                       
-
-                    //example ROC write command "LCB WR 26 5678"
-                    //At initial entry          paramPtr-> "LCB WR 26 5678"
+                    PHY_LOADER_CONSOLE(paramPtr, prt,  HappyBus.PoeBrdCh, eECHO_ON,1); //cmd,poeprt,echoON,broadCast=1)                        
+                    
+                    //example ROC write command "LCB WR 26 5678" 
+                    //At initial entry          paramPtr-> "LCB WR 26 5678" 
                     //After strcmp(tok, "LCA" ) paramPtr-> "WR 26 5678"
-
                     if (!((*paramPtr=='W') && (*(paramPtr+1)=='R')))    //check "WR" ocmmand type
                         {
                         for(int i=1,j=0; i<25; i++,j++)
                             {
                             if((actPorts&(1<<j))==0)        //does poe port have an active FEB
                                 continue;
-
                             //return data word(s) have initial ASCII formatting delays, hard to know when its done
-                            //commands return data sizes from a 2 words to 2K words
-
+                            //commands return data sizes from a 2 words to 2K words 
                             assignLinkPort(i,0); //no fifo reset, changes all lvds and ephy pointers to new port 1of24
                             HappyBus.PoeBrdCh= i;
                             HappyBus.WaitCnt= 10000;       //wait 500mS, ~2.5uS per background check on HappyBusCheck()
                             while (HappyBus.WaitCnt)        //muti blocks of slow data returns use timer
-                                HappyBusCheck();            //check status/get data, takes ~200nS                       
-                            }                      
+                                HappyBusCheck();            //check status/get data, takes ~200nS                        
+                            }                       
                         }
 
                     HappyBus.WaitCnt=0;                 //done
@@ -2892,7 +2816,7 @@ int process(int prt, char *cmdPtr)
                     if(PoolMode==1)                         //enable=1
                         {
                         genFlag |= PoolReqNow;              //make new req now
-                        lvLnk.PoolChkmSec= ReqPoolTime-2;    //force update now
+                        lvLnk.PoolChkmSec= ReqPoolTime30-2;   //force update now
                         genFlag &= ~PoolReqNow;            
                         genFlag &= ~PoolReqGetData;            
                         sprintf(tBuf,"Data Pool ON\r\n");
@@ -2972,7 +2896,14 @@ int process(int prt, char *cmdPtr)
                 else if (!strcmp(tok, "PWROT"))             //Power cycle Orange Tree Dau Board 'ZestETM1'
                     {
                     //2020 Production Boards need hardware mods for this to work
-                    //probably wont be done. SBND board has hardware mods and code todo power reset
+                    //probably wont be done. SBND version board has hardware mods and code todo power reset
+                    _disable_interrupt_();
+                    oTreeOff                                //pwr cylce orange tree board
+                    for(int w=0; w<5000; w++);              //delay some
+                    oTreeOn                      
+                    REG16(ZestETM1)= 0; 
+                    //reset board for a clean start
+                    resetEntry();
                     break;
                     }					
                 else if (!strcmp(tok, "PWRRST"))                    //RESET LTC4266A POE+ Chips
@@ -3012,157 +2943,170 @@ int process(int prt, char *cmdPtr)
                         }                      
                     break;
                     }                
-                else if (!strcmp(tok, "PTRIG1"))      
+
+                else if (!strcmp(tok, "PTRIG0"))        //used with tester code   
                     {
-                    int ptrg[]=  {0x1c01,    0, 0x8010, 0x3456,   0x12,    0,    0,    0,  0x100, 0,//0x224b,
-                                  0x1c02,    0, 0x8020, 0x3456,   0x12,    0,    0,    1,    0,   0,//0xf517,
-                                  0x1c01,    0, 0x8010, 0x3457,   0x12,    0,    0,    0,    0,   0,//0x7cf4,
-                                  0x1c02,    0, 0x8020, 0x3458,   0x12,    0,    0,    0,    0,   0,//0xb0fe,
-                                  0x1c01,    0, 0x8010, 0x3459,   0x12,    0,    0,    0,    0,   0,//0x57ac,
-                                  0x1c01,    0, 0x8010, 0x345a,   0x12,    0,    0,    0,    0,   0 //0x2ed3
-                                  };
-                    param1=arg_dec(&paramPtr,10);       //now get 1st param, trig cnt
+                    int cnt=0;
+                    param1=arg_dec(&paramPtr,1);        //now get 1st param, trig cnt
                     if((param1<0) || (param1>1000))
-                       param1=10;
+                       param1=1;
+                    param2=arg_dec(&paramPtr,0);        //display xmit data, 0=no
                         
+                    //tekmod dec2022
+                    uBReq.ReqCnt= param1*5;
+                    
                     //trigger test commands
                     //Send data on GTP1
-                    for(int cnt=0; cnt<param1; cnt++)
+                    for(cnt=0; cnt<=param1; cnt++)
                       {
-                      for(int i=0, j=0; j<6; j++)
+                      for(int i=0, j=0; j<6; j++)            //use 5 different payloads
                         {
-                        GTP1_PREAM= ptrg[i++];          //GTP1 PREAMBLE REG
-                        GTP1_PAYLD= ptrg[i++];          //GTP1 PAYLOAD REG
-                        GTP1_PAYLD= ptrg[i++];          //GTP1 PAYLOAD REG
-                        GTP1_PAYLD= ptrg[i++];          //GTP1 PAYLOAD REG
-                        GTP1_PAYLD= ptrg[i++];          //GTP1 PAYLOAD REG
-                        GTP1_PAYLD= ptrg[i++];          //GTP1 PAYLOAD REG
-                        GTP1_PAYLD= ptrg[i++];          //GTP1 PAYLOAD REG
-                        GTP1_PAYLD= ptrg[i++];          //GTP1 PAYLOAD REG
-                        GTP1_PAYLD= ptrg[i++];          //GTP1 PAYLOAD REG
-                        GTP1_XMIT = ptrg[i++];          //GTP1 XMIT REG
+                        GTP0_PREAM= ptrg0[i++];          //GTP1 PREAMBLE REG
+                        GTP0_PAYLD= ptrg0[i++];          //GTP1 PAYLOAD REG
+                        GTP0_PAYLD= ptrg0[i++];          //GTP1 PAYLOAD REG
+                        GTP0_PAYLD= ptrg0[i++];          //GTP1 PAYLOAD REG
+                        GTP0_PAYLD= ptrg0[i++];          //GTP1 PAYLOAD REG
+                        GTP0_PAYLD= ptrg0[i++];          //GTP1 PAYLOAD REG
+                        GTP0_PAYLD= ptrg0[i++];          //GTP1 PAYLOAD REG
+                        GTP0_PAYLD= ptrg0[i++];          //GTP1 PAYLOAD REG
+                        GTP0_PAYLD= ptrg0[i++];          //GTP1 PAYLOAD REG
+                        GTP0_XMIT = 0;                   //GTP1 XMIT REG
+                        i++;
                         }
                       }
                     
-                    int i=0, j=1;
-                    while(i < (6*10))  //6 lines of 10 words per line
-                    {
-                    sprintf(tBuf,"%4x ", ptrg[i]); 
-                    putBuf(prt,tBuf,0); 
-                    if (j%10==0)
-                        putBuf(prt,"\r\n",0); 
-                    i++; j++;
-                    }
-                    sprintf(tBuf,"Repeats %d times\r\n", param1); 
-                    putBuf(prt,tBuf,0); 
+                    if(param2!=0)
+                        {
+                        int i=0, j=1;
+                        putBuf(prt,"RDM 20 GTP0\r\n",0);
+                        while(i < (5*10))  //6 lines of 10 words per line
+                            {
+                            sprintf(tBuf,"%4x ", ptrg0[i]); 
+                            putBuf(prt,tBuf,0); 
+                            if (j%10==0)
+                                putBuf(prt,"\r\n",0); 
+                            i++; j++;
+                            }
+                        //sprintf(tBuf,"Repeats %d times\r\n", param1); 
+                        sprintf(tBuf,"\r\n"); 
+                        putBuf(prt,tBuf,0); 
+                        }
                     break;
                     }
+                
+                else if (!strcmp(tok, "PTRIG1"))        //used with tester code   
+                    { 
+                    int cnt=0;
+                    param1=arg_dec(&paramPtr,1);        //now get 1st param, trig cnt
+                    if((param1<0) || (param1>1000))
+                       param1=1;
+                    param2=arg_dec(&paramPtr,0);        //display xmit data, 0=no
                     
+                    //tekmod dec2022
+                    uBReq.ReqCnt= param1*5;
+                                          
+                    //trigger test commands
+                    //Send data on GTP1
+                    for(cnt=0; cnt<param1; cnt++)
+                      {
+                      for(int i=0,j=0; j<6; j++)        //use 5 different payloads
+                        {
+                        GTP1_PREAM= ptrg1[i++];          //GTP1 PREAMBLE REG
+                        GTP1_PAYLD= ptrg1[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrg1[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrg1[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrg1[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrg1[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrg1[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrg1[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrg1[i++];          //GTP1 PAYLOAD REG
+                        GTP1_XMIT = 0;                   //GTP1 XMIT REG
+                        i++;
+                        }
+                      }
+                    
+                    //Note: WBL code in FPGAs has no buffer word count register so we loop on xmit count
+                    if(param2!=0)
+                        {
+                        putBuf(prt,"RDM 21 GTP1\r\n",0);
+                        int i=0, j=1;
+                        while(i < (5*10))  //6 lines of 10 words per line
+                            {
+                            sprintf(tBuf,"%4x ", ptrg1[i]); 
+                            putBuf(prt,tBuf,0); 
+                            if (j%10==0)
+                                putBuf(prt,"\r\n",0); 
+                            i++; j++;
+                            }
+                        //sprintf(tBuf,"Repeats %d times\r\n", param1); 
+                        sprintf(tBuf,"\r\n"); 
+                        putBuf(prt,tBuf,0); 
+                        }
+                    break;
+                    }                    
                 else if (!strcmp(tok, "PINIT"))      
                     {
-                    param1=arg_dec(&paramPtr,0);        //now get 1st param, display data on=1
                     //trigger test commands
-                    sprintf(tBuf,"WR 0 40");      putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 8 FF");      putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 9 FFFF");    putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 300 88");    putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 2 1");       putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 27 300");    putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
+                    wr16FPGA(0x0, 0x40);                   
+                    //wr16FPGA(0x8, 0xFF);
+                    //wr16FPGA(0x9, 0xFFFF);
+                    wr16FPGA(0x300, 0x88);
+                    wr16FPGA(0x2, 0x1);
+                    wr16FPGA(0x27, 0x00);
                     break;
                     }					
-                else if (!strcmp(tok, "PTRIG"))      
+                else if (!strcmp(tok, "PTRIG"))         //used for DAQ uBunch Request  
                     {
-                    param1=arg_dec(&paramPtr,0);        //now get 1st param, display data on=1
+                    int cnt=0;
+                    param1=arg_dec(&paramPtr,1);        //now get 1st param, trig cnt
+                    if((param1<0) || (param1>1000))
+                       param1=1;
+                    param2=arg_dec(&paramPtr,0);        //display xmit data, 0=no
+                        
+                    //tekmod dec2022
+                    uBReq.ReqCnt= param1;
+                    
                     //trigger test commands
-                    sprintf(tBuf,"WR 1B 2");      putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 1D 0");      putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 1D 20");     putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 1D 3456");   putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 1D 4567");   putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 1D 5678");   putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 1D 0");      putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 1D 0");      putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 1D 0");      putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"WR 1F 0");      putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
-                    sprintf(tBuf,"RD 2");         putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-
+                    //Send data on GTP1
+                    for(cnt=0; cnt<=param1; cnt++)
+                      {
+                      for(int i=0, j=0; j<6; j++)        //use GTP1, 5 different payloads
+                        {
+                        GTP1_PREAM= ptrig[i++];          //GTP1 PREAMBLE REG
+                        GTP1_PAYLD= ptrig[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrig[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrig[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrig[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrig[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrig[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrig[i++];          //GTP1 PAYLOAD REG
+                        GTP1_PAYLD= ptrig[i++];          //GTP1 PAYLOAD REG
+                        GTP1_XMIT = 0;                   //GTP1 XMIT REG
+                        i++;
+                        }
+                      }
                     
-
-                    sprintf(tBuf,"RD 27");        putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-                    
-                    sprintf(tBuf,"RD 405");       putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-                    sprintf(tBuf,"RD 805");       putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-                    sprintf(tBuf,"RD C05");       putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-                    
-                    sprintf(tBuf,"RDM 21 50 100 10");    putBuf(prt,tBuf,0); 
-                    if (prt!=tty)                 putBuf(prt,"\r\n",2); 
-                    process(prt, tBuf);
-                    
-                    sprintf(tBuf,"Cmd 'RDM 21 100 10' (Displays GTP1 REC FIFOs DATA\r\n");    
-                    putBuf(0, tBuf,0);                            
+                    if(param2!=0)
+                        {
+                        int i=0, j=1;
+                        putBuf(prt,"RDM 21 GTP1\r\n",0);
+                        while(i < (5*10))  //6 lines of 10 words per line
+                            {
+                            sprintf(tBuf,"%4x ", ptrig[i]); 
+                            putBuf(prt,tBuf,0); 
+                            if (j%10==0)
+                                putBuf(prt,"\r\n",0); 
+                            i++; j++;
+                            }
+                        //sprintf(tBuf,"Repeats %d times\r\n", param1); 
+                        sprintf(tBuf,"\r\n"); 
+                        putBuf(prt,tBuf,0); 
+                        }
                     break;
-                    }					
+                    }
                 else if (!strcmp(tok, "PSEND"))                     
                     {
-                    param1=arg_dec(&paramPtr,0x100);        //1st param (words to read)                    
+                    param1=arg_hex(&paramPtr,0x100);        //1st param (words to read)                    
                     //happybus command type for 'console display'
                     HappyBus.CmdType= eCMD71_CONSOLE;
                     //send command to feb on ePHY
@@ -3171,7 +3115,7 @@ int process(int prt, char *cmdPtr)
                     PHY_LOADER_CONSOLE(cmdBuf20, prt, HappyBus.PoeBrdCh, eECHO_ON,0);  //send cmdBuf[20],poeprt,echoON,broadCast=1)
                     break;
                     }
-                else if ((!strcmp(tok, "PRECALL")) || (!strcmp(tok, "PA"))) //PHY PORT Testing, all ports data
+                else if ((!strcmp(tok, "PRECALL")) || (!strcmp(tok, "PA"))) //PHY PORT Test, all ports data, format data
                     {
                     int i, pwr;
 
@@ -3180,10 +3124,10 @@ int process(int prt, char *cmdPtr)
                         {
                         pwr= POE_PORTS_ACTIVE[i];
                         if (pwr==0) continue;
-                        sprintf(tBuf,"--PORT %d---\r\n", i);    
+                        sprintf(tBuf,"--PORT %d\r\n", i);    
                         putBuf(0, tBuf,0);
                         sprintf(tBuf,"PRECF %d", i);    
-                        process(0,tBuf); 
+                        process(prt,tBuf); 
                         }
 
                     //ePHY Receive Buffers FPGA 3of4
@@ -3191,10 +3135,10 @@ int process(int prt, char *cmdPtr)
                         {
                         pwr= POE_PORTS_ACTIVE[i];
                         if (pwr==0) continue;
-                        sprintf(tBuf,"--PORT %d---\r\n", i);    
+                        sprintf(tBuf,"--PORT %d\r\n", i);    
                         putBuf(0, tBuf,0);
                         sprintf(tBuf,"PRECF %d", i);    
-                        process(0,tBuf); 
+                        process(prt,tBuf); 
                         }
 
                     //ePHY Receive Buffers FPGA 4of4
@@ -3202,14 +3146,14 @@ int process(int prt, char *cmdPtr)
                         {
                         pwr= POE_PORTS_ACTIVE[i];
                         if (pwr==0) continue;
-                        sprintf(tBuf,"--PORT %d---\r\n", i);    
-                        putBuf(0, tBuf,0);
-                        sprintf(tBuf,"PRECF %d", i);    
-                        process(0,tBuf); 
+                        sprintf(tBuf,"--PORT %d\r\n", i);    
+                        putBuf(prt, tBuf,0);
+                        sprintf(tBuf,"PRECF %d", i);            //format data out of buffer
+                        process(prt,tBuf); 
                         }
                     break;
                     }
-                else if (!strcmp(tok, "PREC"))              //PHY PORT Testing, single ports daa
+                else if (!strcmp(tok, "PREC"))                  //PHY PORT Testing, single ports daa
                     {
                     int d16, dat, cnt=0;
                     sPTR prtAddrS, prtAddrD;
@@ -3222,25 +3166,6 @@ int process(int prt, char *cmdPtr)
                     prtAddrD= IOPs[param1].ePHY20_RECBUFp;
                     prtAddrS= IOPs[param1].ePHY16_STAp;
                                           
-                    /*
-                    if (param1<=8)                          //fpga(s)..fpgaBase0-fpgaBase3
-                        {
-                        prtAddrD= (sPTR)fpgaBase1+ (offPHYDATAPORT[param1]);
-                        prtAddrS= (sPTR)fpgaBase1+ oPHY16_RXSTAT;
-                        }
-                    else if (param1<=16) 
-                        {
-                        param1 -= 8;
-                        prtAddrD= (sPTR)fpgaBase2+ (offPHYDATAPORT[param1]);
-                        prtAddrS= (sPTR)fpgaBase2+ oPHY16_RXSTAT;
-                        }
-                    else if (param1<=24) 
-                        {
-                        param1 -= 16;
-                        prtAddrD= (sPTR)fpgaBase3+ (offPHYDATAPORT[param1]);
-                        prtAddrS= (sPTR)fpgaBase3+ oPHY16_RXSTAT;
-                        }
-                     */   
                     d16= *prtAddrS;
                     d16= d16 & PHYSTATUSBIT[param1];        //status bit for 1of8 ports
                     while(d16)
@@ -3254,7 +3179,93 @@ int process(int prt, char *cmdPtr)
                         d16= *prtAddrS;
                         d16= (d16 & PHYSTATUSBIT[param1]);  //status bit for 1of8 ports
                         }
-                    sprintf(tBuf,"FIFO_Wrd_Cnt=%d\r\n",cnt);
+                    sprintf(tBuf,"WrdCnt=0x%X\r\n",cnt);
+                    putBuf(prt,tBuf,0);                
+                    break;
+                    }
+                else if (!strcmp(tok, "PRECTESTER"))            //PHY PORT Test Version for new ROCs loopback testing
+                    {
+                    int d16, dat, i=0, cnt=0, flag=0, ccr=0; 
+                    sPTR prtAddrS, prtAddrD;
+                    param1=arg_dec(&paramPtr,HappyBus.PoeBrdCh);//get poe phy port number 1-24
+                    param2=arg_hex(&paramPtr,4096);             //get count
+                    param3=arg_dec(&paramPtr,8);                //words per line
+                    if ((param1<1) || (param1>24))
+                        { parErr++;  break; }
+                    
+                    prtAddrD= IOPs[param1].ePHY20_RECBUFp;
+                    prtAddrS= IOPs[param1].ePHY16_STAp;
+                    //read port status for data avail.
+                    d16= *prtAddrS;
+                    d16= d16 & PHYSTATUSBIT[param1];        //status bit for 1of8 ports
+                    
+                    //zero out old data
+                    for(i=0;i<128;i++)
+                       phyBuf128i[i]=0;
+                    i=0;
+
+                    //wait for data in case for whatever reason data is late
+                    if(d16==0)
+                      uDelay(200);
+                    //update status
+                    d16= *prtAddrS;
+                    d16= d16 & PHYSTATUSBIT[param1];        //status bit for 1of8 ports
+
+                    if(d16==0) //no data
+                        {
+                        LED_RED1;  //RED ON
+                        LED_GRN0;  //GRN OFF
+                        }                            
+                    
+                    //Phy data here is raw from ROC fpga phy xmit, 
+                    //phy rec'd data 1st byte taked by fpga seq logic, remaining words format reversed bits
+                    while(d16)
+                        {
+                        if(i>128)                           //buffer overflow
+                            i=128;
+                        dat= *prtAddrD;                     //port addr for recd' data                      
+                        phyBuf128i[i++]=dat&0xff;
+                        phyBuf128i[i++]=dat>>8;
+                        //dat= SwapBytes(dat);
+                        //dat= revBits16(dat);
+                        ccr += dat;                        
+                        flag=1;                             //flag as some data was rec'd                         
+                        if( --param2 ==0) break;                        
+                        cnt++;                       
+                          
+                        d16= *prtAddrS;
+                        d16= (d16 & PHYSTATUSBIT[param1]);  //status bit for 1of8 ports
+                        }
+                                       
+                    ccr=  phyBuf128i[126]<<8;
+                    ccr+= phyBuf128i[125];
+                    if(global_pass<24)                       //clear initial connection errors
+                        g_errorcnt=0;
+
+                    if(flag==0)                             //no data recd
+                        {
+                        g_errNDR++;
+                        g_PhyPrts--;                        //sub from total 24 ports being tested
+                        LED_RED1;  //RED ON
+                        LED_GRN0;  //GRN OFF
+                        sprintf(tBuf,"\t\t\t\t\t\t\t\t\tPort#%02d, NoData\r\n",param1);
+                        }
+                    else
+                        {
+                        if (cnt < 128 )                    //data recd, check cnt
+                          {
+                          LED_RED1;  //RED ON
+                          LED_GRN0;  //GRN OFF
+                          g_errorcnt++;                          
+                          }
+                        else
+                          {
+                          LED_GRN1;  //GRN ON
+                          LED_RED0;  //RED OFF
+                          }
+                          
+                        sprintf(tBuf,"Prt_%02d  SN_%-2d   RecdWords=%d    Pass=%-4d  ChkSum=%04X    TotErrs=%d    NoDataPortsTotal=%d\r\n",param1, Ser_Cntrl_Numb.serNumb, cnt, global_pass, ccr, g_errorcnt, g_errNDR);
+                        }
                     putBuf(prt,tBuf,0);                
                     break;
                     }
@@ -3264,33 +3275,13 @@ int process(int prt, char *cmdPtr)
                     sPTR prtAddrS, prtAddrD;
                     param1=arg_dec(&paramPtr,HappyBus.PoeBrdCh);//get poe phy port number 1-24
                     param2=arg_hex(&paramPtr,4096);         //get count
-                    param3=arg_dec(&paramPtr,12);           //words per line
+                    param3=arg_dec(&paramPtr,8);            //words per line
                     
                     if ((param1<1) || (param1>24))
                         { parErr++;  break; }
                     
                     prtAddrD= IOPs[param1].ePHY20_RECBUFp;
                     prtAddrS= IOPs[param1].ePHY16_STAp;
-                    /*
-                    if (param1<=8)                          //fpga(s)..fpgaBase0-fpgaBase3
-                        {
-                        prtAddrD= (sPTR)fpgaBase1+ (offPHYDATAPORT[param1]);
-                        prtAddrS= (sPTR)fpgaBase1+ oPHY16_RXSTAT;
-                        }
-                    else if (param1<=16) 
-                        {
-                        param1 -= 8;
-                        prtAddrD= (sPTR)fpgaBase2+ (offPHYDATAPORT[param1]);
-                        prtAddrS= (sPTR)fpgaBase2+ oPHY16_RXSTAT;
-                        }
-                    else if (param1<=24) 
-                        {
-                        param1 -= 16;
-                        prtAddrD= (sPTR)fpgaBase3+ (offPHYDATAPORT[param1]);
-                        prtAddrS= (sPTR)fpgaBase3+ oPHY16_RXSTAT;
-                        }
-                    */   
-
                     d16= *prtAddrS;                   
                     d16= d16 & PHYSTATUSBIT[param1];        //status bit for 1of8 ports
                     while(d16)
@@ -3304,24 +3295,28 @@ int process(int prt, char *cmdPtr)
                         uBLO= *prtAddrD;            //ubun# low
                         cntD++;                       
                         uBSTA= *prtAddrD;           //ubun status
+                        cntD++;
+
                         if(uBSTA)
                           errs++;
-                          
-                        cntD++;
+                        
                         //using uB_Last as flag to not print with extra linefeed when ub hdr only
                         if((uB_Last==4) && (uWCnt<=4))
                             sprintf(Buf1500,"%04X %04X %04X %04X\r\n", uWCnt, uBHI, uBLO, uBSTA); 
                         else
                             sprintf(Buf1500,"\n%04X %04X %04X %04X\r\n", uWCnt, uBHI, uBLO, uBSTA); 
+
+                        if (uWCnt>4)                //sub 4 word header if count valid
+                            uWCnt-=4;
                         //read ubunch event data
                         while(cntD < uWCnt)
                             {
                             cntD++;
                             cnt++;
-                            dat= *prtAddrD;                     //port addr for recd' data
+                            dat= *prtAddrD;                 //port addr for recd' data
                             sprintf(tBuf,"%04X ", dat); 
                             strcat(Buf1500, tBuf);   
-                            if (cnt==10)
+                            if (cnt==param3)
                                 {
                                 strcat(Buf1500,"\r\n");   
                                 cnt=0;
@@ -3335,20 +3330,28 @@ int process(int prt, char *cmdPtr)
                             }
                         putBuf(prt,Buf1500,0); 
                         d16= *prtAddrS;
-                        d16= d16 &  PHYSTATUSBIT[param1];   //status bit for 1of8 ports
+                        d16= d16 &  PHYSTATUSBIT[param1];       //status bit for 1of8 ports
                         uB_Last= cntD;
                         cntTot+= cntD;
                         if(cntTot>4095)
                             {
-                            sprintf(tBuf,"\r\nPhyRxBuffer Overflow, RecWrdCnt=%d(Dec)    ****\r\n", cntTot);
-                            putBuf(prt,tBuf,0);                
+                            sprintf(tBuf,"\r\nPhyRx_OverFlow,  Cnt=%d\r\n", cntTot);
+                            putBuf(prt,tBuf,0); 
+                            break;
                             }
                         }
                     if(cntTot)
-                        sprintf(tBuf,"\r\nReg_%04X=%X  WrdCnt(D)=%d   uB_Errs=%d   (help 'HT' format, err status)\r\n",((int)prtAddrS&0xffff)/2, d16, cntTot,errs);
+                        {
+                        sprintf(Buf1500,"\r\nReg%3X=%X  RecTot=%d(D)\r\n",((int)prtAddrS&0xffff)/2, d16, cntTot);
+                        //if (errs)
+                        //    {
+                        //    sprintf(tBuf,"FEB Status Word Bits: 8=Emp 7654=OverFlow 3210=Error\r\n");
+                        //    strcat(Buf1500, tBuf);
+                        //    }
+                        putBuf(prt,Buf1500,0);                         
+                        }
                     else
-                        sprintf(tBuf,"   Empty\r\n");
-                    putBuf(prt,tBuf,0); 
+                        putBuf(prt," Empty\r\n",8); 
                     break;
                     } 
                 else if (!strcmp(tok, "PFM"))               //LVDS PORT Testing
@@ -3363,25 +3366,6 @@ int process(int prt, char *cmdPtr)
                     prtAddrD= IOPs[param1].ePHY20_RECBUFp;
                     prtAddrS= IOPs[param1].ePHY16_STAp;
                     
-                    /*
-                    if (param1<=8)                          //fpga(s)..fpgaBase0-fpgaBase3
-                        {
-                        prtAddrD= (sPTR)fpgaBase1+ (oFMData30[param1]);
-                        prtAddrS= (sPTR)fpgaBase1+ oFMStat40;
-                        }
-                    else if (param1<=16) 
-                        {
-                        param1 -= 8;
-                        prtAddrD= (sPTR)fpgaBase2+ (oFMData30[param1]);
-                        prtAddrS= (sPTR)fpgaBase2+ oFMStat40;
-                        }
-                    else if (param1<=24) 
-                        {
-                        param1 -= 16;
-                        prtAddrD= (sPTR)fpgaBase3+ (oFMData30[param1]);
-                        prtAddrS= (sPTR)fpgaBase3+ oFMStat40;
-                        }
-                    */    
                     d16= *prtAddrS;
                     d16= d16 & PHYSTATUSBIT[param1];            //status bit for 1of8 ports
                     sprintf(tBuf,"RxSTAT=%x\r\n",d16);
@@ -3399,7 +3383,7 @@ int process(int prt, char *cmdPtr)
                         d16= *prtAddrS;
                         d16= d16 &  PHYSTATUSBIT[param1];       //status bit for 1of8 ports
                         }
-                h_TP48_LO
+                //h_TP48_LO
                     sprintf(tBuf,"\r\nRxSTAT=%x  RecWrdCnt=0x%X (%0d)\r\n", d16, i,i);
                     putBuf(prt,tBuf,0);                
                     break;
@@ -3477,93 +3461,7 @@ int process(int prt, char *cmdPtr)
                     sprintf(Buf1500,"%04X\r\n",g_dat16);
                     putBuf(prt, Buf1500,0);                 //send to current active port
                     break;
-                    }
-                
-/*                else if (!strcmp(tok, "RDB1"))              //read bin TDC data(1) buffer (from FEBs)
-                    {
-                    param1= arg_hex(&paramPtr,-1);          //now get 1st param, word count
-                    param2= arg_hex(&paramPtr,0);           //now get 2nd param, reset mode
-
-                    //0 will stop any active request
-                    if (param1==0)
-                        {
-                        BinSt.gSndWordCnt=0;                //stops any active background xfers
-                        break;
-                        }
-                    //already busy, exit
-                    if (BinSt.gSndWordCnt)                  //nonzero, rdb already active
-                        break;
-                    
-                    //after 1st packet, background loop will send remaining data using non-zero 'gSndBytCnt'
-                    if (param1!=-1)
-                        BinSt.gSndWordCnt= param1; 
-                    else 
-                        BinSt.gSndWordCnt= (fpga1binSzHi<<16) + fpga1binSzLo; // i/o FPGA 2
-                    //if no data, break
-                    if(BinSt.gSndWordCnt==0)
-                        break;
-                    
-                    if (BinSt.gSndWordCnt> MAX_WORD_PER_FPGA) //limit word count
-                        param1= MAX_WORD_PER_FPGA;
-                    
-                    //ddr port read pointers not reset if param2 nonZero
-                    if(param2==0)
-                        {
-                        //ddr port read pointers FEB FPGA_1_of_3
-                        SDramRdHI1=0;
-                        SDramRdLO1=0;
-                        }
-                    
-                    //feb readout fpga1
-                    BinSt.gSndSrc= (lPTR)&f1_RD16;          //uC DDR ram data reg
-                    mStime.gBusy_mSec=0;
-                    BinSt.gSndPrt= prt;
-                    g_wait=0;                               //testing delay counter
-                    mStime.g_SockMs=0;
-                    sendBin(prt);
-                    break;
-                    }
-                if (!strcmp(tok, "RDB2"))                   //read bin TDC data(2) buffer (from FEBs)
-                    {
-                    param1= arg_hex(&paramPtr,-1);          //now get 1st param, word count
-                    param2= arg_hex(&paramPtr,0);           //now get 2nd param, reset mode
-                    //0 will stop any active request
-                    if (param1==0)
-                        {
-                        BinSt.gSndWordCnt=0;                //stops any active background xfers
-                        break;
-                        }
-                    //already busy, exit
-                    if (BinSt.gSndWordCnt)                  //nonzero, rdb already active
-                        break;                    
-                    //after 1st packet, background loop will send remaining data using non-zero 'gSndBytCnt'
-                    if (param1!=-1)
-                        BinSt.gSndWordCnt= param1; 
-                    else 
-                        BinSt.gSndWordCnt= (fpga2binSzHi<<16) + fpga2binSzLo; // i/o FPGA 2
-                    //if no data, break
-                    if(BinSt.gSndWordCnt==0)
-                        break;                    
-                    if (BinSt.gSndWordCnt> MAX_WORD_PER_FPGA) //limit word count
-                        param1= MAX_WORD_PER_FPGA;
-                    
-                    //ddr port read pointers not reset if param2 nonZero
-                    if(param2==0)
-                        {
-                        //ddr port read pointers FEB FPGA_2_of_3
-                        SDramRdHI2=0;
-                        SDramRdLO2=0;
-                        }                    
-                    //feb readout fpga2
-                    BinSt.gSndSrc= (lPTR)&f2_RD16;          //uC DDR ram data reg
-                    mStime.gBusy_mSec=0;
-                    BinSt.gSndPrt= prt;
-                    g_wait=0;                               //testing delay counter
-                    mStime.g_SockMs=0;
-                    sendBin(prt);
-                    break;
-                    }
-*/                
+                    }                
                 else if (!strcmp(tok, "RDBR"))              //read bin data, User Names Register
                     {
                     sPTR saddr = (sPTR) fpgaBase0;
@@ -3645,17 +3543,30 @@ int process(int prt, char *cmdPtr)
                     //get 1st param now
                     if ( (param1=arg_hex(&paramPtr,-1))==-1)//now get 1st param, rd addr hex
                         { param1= 0;}                       //default start addr 1
-                    //address only, no board number
-                    param1 &= 0xFFFFFFF;
-                    //User enters BYTE ADDR, change to word addr
-                    param1 = param1/2;
                     if ( (param2=arg_hex(&paramPtr,-1))==-1)//now get read cnt dec
                         { param2= 256;}                     
+                    //address only, no board number
+                    if (param1>=0x7FFFFF)                   //max addr else code abort
+                        {
+                        sprintf (tBuf,"End of FLASH");
+                        putBuf(prt, tBuf,0);                 
+                        break;
+                        }
+
+                    //User enters BYTE ADDR, change to word addr
+                    param1 = param1/2;
                     
                     *Buf1500=0;
                     saddr +=param1;
                     for (int i=1; i<param2+1; i++)          //Note: Buf1500 is 1500 bytes
                       {
+                       if (saddr>(pFLASHbase+0x3fffff))    //max buss addr else code abort
+                        {
+                        putBuf(prt, Buf1500,0);             //Note:putBuf to hBus will change fpga ptrs
+                        sprintf (tBuf,"\r\nEnd of FLASH\r\n");
+                        putBuf(prt, tBuf,0);                 
+                        break;
+                        }                        
                        d16= *saddr++;
                        sprintf (tBuf,"%04x ", d16);
                        strcat(Buf1500, tBuf);
@@ -3690,6 +3601,13 @@ int process(int prt, char *cmdPtr)
                     *Buf1500=0;
                     for (int i=1; i<param2+1; i++)          //Note: Buf1500 is 1500 bytes
                       {
+                       if (param1 >= 0x3ffff0)              //max bus addr else code abort
+                        {
+                        putBuf(prt, Buf1500,0);             //Note:putBuf to hBus will change fpga ptrs
+                        sprintf (tBuf,"\r\nEnd of FLASH\r\n");
+                        putBuf(prt, tBuf,0);                 
+                        break;
+                        }                        
                        saddr = (sPTR)fpgaBase0+ param1;
                        index= *saddr;
 
@@ -3898,7 +3816,6 @@ int process(int prt, char *cmdPtr)
                     {
                     /** - set baudrate */
                     sciSetBaudrate(UART, 921600) ;                                          
-                    //sciREG->BRS = 14U/2;    //baudrate up from 450800 to 921600
                      break;
                     }
                
@@ -4078,8 +3995,20 @@ int process(int prt, char *cmdPtr)
                     }
                 else if (!strcmp(tok, "TRIG"))         //Check fiber input uBunch reqs, mode 1 uses short Phy packet reqs to FEB
                     {   
-                    param1=arg_dec(&paramPtr,4);        //get 1st param
-                    if(param1==1)
+                    param1=arg_dec(&paramPtr,1);        //get 1st param                    
+
+                    if(param1==11)
+                        {
+                       param2=arg_dec(&paramPtr,1);     //get 2nd param all trigs via ptrig0,1 modes
+                        //tek dec 2022 temp test mode
+                        uBReq.ReqCnt= param2;
+                        uBReq.SmPacMode=1;                    
+                        uBReq.Flag |= DAQuB_Trig_NEW;   //aq uBunch decode On
+                        uBReq.Flag &=~DAQuB_Trig_OLD;   //if 1 on, set mode 0 off
+                        }
+                    
+                    else if(param1==1)                   
+                  //if(param1==1)
                         {
                         uBReq.Flag |= DAQuB_Trig_NEW;   //aq uBunch decode On
                         uBReq.Flag &=~DAQuB_Trig_OLD;   //if 1 on, set mode 0 off
@@ -4096,8 +4025,591 @@ int process(int prt, char *cmdPtr)
                     putBuf(prt, tBuf,0);
                     break;
                     }
-                else  {parErr=0xf;   break; }
                 
+                else if (!strcmp(tok, "TESTINIT"))         //Tester Code, Init FEB/ROC in test mode
+                    {                       
+                    param1=arg_dec(&paramPtr,1);            //1 = INIT ROC, 2=INIT ROC AND FEB(s)  
+                    //ROC INIT
+                    //	2 SECOND GATES internal gate
+                    wr16FPGA(0x00, 10);
+                    wr16FPGA(0x30, 2);
+                    wr16FPGA(0x31, 2);
+                    wr16FPGA(0x3a, 0);
+
+                    wr16FPGA(0x3b, 0);
+                    wr16FPGA(0x43, 1);
+                    wr16FPGA(0x00, 0x110);
+                    wr16FPGA(0x400, 8);
+                    wr16FPGA(0x800, 8);
+                    wr16FPGA(0xC00, 8);
+
+                    sprintf(tBuf,"ROC Initialized in WBL Test Mode\r\n");
+                    putBuf(prt, tBuf,0);
+
+                    if(param1==1)
+                      break;
+                    
+                    //Init all active POE-FEB ports  
+                    int pBits= ( (ACT_PORTS_HI<<16)+ ACT_PORTS_LO);
+                    for(int i=1,j=0; i<25; i++,j++)
+                    {
+                    if((pBits&(1<<j))==0)
+                            continue;
+                    //FEB INIT 
+                    //Link command version
+                    sprintf(tBuf,"LCA TRIG 0");  process(prt, tBuf);
+                    mDelay(10);
+                    sprintf(tBuf,"LCA WR 306 0");  process(prt, tBuf);
+                    mDelay(10);
+                    sprintf(tBuf,"LCA WR 307 0");  process(prt, tBuf);
+                    mDelay(10);
+                    sprintf(tBuf,"LCA WR 304 e");  process(prt, tBuf);
+                    mDelay(10);
+                    sprintf(tBuf,"LCA WR 305 20"); process(prt, tBuf);
+                    mDelay(10);
+                    sprintf(tBuf,"LCA WR 317 3");  process(prt, tBuf);
+                    mDelay(10);
+                    sprintf(tBuf,"LCA WRI 030 800 8");  process(prt, tBuf);
+                    mDelay(100);
+                    sprintf(tBuf,"LCA WRI 430 800 8");  process(prt, tBuf);
+                    mDelay(100);
+                    sprintf(tBuf,"LCA WRI 830 800 8");  process(prt, tBuf);
+                    mDelay(100);
+                    sprintf(tBuf,"LCA WRI C30 800 8");  process(prt, tBuf);
+                    mDelay(100);
+                                      
+                    sprintf(tBuf,"LCA AFEWR 1 102 A000");  process(prt, tBuf);
+                    mDelay(10);
+                    sprintf(tBuf,"LCA AFEWR 1 202 A000");  process(prt, tBuf);
+                    mDelay(10);
+                    sprintf(tBuf,"LCA AFEWR 2 102 A000");  process(prt, tBuf);
+                    mDelay(10);
+                    sprintf(tBuf,"LCA AFEWR 2 202 A000");  process(prt, tBuf);
+                    mDelay(10);
+                    sprintf(tBuf,"LCA AFEWR 3 102 A000");  process(prt, tBuf);
+                    mDelay(10);
+                    sprintf(tBuf,"LCA AFEWR 3 202 A000");  process(prt, tBuf);
+                    mDelay(10);
+                    sprintf(tBuf,"LCA AFEWR 4 102 A000");  process(prt, tBuf);
+                    mDelay(10);
+                    sprintf(tBuf,"LCA AFEWR 5 202 A000");  process(prt, tBuf);
+                    mDelay(10);
+                    }
+                    lvLnk.PoolMode=0;                   //data pool off  
+                    
+                    sprintf(tBuf,"ROC-FEB Initialized in WBL Test Mode\r\n");
+                    putBuf(prt, tBuf,0);
+                    break;                     
+                    }
+                
+                else if (!strcmp(tok, "TESTRAM"))      //Tester Code, Standard sdRAM Test 3 fpgas attached RAM
+                    {
+                    lvLnk.PoolMode=0;                   //data pool off  
+                    iFlag |= iNoPrompt;                 //flag as no prompt on terminal 
+                    sprintf(tBuf,"Busy ~45 Seconds Per FPGA\r\n");
+                    putBuf(prt, tBuf,0);
+                    putBuf(prt, "\r\nFPAG2 sdRam Test\r\n",0);
+                    sprintf(tBuf,"SD 2");               //sdRAM2 Testing
+                    process(prt, tBuf);                 //process command                                   
+                    iFlag |= iNoPrompt;                 //flag as no prompt on terminal 
+                    putBuf(prt, "\r\nFPAG3 sdRam Test\r\n",0);
+                    sprintf(tBuf,"SD 3");               //sdRAM3 Testing
+                    process(prt, tBuf);                 //process command                                   
+                    iFlag |= iNoPrompt;                 //flag as no prompt on terminal 
+                    putBuf(prt, "\r\nFPAG4 sdRam Test\r\n",0);
+                    sprintf(tBuf,"SD 4");               //sdRAM4 Testing
+                    process(prt, tBuf);                 //process command                                   
+                    iFlag |= iNoPrompt;                 //flag as no prompt on terminal 
+                    sprintf(tBuf,"SDRAM Finished\n");
+                    putBuf(prt, tBuf,0);
+                    break; 
+                    }                    
+                else if (!strcmp(tok, "TESTFIBER"))     //Tester Code, FIBER XMIT/REC
+                    {
+                    uint16_t len=0, key, cnt1=1,cnt2;
+                    
+                    sprintf(tBuf,"FT");                 //reset/reload FPGAs
+                    process(prt, tBuf);                 //process command           
+                    
+                    sprintf(tBuf,"ROC FIBER LINK Testing\r\n");
+                    putBuf(prt, tBuf,0);
+                    lvLnk.PoolMode=0;                   //data pool off 
+
+                    sprintf(tBuf,"\r\nReset FPGAs Done First\r\n");
+                    putBuf(prt, tBuf,0);                    
+                    sprintf(tBuf,"Option: TESTFIBER 1 c  (1=TransmitMode,  'c=Ch' 0=GTP0(Def), 1=GTP1, 3=Both(Def))\r\n");
+                    putBuf(prt, tBuf,0);
+                    sprintf(tBuf,"Option: TESTFIBER 2    (2=Receives Mode(Default), All Channels)\r\n\n");
+                    putBuf(prt, tBuf,0);
+                    param1=arg_dec(&paramPtr,2);            //now get 1st param, Test Mode, 1=Rec=ROC2(DUT,Default) or 2=Xmit=ROC1
+                    param2=arg_dec(&paramPtr,3);            //now get 2nd param, xmit chan 0,1,3
+ 
+                    if(param1==2)
+                      sprintf(tBuf,"FIBER Receive Mode\r\n");
+                    else if(param1==1)
+                      sprintf(tBuf,"FIBER Xmit Mode\r\n");
+                    else
+                      {parErr++;  break; }
+                    putBuf(prt, tBuf,0);
+                    mDelay(1000);                           //show mode timeout before test data 
+                    iFlag |= iNoPrompt;                     //flag as no prompt on terminal 
+                  //wr16FPGA(0x02, BIT0);                   //GTP Rx fifo reset
+                      
+                    for (int l=0;l<4096; l++)   //empty fifos
+                        {
+                        rd16FPGA(0x20);         //EGPT0 FIFO
+                        rd16FPGA(0x21);         //GPT1 FIFO
+                        }
+                    
+                    while(1)
+                    {                      
+                    if (param1==1 && len==0)                //transmit mode
+                        {
+                        if(param2==0 || param2==3)
+                        {
+                        putBuf(prt,"Transmit GTP0\r\n",0);
+                        iFlag |= iNoPrompt;                 //flag as no prompt on terminal 
+                        sprintf(tBuf,"PTRIG0 %d 0",cnt1);   //XMIT on FIBER CH0 1 MULTI PACKET SEQ, Turn off local echo
+                        process(prt, tBuf);                 //process command           
+                        }
+                        if(param2==1 || param2==3)
+                        {
+                        putBuf(prt,"Transmit GTP1\r\n",0);
+                        iFlag |= iNoPrompt;                 //flag as no prompt on terminal 
+                        sprintf(tBuf,"PTRIG1 %d 0",cnt1);   //XMIT on FIBER CH1 1 MULTI PACKET SEQ, Turn off local echo
+                        process(prt, tBuf);                 //process command               
+                        }
+                        
+                        len= SockKeyWait(0, prt, &key);     //CharCnt=SockKeyWait(mSecWait, Port#, Rtn 1st Ch RecBuf)
+                        if(len)
+                            {
+                            iFlag |= iNoPrompt;             //flag as no prompt on terminal 
+                            sprintf(tBuf,"FIBER Transmit Mode Exit\r\n");
+                            putBuf(prt, tBuf,0);
+                            break;
+                            }                        
+                        mDelay(1000);  
+                        }
+                    else if (param1==2 && len==0)   //receive mode
+                        {
+                        //Note: WBL code in FPGAs has no buffer word count register so we loop on xmit count 
+                        iFlag |= iNoPrompt;                 //flag as no prompt on terminal
+                        cnt2=0;
+                        while(!(rd16FPGA(0x02) & BIT2))                 //GTP FIFO 0, 1==empty
+                            {
+                            iFlag |= iNoPrompt;                 //flag as no prompt on terminal
+                            sprintf(tBuf,"GTP0  ");    
+                            putBuf(prt,tBuf,0);
+                            sprintf(tBuf,"RDM 20 %d 10", 10);   //Rec on FIBER CH0, 1 MULTI PACKET SEQ
+                            process(prt, tBuf);              //process command           
+                            if(cnt2++>800) break;
+                            }
+                        cnt2=0;
+                        while(!(rd16FPGA(0x02) & BIT3))                  //GTP FIFO 1, 1==empty
+                            {
+                            iFlag |= iNoPrompt;                 //flag as no prompt on terminal
+                            sprintf(tBuf,"GTP1  ");    
+                            putBuf(prt,tBuf,0);
+                            sprintf(tBuf,"RDM 21 %d 10", 10); //Rec on FIBER CH1, 1 MULTI PACKET SEQ
+                            process(prt, tBuf);                 //process command            
+                            if(cnt2++>800) break;
+                            }
+                        len= SockKeyWait(0, prt, &key);     //CharCnt=SockKeyWait(mSecWait, Port#, Rtn 1st Ch RecBuf)
+                        if(len)
+                            {
+                            iFlag |= iNoPrompt;             //flag as no prompt on terminal 
+                            sprintf(tBuf,"FIBER Receive Mode Exit\r\n");
+                            putBuf(prt, tBuf,0);
+                            break;
+                            }          
+                        //if (rdCnt!=0xC) putBuf(prt,"\r\n",0);//0xC==empty
+                        mDelay(1000);                        
+                        }                                             
+                    }                    
+                    break;                     
+                    }
+                
+                else if (!strcmp(tok, "TESTLVDS"))         //Tester Code, LVDS sections
+                    {
+                    uint16_t len=0, key, dat, cnt, cntH, wcnt, xDat, xSum, Sum, d16, chan, Err=0, rcntErr=0, dBuf[dBufSz], prts, totprts=0;
+                    uint32_t gcnt=0, h=0, loopLv=0;
+
+                    sprintf(tBuf,"Setting ROC LVDS Clock to 25Mhz to match FEBs 25Mhz return data clock\r\n");
+                    putBuf(prt, tBuf,0);
+                    //Set ROC 25Mhz LVDS Xmit to match FEB LVDS return clock that always runs at 25Mhz                    
+                    wr16FPGA(0x000, 0x00);                   //Set LVDS clock to 25Mhz
+
+                    
+                    //Use simple commands without wait option
+                    sprintf(tBuf,"Option: 'TESTLVDS  1'       (Transmit Mode)\r\n\n");
+                    putBuf(prt, tBuf,0);
+                    sprintf(tBuf,"Option: 'TESTLVDS  2 0 s'   (Receive, Don't Display Data, Stop on 1st Error\r\n");
+                    putBuf(prt, tBuf,0);
+                    sprintf(tBuf,"Option: 'TESTLVDS  2 1 s'   (Receive, Display All Data,   Stop on 1st Error)\r\n\n");
+                    putBuf(prt, tBuf,0);
+                    sprintf(tBuf,"     ** Test each ROC in Transmit and Receive Modes **\r\n\n");
+                    putBuf(prt, tBuf,0);
+                    sprintf(tBuf,"     ** Start Transmit Mode ROC 1st, then Second ROC in Receive **\r\n\n");
+                    putBuf(prt, tBuf,0);
+                    
+                    
+                    sprintf(tBuf,"     **  Press any key to begin testing **\r\n\n");
+                    putBuf(prt, tBuf,0);
+                    while (SockKeyWait(0, prt, &key)==0);     
+                    
+                    //Turn Data Pool OFF, leave off for all testing
+                    lvLnk.PoolMode=0;                   //data pool off  
+
+                    param1=arg_dec(&paramPtr,0);           //1st xmit=1 (always recieves)
+                    param2=arg_dec(&paramPtr,0);           //2nd display mode 0=counters only
+                    param3=arg_dec(&paramPtr,0);           //3rd Exit on first error
+                    
+                    sPTR prtAddrS, prtAddrD, prtAddrC;                    
+                    sPTR saddr = (sPTR) fpgaBase0;
+                    saddr += 0x6E;                          //Added address 0x6e for testsep to xmit on all LVDS ports   
+                    
+                    EmptyAll_LVDS_FIFOs();                  //empty lvds fifos                      
+                    //wr16FPGA(0x0, 0x0);                   //stop lvds trigger xmits
+                    
+                    if(param1==1)  //1=Xmit    
+                        sprintf(tBuf,"ROC SN%-2d Xmit Mode Plus Receives\r\n",Ser_Cntrl_Numb.serNumb); 
+                    else
+                        sprintf(tBuf,"ROC SN%-2d Rec Mode, Each Port Receives 128 Words, (256 Words Ok)\r\n",Ser_Cntrl_Numb.serNumb); 
+                    putBuf(prt,tBuf,0);   
+                    sprintf(tBuf,"ROC SN%-2d Scanning all 24 POE LVDS PORTS for Received Data (Note Xmit SumCheck=FFFO)\r\n",Ser_Cntrl_Numb.serNumb); 
+                    putBuf(prt,tBuf,0);   
+
+              //tek code setup for trans ROC only mode every 100mSec
+              //tek code setup for receive ROC only always checking for word count
+              //and timeout/breakout in case word count fails
+
+                    while(1) 
+                        {  
+                        prts=0;
+                        totprts=0;
+
+                      //Transmit Mode==1
+                      //Transmit Mode==1 
+                        if(param1==1)  
+                           {
+                           h=0;
+                           uint16_t d, cnt;
+                           prtAddrD = (u_16Bit*)IOPs[1].FM30_DATp;    //data Ch1 only
+                           prtAddrC = (u_16Bit*)IOPs[1].FM30_DATp+8;  //word count chan 1 only
+                           for (h=1; h<100000; h++)
+                                {
+                                cnt= *prtAddrC;
+                                if (cnt)
+                                  break;      //DUT returns 1 word when ready
+                                uDelay(10);
+                                }
+                            d= *prtAddrD;
+                            if(cnt)
+                              {
+                              sprintf(tBuf,"DUT Ready Loop=%d  ReplyCnt=%d  DataReply=%0x\r\n",loopLv, cnt, d); 
+                              for (int j=0; j<256;j++)      //read and empty any extra fifo data
+                                *prtAddrC;
+                              }
+                            else
+                              sprintf(tBuf,"DUT Ready Loop=%d  ReplyCnt=%d\r\n",loopLv++, cnt); 
+                            putBuf(prt,tBuf,0);   
+                            loopLv++;  //loopLv transmit mode incr
+                            EmptyAll_LVDS_FIFOs();      //empty lvds fifos                                                   
+                            mDelay(100);  
+                            //Transmit Test Data Pattern on LVDS 128 word loop
+                            xDat=0x0001;
+                            xSum=0;  
+                            for (int i=1; i<=128; i++)  //24 Ports todo
+                                {
+                                xSum +=xDat;
+                                *saddr= xDat;
+                                xDat= xDat<<1;
+                                if (i%16==0)
+                                    xDat=1;
+                                }
+                            mDelay(100);  
+                            }
+                
+                        //Receive Mode==0
+                        //Receive Mode==0
+                            if(param1==2)  
+                            {
+                              
+                            prtAddrC = (u_16Bit*)IOPs[1].FM30_DATp+8;  //word count chan 1 only                              
+                            for (h=0; h<100000; h++)
+                                {
+                                if (*prtAddrC>127)
+                                  break;      //DUT returns 1 word when ready
+                                uDelay(10);
+                                }
+                            sprintf(tBuf,"\r\nDUT Ready Loop=%d  Cnt=%d\r\n",loopLv, *prtAddrC); 
+                            putBuf(prt,tBuf,0);   
+                            loopLv++;  //loopLv rec mode incr
+
+                            
+                            for(chan=1; chan<=24; chan++)    //modified to find data on any port
+                              {
+                              //init channel pointers
+                              prtAddrD = (u_16Bit*)IOPs[chan].FM30_DATp;    //data
+                              prtAddrS = (u_16Bit*)IOPs[chan].FM40_STAp;    //status
+                              prtAddrC = (u_16Bit*)IOPs[chan].FM30_DATp+8;  //word count                    
+                             
+                              if(chan==1)
+                                {
+                                 h=0;
+                                 while (h++<1500)
+                                    {
+                                    if (*prtAddrC>128-10)  //hardcoded expect 128 words
+                                      h=2000;
+                                    uDelay(100);
+                                    }
+                                }
+                                                                                                              
+                              for(h=0; h<20000; h++)
+                                  {
+                                  if (*prtAddrC > 10)              //after 1 word, fifo fills quickly
+                                      {
+                                        h=25000;     //break out of loop once words recd
+                                      }
+                                  uDelay(10);
+                                  }
+                              if(h>25000)
+                                h++;
+                              if(chan==23) //tek test 7/16/24
+                                wcnt=9999;
+                              
+                              wcnt= *prtAddrC;                          //port word count
+                              d16= *prtAddrS;                           //check data avail status
+                              d16 &= IOPs[chan].ePHY_BIT;               //0= data available  
+                              cnt=0;
+                              Sum=0;
+                              prts++;                      
+                              
+                              //Expect 128 but may get twice
+                              
+                              if ( wcnt>0 )                             //words available only
+                                  {
+                                  cntH=wcnt;
+
+                                  //Move all received FIFO data to buffer 
+                                  //create checksum
+                                  while(wcnt>0)
+                                      {
+                                      h_TP48_HI                   
+                                      dat= *prtAddrD;                     //port addr for recd' data
+                                      if(cnt++<256)
+                                          dBuf[cnt]=dat;
+                                      wcnt--;
+                                      Sum +=dat;
+                                      h_TP48_LO
+                                      }
+                                  
+                                  gcnt += cnt;
+                                  totprts++;                                
+
+                                  //check chksum
+                                  //now display data if bad
+                                  int x=1;
+                                  if (param2==1)
+                                      {
+                                      if(cnt>127) 
+                                        cnt=128;  
+                                      while(cnt-->0)
+                                        {                                        
+                                        if(param2==1)                   //Display all data if enabled
+                                            {
+                                            sprintf(tBuf,"%4X ", dBuf[x++]); 
+                                            if (cnt%16==0)
+                                               strcat(tBuf,"\r\n");  
+                                            putBuf(prt,tBuf,0);  
+                                            }
+                                        else
+                                            mDelay(1);                  //Allow time recd data FIFO loading
+                                        }
+                                      }
+                                                                  
+                                  if ((Sum == 0xfff8) || (Sum == 0xfff0) )  //sum for word counts 128 or 256
+                                      {
+                                      sprintf(tBuf,"Prt#%2d  Recd=%d   SumCk=%04X  TotErrDat=%d   ErrsRecCnt=%d\r\n", chan, cntH, Sum, Err, rcntErr); 
+                                      putBuf(prt,tBuf,0);                                    
+                                      LED_GRN1;  //GRN ON
+                                      LED_RED0;  //RED OFF
+                                      }
+                                  else
+                                      {
+                                      ++Err;
+                                      sprintf(tBuf,"Prt#%2d  Recd=%d   SumCk=%04X  TotErrDat=%d   ErrsRecCnt=%d *\r\n", chan, cntH, Sum, Err, rcntErr); 
+                                      putBuf(prt,tBuf,0);                                    
+                                      LED_RED1;  //RED ON
+                                      LED_GRN0;  //GRN OFF
+                                      if(param3)
+                                          param3=999;  //force exit on first error
+                                      }
+                                  }
+                              else  //no data timeout
+                                  {
+                                  rcntErr++;
+                                  sprintf(tBuf,"Prt#%2d  Recd=%d   SumCk=%04X  TotErrDat=%d   Missing Port Data *****\r\n\n", chan, cntH, Sum, Err); 
+                                  putBuf(prt,tBuf,0);                                    
+                                  LED_RED1;    //RED ON
+                                  }
+                              
+                              
+                              
+                              //exit loop if exit on error mode set
+                              if(param3==999) 
+                                    break;                            
+                              }//End Receive Mode Single Channel   
+                            
+                            //send done word on lvds to xMIT Mode ROC
+                            *saddr=0x1234;
+                            } //end All 24 Channels
+                        
+                        //break on USB or socket data entry
+                        len= SockKeyWait(0, prt, &key);     
+                        if(param3==999) len=1;  //force exit on first error mode
+                        if(len || (KeyBoardWait(0)==1))
+                            {
+                            sprintf(tBuf,"Test Exit\r\n");
+                            chan=26;  //break out of loop
+                            putBuf(prt, tBuf,0);
+                            break;
+                            }  
+                        }
+                    LED_RED0
+                    LED_GRN0
+                    sprintf(tBuf,"Reset ROC LVDS Clock from 25Mhz back to normal 20Mhz mode\r\n");
+                    putBuf(prt, tBuf,0);                      
+                    //restore ROC 20Mhz LVDS Xmit clock
+                    wr16FPGA(0x000, 0x010);                   //Set LVDS clock to normal 20Mhz
+                    break;  
+                    }
+                else if (!strcmp(tok, "TESTPHY"))       //Tester Code, PHY sections
+                    {
+                    uint16_t sndCnt=0, len, key,ccr=0;                     
+                    iFlag |= iNoPrompt;                 //flag as no prompt on terminal 
+                    lvLnk.PoolMode=0;                   //data pool off  
+                    sprintf(tBuf,"ROC PHY Testing Mode, 1=Xmit Only, 2=Rec Only\r\n");
+                    putBuf(prt, tBuf,0);
+                    sprintf(tBuf,"Option: TESTPHY 1    (Xmits and Recs all ports, PacketDataSize=128Dec)\r\n");
+                    putBuf(prt, tBuf,0);
+                    sprintf(tBuf,"Option: TESTPHY 2    (Recs all Ports)\r\n");
+                    putBuf(prt, tBuf,0);
+                    sprintf(tBuf,"   ** Test each ROC in Transmit and Receive Modes **\r\n\n");
+                    putBuf(prt, tBuf,0);
+
+                    param1=arg_hex(&paramPtr,2);    //now get 1st param, Test Mode xmit/rec
+                    global_pass=0;                  //pass counter
+                    g_errorcnt=0;                   //error counter
+                    g_errNDR=0; 
+                    iFlag |= iNoPrompt;             //flag as no prompt on terminal 
+                    wr16FPGA(0x400, 8);             //disable auto move data to fpga0 mode
+                    wr16FPGA(0x800, 8);
+                    wr16FPGA(0xc00, 8);
+                    int rxStat4,rxStat8,rxStatC;                      
+                    sPTR prtAddrS, prtAddrD;
+                    
+                    //Turn Data Pool OFF, leave off for all testing
+                    lvLnk.PoolMode=0;                   //data pool off                       
+                    
+                    if(param1==2) //Mode=2, RECEIVE Data Loop, any key to exit
+                        {
+                        sprintf(tBuf,"ROC RECEIVE PHY Mode Only (SN#%d)\r\n", Ser_Cntrl_Numb.serNumb);
+                        putBuf(prt, tBuf,0);
+
+                        while(1)
+                            {
+                            //reset daq fpga Interlink FIFOs
+                            //ePHY buffers must be empty before filling request
+                            rxStat4 = ePHY_RX_STA_416&0xff;
+                            rxStat8 = (ePHY_RX_STA_816&0xff);
+                            rxStatC = (ePHY_RX_STA_C16&0xff);
+                            g_PhyPrts=0;
+                            
+                            if (rxStat4+rxStat8+rxStatC)
+                            //**** comment out for() loop to check single port only
+                            for(param2=1; param2<=24; param2++)             //modified to find data on any port
+                                {
+                                g_PhyPrts++;
+                                iFlag |= iNoPrompt;                     //flag as no prompt on terminal 
+                                sprintf(tBuf,"PRECTESTER %d", param2);  //empty ePhy rec fifos
+                                process(prt, tBuf);                            
+                                }  
+                            
+                            len= SockKeyWait(0, prt, &key);         //CharCnt=SockKeyWait(mSecWait, Port#, Rtn 1st Ch RecBuf)
+                            if(len)
+                                {
+                                iFlag |= iNoPrompt;                 //flag as no prompt on terminal 
+                                sprintf(tBuf,"PHY Recieve Mode Exit\r\n");
+                                putBuf(prt, tBuf,0);
+                                break;
+                                }    
+                            if(KeyBoardWait(0))                     //returns non zero if USB char avail (wiats nn seconds)
+                                break;  
+                            if(g_PhyPrts)
+                                {
+                                LED_RED0;  //RED Off
+                                LED_GRN1;  //GRN On
+                                sprintf(tBuf,"\t\t\t\t\t\t\t\t\tActive PHY Ports=%d\r\n", g_PhyPrts);
+                                putBuf(prt, tBuf,0);
+                                }
+                            }
+                        global_pass++;                    
+                        }
+                    else  
+                        //Mode=1, Transmit data loop
+                        {
+                        iFlag |= iNoPrompt;                 //flag as no prompt on terminal 
+                    
+                        //ROC1 Master Mode (Sends PHY Packets to DUT)
+                        param2=arg_dec(&paramPtr,128);    //get 2nd param, xmit Byte cnt  
+                        wr16FPGA(0x400, 8);                 //disable auto move data to fpga0 mode
+                        wr16FPGA(0x800, 8);
+                        wr16FPGA(0xc00, 8);
+                        int j,k=0;
+                        //Init test data       *** 128 '80H' words maximum in ROC Phy Xmit FIFOs   
+                        ccr=0;
+                        phyBuf128[0]=0;
+                        phyBuf128[1]=0;
+                        for(j=0; j<=128; j++)
+                            {
+                            phyBuf128[j]=k;
+                            ccr+=k;
+                            k++;
+                            }
+                        phyBuf128[126]=ccr&0xff;
+                        phyBuf128[127]=ccr>>8;
+
+                        sprintf(tBuf,"ROC TRANSMIT PHY Mode (SN#%d)  Xmit Data ChkSum=%04X\r\n",Ser_Cntrl_Numb.serNumb, ccr);
+                        putBuf(prt, tBuf,0);
+
+                        while(1)
+                            {
+                            sndCnt= param2;               //send packet size word cnt to byte count
+                            //_disable_interrupt_();
+                            //send standard min 6 byte header with with test data packet
+                            PHY_LOAD_DAQ_K28SEND_BCAST_MINI_TESTER(0xaa55, HappyBus.PoeBrdCh, (sPTR)phyBuf128, sndCnt+3);     // bytes to send                                
+                            //_enable_interrupt_();
+                            
+                            //user socket port keyboard breakout check
+                            len= SockKeyWait(0, prt, &key); //CharCnt=SockKeyWait(mSecWait, Port#, Rtn 1st Ch RecBuf)
+                            if(len)
+                                {
+                                iFlag |= iNoPrompt;                      //flag as no prompt on terminal 
+                                sprintf(tBuf,"PHY Transmit Mode Exit\r\n");
+                                putBuf(prt, tBuf,0);
+                                break;
+                                }     
+                            //user USB port keyboard breakout check
+                            if(KeyBoardWait(0))            //returns non zero if USB char avail (wiats nn seconds)
+                                break;
+                            
+                            mDelay(800);                            
+                            }                               
+                        }
+                    break;
+                    }                
+                else  {parErr=0xf;   break; }
         case 'U':        
                 if ((!strcmp(tok, "UBUN"))||(!strcmp(tok, "UB")))//uBunch request status display
                     {                               
@@ -4113,9 +4625,8 @@ int process(int prt, char *cmdPtr)
                     {
                     uBReq.SmPacMode=0;
                     uBReq.Mode=0;
-                    GTP1_Rec_TEST();                    //empty old uB Reqs 
                     REG16(fpgaBase0)= 0x0;              //stop test mode
-                    uBReq.Flag &= ~DAQREQ_2FEB;         //daq off
+                    uBReq.Flag &= ~DAQuB_Test;          //daq off
                     uBReq.Port= prt;                    //save port number for later status printout
                     break;
                     }
@@ -4123,62 +4634,24 @@ int process(int prt, char *cmdPtr)
                     {
                     //data req pack via optical loopback
                     uBReq.uDly= arg_dec(&paramPtr,20);  //repeat after fixed delay
-                    //k28.mode= eCMD_DAQ_DY2;
-                    //uBReq.Mode=1;
-                    //REG16(fpgaBase0+(0xf*2))= 10*10;
-                    //REG16(fpgaBase0)= 0x101;          //continous run mode
-                    //uDelay(100);                      //allow time to ub reqs load
-                    //uBReq.Flag |= DAQREQ_2FEB;        //daq on test,  'GTP1_Rec_TEST()'
-                    //uBReq.Port= prt;                  //save port number for later status printout
                     break;
                     }
                 else if (!strcmp(tok, "UB2"))           //test code here
                     {
-                    int rxStat4,rxStat8,rxStatC,empty;                      
+                    //int rxStat4,rxStat8,rxStatC;                      
                     //data req pack via optical loopback
-                    param1= arg_dec(&paramPtr,1);       //1 cycle of nnn counts
-                    if(param1>32767)
-                        {
-                        sprintf(tBuf,"Req F 16BIT, Max cnt 32767\r\n");
-                        putBuf(prt, tBuf,0);
-                        param1=32767;
-                        }                    
-                    uBReq.Mode=2;
-                    param2= arg_dec(&paramPtr,1);       //1 ub req per packet
-                    //if(param1>8)
-                    //    uBReq.uBPerPacRq= param2;
+                    param1= arg_dec(&paramPtr,1);       //Max 2 triggers per request
+                    param2= arg_dec(&paramPtr,1);       //Loop to repeat in background
+                    uBReq.ReqCnt= param1;
+                    uBReq.LoopCnt= param2;              //32 bit
+                    uBReq.Mode=2;                   
+                    REG16(fpgaBase0+(0x27*2))= 0x300; //Reset SerDes and FIFOs, not equal 7
                     
-                    //dump remaining words uBun Req, no cnt reg at this time
-                    //prevent optimizing out
-                    for(int j=0; j<1000; j++)
-                        empty=GTP0_RQ_PAC0D;            //empty/dump fifo
-                    
-                    //reset daq fpga Interlink FIFOs
-                    //ePHY buffers must be empty before filling request
-                    rxStat4 = ePHY_RX_STA_416;
-                    rxStat8 = (ePHY_RX_STA_816<<8);
-                    rxStatC = (ePHY_RX_STA_C16<<8);
-                    if (rxStat4+ rxStat8+ rxStatC)
-                        {
-                        sprintf(tBuf,"PA");             //empty ePhy rec fifos
-                        process(prt, tBuf);
-                        REG16(fpgaBase0+(0x27*2))= 0x300;
-                        sprintf(tBuf,"WR 27 300    //Reset Link SerDes and FIFOs, not equal 7\r\n");
-                        putBuf(prt, tBuf,0);
-                        }
-                    h_TP47_LO
-                      
-                    //tek small packets 03-13-20 pm                  
-                    uBReq.SmPacMode=1;
-                    
-                    REG16(fpgaBase0+(0xf*2)) = param1;
-                    REG16(fpgaBase0+(0x32*2))= (param1>>16);    //bunch cnt high
-                    REG16(fpgaBase0+(0x33*2))= (param1&0xffff); //bunch cnt low
-                    REG16(fpgaBase0)= 0x303;            //one loop test mode
-                    uDelay(200);                        //allow time to ub reqs load
-                    uBReq.Flag |= DAQREQ_2FEB;          //daq on test,  'GTP1_Rec_TEST()'
+                    h_TP47_LO                      
+                    //tek small packets 03-13-20                  
+                    uBReq.SmPacMode=1;                    
+                    uBReq.Flag |= DAQuB_Test;           //Note if 'TRIG 1' active, packet will not be procees in 'DAQuB_Test test mode'
                     uBReq.Port= prt;                    //save port number for later status printout  
-                    uBReq.uDly= 25;                     //delay between ub requests
                     break;
                     }
                 else if (!strcmp(tok, "UB3"))           //test code here, delete later stuct k28
@@ -4191,20 +4664,26 @@ int process(int prt, char *cmdPtr)
                     //prevent optimizing out
                     int empty;
                     for(int j=0; j<4000; j++)
-                        empty=GTP0_RQ_PAC0D;                //empty/dump fifo
+                        empty=GTP0_RQ_PAC0D;            //empty/dump fifo
                     
                     REG16(fpgaBase0+(0xf*2))= 10*10;
                     REG16(fpgaBase0+(0x32*2))= 1;       //bunch cnt high
                     REG16(fpgaBase0+(0x33*2))= 100;     //bunch cnt low
                     REG16(fpgaBase0)= 0x303;            //one loop test ubunch and heartbeat
                     mDelay(1);                          //allow time to ub reqs load
-                    uBReq.Flag |= DAQREQ_2FEB;          //daq on test,  'GTP1_Rec_TEST()'
+                    uBReq.Flag |= DAQuB_Test;           //daq on test, test mode
                     uBReq.Port= prt;                    //save port number for later status printout
                     break;
                     }
                 else if (!strcmp(tok, "UB4"))           //test code here, delete later stuct k28
                     {
+                    param2=arg_dec(&paramPtr,2);        //get param
                     uBReq.SmPacMode=1;
+                    for (int i=0; i<param2; i++)
+                      {
+                      GTP1_Rec_Trigs_Fake_uB_Request();
+                      uDelay(800);
+                      }
                     break;
                     }
                 else  {parErr=0xf;   break; }
@@ -4231,15 +4710,7 @@ int process(int prt, char *cmdPtr)
                     putBuf(prt,"\r\n",2);
                     break;
                     }
-                else if (!strcmp(tok, "ZINIT"))             //re-Init network 'ZestETM1' module
-                    {
-                    //ORANGE_TREE Startup ''fpga logic requires an initial write to clear 'WR control signal'
-                    REG16(ZestETM1)= 0; 
-                    iFlag &= ~OTREE_CONFIG;                //clr flag
-                    SocketInit();  // don't use here, OTree being used in Auto-Open Settings via web page
-                    break;
-                    }
-                else if (!strcmp(tok, "ZINIT1"))            //re-Init network 'ZestETM1' module socket
+                else if (!strcmp(tok, "ZINIT"))            //re-Init network 'ZestETM1' module socket
                     {
                     iFlag &= ~OTREE_CONFIG;                //clr flag
                     tcp_server_init(0,netInfo.sTelnet0, eRecDatBuf[0] );    //(sock,port)                     
@@ -4440,6 +4911,15 @@ int process(int prt, char *cmdPtr)
                     gioEnableNotification(gioPORTA, BIT5) ;
                     break;
                     }                                 
+                else if (!strcmp(tok, "ZINIT1"))            //re-Init network 'ZestETM1' module socket
+                    {
+                    iFlag &= ~OTREE_CONFIG;                //clr flag
+                    tcp_server_init(0,netInfo.sTelnet0, eRecDatBuf[0] );    //(sock,port)                     
+                    tcp_server_init(1,netInfo.sTelnet1, eRecDatBuf[1] );    //(sock,port)                     
+                    tcp_server_init(2,netInfo.sTelnet2, eRecDatBuf[2] );    //(sock,port)                     
+                    tcp_server_init(3,netInfo.sTelnet3, eRecDatBuf[3] );    //(sock,port)                     
+                    break;
+                    }
                 else  {parErr=0xf;   break; }
         default:
                 putBuf(prt,"\r\nsyntax error?\r\n",0);  //send to current active port
@@ -4542,11 +5022,11 @@ u_8Bit revBits8(u_8Bit c)                       //reverse 8 bits
 
 //byte swap
 #pragma optimize= none
-unsigned short SwapBytes(unsigned short x)
+unsigned short SwapBytes(unsigned short c)
 {
     __asm("    rev16     r0, r0\n"
           "    bx      lr\n");                  // need this to make sure r0 is returned
-    return(x);                                  // return makes compiler happy - ignored
+    return(c);                                  // return makes compiler happy - ignored
 }
 
 //Load-Multiple memory copy
@@ -4937,7 +5417,7 @@ void hDelayuS(uint32 dly, uint32 Wait)
 
     hetREG1->INTENAS= 1<<8;                     //nHet instr that gen irq 0,1,2,3...
     genFlag |= hDelay;                          //set het timer flag, intr clears it
-  //hHI_TP45;
+    h_TP47_HI;
 
     e_HETPROGRAM0_UN.Program0_ST.TIMERCOMP_0.memory.data_word= dly; //refer cnt loaded
     e_HETPROGRAM0_UN.Program0_ST.ENCOUNTER_0.memory.data_word=0;    //cnt up var, clr it
@@ -4948,7 +5428,7 @@ void hDelayuS(uint32 dly, uint32 Wait)
     //wait for time out or check in background
     if (Wait)
         while (genFlag & hDelay);                   //wait to finish, nonzero==busy
-  //hLO_TP45;
+    //h_TP47_LO;
 }
 
 
@@ -5019,7 +5499,12 @@ void dispNet(int prt)
     sprintf(tBuf,"  zero or broadcast addr(e.g. 192.168.1.0 or 192.168.1.255), illegal\r\n"); 
     strcat(Buf1500, tBuf);
     sprintf(tBuf,"  addresses (e.g. 127.x.x.x) or addr not on the same subnet as the gateway\r\n"); 
-    strcat(Buf1500, tBuf);        
+    strcat(Buf1500, tBuf);    
+    if (prt)
+        {
+          sprintf(tBuf,"  See ZestETM1 IpAddress:Port(80 HTML) settings (AdminPSW=u2e)\r\n"); 
+        strcat(Buf1500, tBuf);        
+        }
     putBuf(prt, Buf1500,0);                 //send to current active port
 
     
@@ -5108,132 +5593,6 @@ void dataRecall(int mode, u_32Bit fADDR)
     
 }
 
-
-//Program Controllers FLASH with data stored in FPGA2_SDram
-//Using FPGA2_sdRam2 data, assume *.bin file already
-int LDFLASH(int prt)
-{
-    uint16_t d16, key=5;
-    int i, count=0, sum=0;
-    extern int g_Done, g_Cnt;
-    g_Cnt=0; g_Done=0;
-  
-	//set write fpga Addr
-	//set read addr to base, doesnt always change
-    
-    //set rd/wr sdRAM Addr via special sequence
-    SET_SDADDR_RDx(fPtrOffset2,0,0);
-    
-	sprintf(tBuf,"u_SDram: Verify SDRam ...\r\n");
-	putBuf(prt, tBuf,0);
-                    
-	for (i=0; i<u_SRAM.DwnLd_sCNT/2; i++)
-		{
-		d16= REG16((&SDR_RD16)+fPtrOffset2); //data port, using fpga(2of4) sdRam
-		sum += (d16>>8);
-		sum += d16&0xff;
-		count+=2;
-		}
-                    
-    //set rd sdRAM Addr via special sequence
-    SET_SDADDR_RDx(fPtrOffset2,0,0);
-                    
-	sprintf(tBuf,"u_SDram: Rec'd %d Bytes, ChkSum=0x%4X\r\n", u_SRAM.DwnLd_sCNT, u_SRAM.DwnLd_sSUM&0xffff);
-	putBuf(prt, tBuf,0);
-	sprintf(tBuf,"Verify : Rec'd %d Bytes, ChkSum=0x%4X\r\n", count, sum&0xffff);
-	putBuf(prt, tBuf,0);
-	if((u_SRAM.DwnLd_sCNT==count) && (u_SRAM.DwnLd_sSUM==(sum&0xffff)) && (count))
-		sprintf(tBuf,"Verify : Passed, Data matches\r\n");
-	else
-		{
-		sprintf(tBuf,"Verify : Error, Data Does not Match, exit loader\r\n");
-		putBuf(prt, tBuf,0);
-		return 1;
-		}
-	putBuf(prt, tBuf,0);
-	uDelay(5000);                   
-	sprintf(tBuf,"u_SDram: Load to flash? (1=FPGA0), (2=FPGA2-4), (EnterKey=Exit)\r\n");
-	putBuf(prt, tBuf,0);
-	if(prt<5)
-		{
-		i= SockKeyWait(10000, prt, &key); //CharCnt=SockKeyWait(mSecWait, Port#, 1st Char in RecBuf)
-		if(i==0) 
-		return 1;                         //no user input, timeout
-		}
-	else
-		key= getBufBin();
-
-	uDelay(5000);                   
-	if (key=='1')
-		{
-		sprintf(tBuf,"S29JL064J: FPGA_1 File Pgm\r\n");
-		putBuf(prt, tBuf,0);
-		eraseFLASH_Sector(SECTORES, 0, prt);
-		sprintf(tBuf,"S29JL064J: Total sector erased %d (%d Bytes)\r\n", SECTORES, (SECTORES-7)*0x7fff);
-		putBuf(prt, tBuf,0);
-        //set rd sdRAM Addr via special sequence
-        SET_SDADDR_RDx(fPtrOffset2,0,0);
-        
-		sum=loadFLASH(S29JL064J_SECTOR0, prt);  //Actual S29JL064J address= 0x0 @Sector 0
-		if (sum==u_SRAM.DwnLd_sSUM)             //if match, re-reload fpga0
-			{
-			uDelay(5000);                   
-			sprintf(tBuf,"S29JL064J: Re-Loading FPGA1\r\n");
-			putBuf(prt, tBuf,0);
-			flashXFER(0, prt);
-			//setup PLL Chip
-			wr16FPGA(0x17,0);
-			wr16FPGA(0x18,0x164);
-			wr16FPGA(0x18,0xB401);
-			wr16FPGA(0x17,0x12);
-			wr16FPGA(0x18,0x12);
-			mDelay(100);
-			}
-		else
-			{
-			sprintf(tBuf,"S29JL064J: FAILED, Try again before resetting otherwise Telnet will Fail\r\n");
-			putBuf(prt, tBuf,0);
-			}
-		}
-	else if(key=='2')
-		{
-		sprintf(tBuf,"S29JL064J: FPGA_2-4 File Pgm\r\n");
-		putBuf(prt, tBuf,0);
-		uDelay(5000);                   
-		eraseFLASH_Sector(40, S29JL064J_SECTOR40, prt); //Actual S29JL064J address= 0x110000 @Sector 41
-		sprintf(tBuf,"S29JL064J: Total sector erased %d (%d Bytes)\r\n", SECTORES, (SECTORES-7)*0x7fff);
-		putBuf(prt, tBuf,0);
-		uDelay(5000);                   
-		sum=loadFLASH(S29JL064J_SECTOR40, prt);    //Actual S29JL064J address= 0x110000 @Sector 41
-		uDelay(5000);                   
-		if (sum==u_SRAM.DwnLd_sSUM)                //if match, re-reload fpga0
-			{
-			uDelay(5000);                   
-			sprintf(tBuf,"S29JL064J: Re-Loading FPGA2-4\r\n");
-			putBuf(prt, tBuf,0);
-			flashXFER(1, prt);
-			flashXFER(2, prt);
-			flashXFER(3, prt);
-			//Rx Enable
-			wr16FPGA(0x400,0x9);
-			wr16FPGA(0x800,0x9);
-			wr16FPGA(0xC00,0x9);
-			}
-		else
-			{
-			sprintf(tBuf,"S29JL064J: Try again before resetting the board otherwise Telnet will Fail\r\n");
-			putBuf(prt, tBuf,0);
-			}
-		}
-	else
-		{
-		sprintf(tBuf,"Verify : Exit, no changes made\r\n");
-		putBuf(prt, tBuf,0);
-		}
-    return 0;           //0=okay
-}
-
-
 //read temperature chip tmp04 using het seq logic 'TMP05A'
 //Temperature (°C) = 421 - (751 × (TH/TL))
 //nominal conversion of TH/TL = 34ms/65ms at 25°C
@@ -5320,12 +5679,16 @@ int SockKeyWait(int wait, uint16 sock, uint16 *key)
   int *Ptr= (int *) &netInfo.sTelnet0;
   Ptr = Ptr+ (sock*2);
   IPport=  *Ptr;                              //read sockets port numb from structure
-  
-  //wait *=1000;
   mStime.g_wTicks=0;
+  
+  if(wait==0)                           //quick check then leave
+    {
+    len= loopback_tcps(sock,IPport,(uint8*)eRecDatBuf[sock],0);
+    return len;                       //data avail, return 'TRUE'
+    }
   while(1)
       {
-      if(mStime.g_wTicks > wait)
+      if(mStime.g_wTicks > wait)            //timer incr at 1mS rate
         return 0;                           //timeout, return 'TRUE'
       else 
         {
@@ -5664,7 +6027,7 @@ float poePower(int poeprt)
 //see CDCUN1208LP datasheet for info on data array
 #define CLKFANOUT    *(sPTR)(fpgaBase0+ (0x42*2))   //CDCUN1208LPRHBR read/write 16bit
 uint16 CLKINITDATA[]= {0x0398,0x0398,0x0398,0x0398, 0x0398,0x0398,0x0398,0x0398,
-                        0x0398,0,0,1,  0,0,0,2 };
+                       0x0398,0,0,1,  0,0,0,2 };  // was 0x0398,0,0,9,  0,0,0,2 }; tek 7/10/24 from 9 to 1
 //
 //Init 'CDCUN1208LPRHBR' Clock(FM) Fanout Buffer via FPGA Configured SPI Port
 //Init 3 'CDCUN1208LP' chips
@@ -5685,7 +6048,7 @@ int ClkDrvInit()
 
 
 //Set power up FPGA Registers and Registered I/O, PLL Clock 'ADF4001'
-//Init 'CDCUN1208LPRHBR' chip
+//Init 'ADF4001' chip
 //
 void InitFPGA_REGISTERS()
 {
@@ -5701,7 +6064,10 @@ void InitFPGA_REGISTERS()
     wr16FPGA(0x18,0x5001);      // div by 80 addr 1
 
     wr16FPGA(0x17,0x12);
-    wr16FPGA(0x18,0x42);
+  //wr16FPGA(0x18,0x42);
+  //pll locks now Feb 2024
+    wr16FPGA(0x18,0x12);   
+        
     //Rx Enable
     wr16FPGA(0x400,0x9);
     wr16FPGA(0x800,0x9);
@@ -5710,7 +6076,40 @@ void InitFPGA_REGISTERS()
     //enable phy rec data auto move to sdRam via fpga code
     wr16FPGA(0x400,0x29);   //0x400 FPGA2 CSR
     wr16FPGA(0x800,0x29);   //0x800 FPGA3 CSR
+    wr16FPGA(0xC00,0x29);   //0x800 FPGA3 CSR
     ClkDrvInit();           //init 'CDCUN1208LPRHBR' chip
+    
+    //adf4001 PLL power up 'tek added 7-15-24'
+    wr16FPGA(0x19,0x01);        //data 0=enable,1=disable 
+    wr16FPGA(0x19,0x00);        //data 0=enable,1=disable 
+    
 }                    
 
+
+
+
+
+//empty all lvds receive fifos
+//
+uint16 ClrFmRecFIFO(void)
+{
+    u_16Bit rdat;
+    u_16Bit* wrdUsed;                   //lvds fifo words used
+	
+     //Try global reset to clr old lvds fifo data, if this works us it 
+    *(uSHT*)IOPs[POE01].FM41_PARp= FMRstBit8;//FPGA2 lvds fifo buf and parErr clr              
+    *(uSHT*)IOPs[POE09].FM41_PARp= FMRstBit8;//FPGA3 lvds fifo buf and parErr clr               
+    *(uSHT*)IOPs[POE17].FM41_PARp= FMRstBit8;//FPGA4 lvds fifo buf and parErr clr               
+    
+    for(int k=1; k<=24; k++)            //24 ports with up to 8 pmt boards per port                      
+		{
+        if (POE_PORTS_ACTIVE[k]==1)     //added to ignore ports that are not active
+			{
+            wrdUsed= (u_16Bit*)(IOPs[k].FM30_DATp)+(0x08); //lvds fifo words used              
+            while (*wrdUsed) 
+              rdat= *(u_16Bit*)IOPs[k].FM30_DATp; //read data in lvds fifo, expect 'ACK' from PMT   
+			}
+        }  
+  return rdat;
+}
 

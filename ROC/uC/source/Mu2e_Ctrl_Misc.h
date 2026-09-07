@@ -22,10 +22,10 @@ int     stab_PoolFunc(int,int);
 void    dmaConfigCtrlPacket1(uint32 sadd,uint32 dadd,uint32 dsize);
 int     ePHY_FIFO_LOAD(int sndLenW);
 int     ePHY_SEND(int poePrt, int broadcast);
-int     GTP1_Rec_TEST(void);
 
 int     PHY_LOAD_DAQ_K28SEND_BCAST(int cmdType, int phyPort, sPTR xBuf, int wLen);
 int     PHY_LOAD_DAQ_K28SEND_BCAST_MINI(int cmdType, int phyPort, sPTR xBuf, int wLen);
+int     PHY_LOAD_DAQ_K28SEND_BCAST_MINI_TESTER(int cmdType, int PrtPOE, sPTR xBuf, int ubCnt);
 
 
 int     link_ID_Chk(int prt);
@@ -35,16 +35,18 @@ int     PHY_LOADER_POOL_BCAST(int PrtPOE, int broadCast);
 int     EmptyAll_LVDS_FIFOs();
 int     GTP1_Rec_Trigs();
 
-#define S29JL064J_SECTOR0 (0x0)         //Actual S29JL064J ADR=0x0 @Sector 0
-#define S29JL064J_SECTOR40 (0x220000/2) //Actual S29JL064J ADR=0x110000 @Sector 41
-#define S29JL064J_SECTOR41 (0x220000/2) //Actual S29JL064J ADR=0x110000 @Sector 41
+//int     SendFile_SrcSock(int prt, char* eBufB_Sock, int poePrt);
 
 //adding storage for FEB image file to be downloaded via ROC to FEBs
 //
 int     SendFile_SrcSector71(int prt, int poePrt, int count, u_16Bit cksum, u_32Bit imageSz);
 
 #define SectAddr71  (0x400000/2)        //Actual S29JL064J Word ADR=0x200000 "RFI 400000 to display" (upper BackUp image)                           
-#define FileSectCntH   70               //each sector is 64K Byte
-#define S29JL064J_SECTOR71 (SectAddr71) //Actual S29JL064J ADR=0x110000 @Sector 41  "RFI 220000 to display" 
+#define FileSectCntH   61               //each sector is 64K Byte
+
+#define S29JL064J_SECTOR0 (0x0)         //Actual S29JL064J ADR=0x0 @Sector 0        "RFI 000000 to display" 
+#define S29JL064J_SECTOR41 (0x220000/2) //Actual S29JL064J ADR=0x110000 @Sector 41  "RFI 220000 to display" 
+#define S29JL064J_SECTOR71 (SectAddr71) //Actual S29JL064J ADR=0x400000 @Sector 71  "RFI 400000 to display" 
+
 
 #endif

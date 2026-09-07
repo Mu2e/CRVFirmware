@@ -69,6 +69,7 @@
 #include "mu2e_Ctrl_i2c.h"          //mu2e i2c link functions
 #include "ZestETM1_SOCKET.h"
 extern void nError();
+extern float readTemperature();
 
 extern int esm_Ch;
 extern int esm_Cnt;
@@ -78,6 +79,7 @@ extern struct vB USB_Rec;
 extern struct msTimers mStime;
 extern struct sLVDS lvLnk;
 extern struct HappyBusReg HappyBus;
+extern uint32 volatile iFlag;
 
 /* USER CODE END */
 void esmGroup1Notification(uint32 channel)
@@ -187,19 +189,32 @@ void rtiNotification(uint32 notification)
           DSR_LO                            //LOW enables data flow
   
     if (notification==1)
-        {
+    {
         mStime.g_timeMs++;                  //sysTick 1mSec timer used in mDelay
         mStime.gBusy_mSec++;
         mStime.g_wTicks++;
  
         //tek mod aug 2018, let daq packs control leds
-        LEDs_OFF
+        //LEDs_OFF
 
+    if (iFlag & iPHY_BINMODE)
+        {
+        m++;
+        if (m==50)
+            LED_GRN1                        //front panel
+        else if(m>150)
+            {
+            LED_GRN0                        //front panel
+            m=0;
+            }
+        }
+    else
+        {
         if(m==0)
             ucLED_HI                        //ucLED_HI
         else if(m==500)
             ucLED_LO                        //ucLED_LO
-          
+              
         if ((genFlag & hDelay)==0)          //read adc if uS delay not active
             {
             if (adc_ms++==500)
@@ -227,9 +242,9 @@ void rtiNotification(uint32 notification)
             //if pool request enabled, req data, wait read data or get timeout
             lvLnk.PoolChkmSec++;              
             //Pool Data Request timers, req,get,getTimeout
-            if(lvLnk.PoolChkmSec== ReqPoolTime) 
+            if(lvLnk.PoolChkmSec== ReqPoolTime30) 
                 genFlag &= ~PoolReqNow;            
-            if (lvLnk.PoolChkmSec== ReqPoolTime) 
+            if (lvLnk.PoolChkmSec== ReqPoolTime30) 
                 genFlag |= PoolReqNow;              //cleared after returned data checked
             else if (lvLnk.PoolChkmSec== GetPoolTime)//return data pool data should be ready
                 genFlag |= PoolReqGetData;
@@ -253,7 +268,6 @@ void rtiNotification(uint32 notification)
             {
             //1 second counter routines
             m=0;
-                        
             //active FEB Scan, used fpga status register now (every 4 sec)
             if (++lvLnk.IDChkSec== ID_RegTime)      //reads fpga to see if FEBs active
                 {
@@ -266,9 +280,21 @@ void rtiNotification(uint32 notification)
             {
             genFlag |= ZEST_ETM1_INTR;              //set flag to check in main loop
             mStime.g_SockIntrSec=0;
+            
+            //Chassis Fan Control timer (testing code, actual use leave fan on)
+            //int temp=0;
+            //    {
+            //    mStime.FanTempTimer=0;
+            //    temp= (int)readTemperature();       
+            //    if(temp > 40)                       //turn on > 104 degree Fahrenheit
+            //      FAN1_HI
+            //    else if(temp < 25)                  //turn off < 77 degree Fahrenheit
+            //      FAN1_LO
+            //    }            
             }                             
         } //end notification==1
 
+    } //end notification==1
     if (notification==2)
         {
          //Enable RTI Compare 1 interrupt notification
