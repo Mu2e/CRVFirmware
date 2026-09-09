@@ -2154,14 +2154,6 @@ int process(int prt, char *cmdPtr)
                     strcat (Buf1500,tBuf);
                     putBuf(prt, Buf1500,0);
                     
-                    //FLASH Sector71 reserved for downloadable FEB image file
-                    FRAM_RD(DWNLD_3_COUNT,(uint8*)&D32, 4); //read 4 bytes
-                    FRAM_RD(DWNLD_3_CSUM, (uint8*)&D16, 2);   //read 2 bytes
-                    sprintf(tBuf   ,"FEBFL3 BytCt: %d\r\n",D32);
-                    strcat (Buf1500,tBuf);
-                    sprintf(tBuf,   "FEBFL3 SumCk: %04X\r\n",D16);
-                    strcat (Buf1500,tBuf);
-                    putBuf(prt, Buf1500,0);
                     break;
                     }
                 else if (!strcmp(tok, "FI"))        //fpga reset using init poin
@@ -2641,13 +2633,13 @@ int process(int prt, char *cmdPtr)
                     if (HappyBus.SavePrt==0) 
                          HappyBus.SavePrt=1;        //just in case, force valid ptrs else 'boom'
                     
-                    if (wrMode==0)
-                        {
+                    //if (wrMode==0)
+                    //    {
                         //clear all lvds receive fifos
                         *(uSHT*)IOPs[POE01].FM41_PARp= FMRstBit8;//FPGA2 lvds fifo buf and parErr clr              
                         *(uSHT*)IOPs[POE09].FM41_PARp= FMRstBit8;//FPGA3 lvds fifo buf and parErr clr               
                         *(uSHT*)IOPs[POE17].FM41_PARp= FMRstBit8;//FPGA4 lvds fifo buf and parErr clr               
-                        }
+                    //    }
                     
                     HappyBus.CmdType= eCMD71_CONSOLE;
                     //make it slow else wont pick up super slow cmd 'A0' data 1 sec per reads
