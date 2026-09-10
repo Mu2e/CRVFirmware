@@ -8,7 +8,18 @@ import argparse
 # --- Constants for Reliability ---
 # Speed Limit: ~25 KB/s (1024 bytes every 0.04s)
 CHUNK_SIZE = 1024
-SLEEP_PER_CHUNK = 0.04 
+SLEEP_PER_CHUNK = 0.04
+
+# Banners the ROC prints when it is done erasing and ready to accept the image.
+# Wording differs between uC firmware versions; any of these means "go".
+READY_TRIGGERS = (
+    "Select Binary file Now",   # FEB2 v5.05 and later
+    "Waiting for data",         # older ROC firmware
+    "Begin Load Flash",         # older ROC firmware
+)
+
+# Erasing the full flash socket takes on the order of a minute.
+ERASE_TIMEOUT = 180.0
 
 def create_parser():
     parser = argparse.ArgumentParser(description="Upload firmware via TCP Socket (Silent Mode)")
@@ -75,28 +86,45 @@ def main():
     sock.sendall(command_bytes)
 
     # 5. Wait for flash erase
+    # The ROC prompt wording has changed across firmware versions, so match any
+    # of the known "ready for data" banners. Matching is done against a rolling
+    # buffer because a banner can be split across TCP reads.
     print("Waiting for flash erase...")
     trigger_found = False
-    for k in range(100):
+    rx_buffer = ""
+    deadline = time.time() + ERASE_TIMEOUT
+
+    while time.time() < deadline:
         try:
             chunk = sock.recv(1024)
-            if not chunk: break
-            
+            if not chunk:
+                print("\nConnection closed by ROC while waiting for erase.")
+                break
+
             text = chunk.decode('utf-8', errors='ignore')
-            print(text, end="", flush=True) 
-            
-            if "Waiting for data" in text or "Begin Load Flash" in text:
+            print(text, end="", flush=True)
+
+            # Keep only enough tail to span a banner split across two reads.
+            rx_buffer = (rx_buffer + text)[-4096:]
+
+            if any(t in rx_buffer for t in READY_TRIGGERS):
                 print("\n>> Ready!")
                 trigger_found = True
                 break
         except socket.timeout:
             pass
-        time.sleep(0.5)
 
     if not trigger_found:
-        print("\nTimeout waiting for flash erase.")
+        print(f"\nTimeout waiting for flash erase (>{ERASE_TIMEOUT:.0f}s).")
+        print("Last output from ROC did not contain any of:")
+        for t in READY_TRIGGERS:
+            print(f"  - {t!r}")
         sock.close()
         sys.exit(1)
+
+    # The ROC arms a 90s window for the first data byte once the prompt appears.
+    # Give it a moment to finish printing before streaming.
+    time.sleep(0.2)
 
     # 6. Stream Loop (Silent Mode)
     print(f"Streaming file...")
