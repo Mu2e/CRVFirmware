@@ -842,25 +842,25 @@ int GTP1_Rec_Trigs()                //cmd 'TRIG' handler (external triggers)
         uBunReq++;
         
         //tek mode dec 2022
-        dat16= GTP0_RECFIFO;       //dump 1st k28.d2y word         
-        dat16= GTP0_RECFIFO;       //dump 2nd xFer byte cnt
-        dat16= GTP0_RECFIFO;       //dump 3rd PAC type word
+        dat16= GTP0_RQ_PAC0D;      //dump 1st k28.d2y word
+        dat16= GTP0_RQ_PAC0D;      //dump 2nd xFer byte cnt
+        dat16= GTP0_RQ_PAC0D;      //dump 3rd PAC type word
 
         //keep time stamp low word, middle word
-        dat16= GTP0_RECFIFO;       //save uBun Number lower 16 
-        uBuPacArray2[uBunWrd++]= dat16;       
+        dat16= GTP0_RQ_PAC0D;      //save uBun Number lower 16
+        uBuPacArray2[uBunWrd++]= dat16;
       //uBunIDs[idx++]= dat16;
-        
-        dat16= GTP0_RECFIFO;       //save uBun Number middle 16 
-        uBuPacArray2[uBunWrd++]= dat16;       
+
+        dat16= GTP0_RQ_PAC0D;      //save uBun Number middle 16
+        uBuPacArray2[uBunWrd++]= dat16;
       //uBunIDs[idx++]= dat16;
 
         //dump rest of 8word xfer
-        dat16= GTP0_RECFIFO;       //timestamp high
-        dat16= GTP0_RECFIFO;       //resevered
-        dat16= GTP0_RECFIFO;       //resevered
-        dat16= GTP0_RECFIFO;       //resevered
-        dat16= GTP0_RECFIFO;       //crc
+        dat16= GTP0_RQ_PAC0D;      //timestamp high
+        dat16= GTP0_RQ_PAC0D;      //resevered
+        dat16= GTP0_RQ_PAC0D;      //resevered
+        dat16= GTP0_RQ_PAC0D;      //resevered
+        dat16= GTP0_RQ_PAC0D;      //crc
         
         //******************************************************************
         //******   Since fifo may have multiple uBunch reqs         ********
