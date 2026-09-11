@@ -489,7 +489,11 @@ def add_common_args(parser):
 
 def create_parser():
     parser = argparse.ArgumentParser(
-        description="Monitor and control PD-9524GC-10G PoE injectors"
+        description="Monitor and control PD-9524GC-10G PoE injectors",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="common options (available on all subcommands):\n"
+               "  --id ID       injector ID from config, or 'all' (default: all)\n"
+               "  port          port number (1-24) or 'all' (used by detail/on/off/cycle)",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
