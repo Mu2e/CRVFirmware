@@ -809,99 +809,60 @@ int CheckAndProcessDCS()
 
 //This function access is controller by cmd 'TRIG' and 'TRIG1'
 //At some point this function will enable for normal DAQ data taking
-//Getting here using 'TRIG 1' should become the normal
-//Sends 1 or 2 uB request if uB data available in FIFO buffer
+//Getting here using 'TRIG1' should become the normal
 //
-int GTP1_Rec_Trigs()                //cmd 'TRIG' handler (external triggers)
+int GTP1_Rec_Trigs()                //cmd 'TRIG' handler
 {
     int k28_in, dat16;
     static int uBunWrd=0, uBunReq=0;;
-    
-    //Has 50uS Phy Xmit Timer hold off timer ended
-    while ((genFlag & hDelay))     //wait to finish, nonzero==busy
-        return k28_in;    
-    h_TP47_LO;                     //scope test point
-    
+
     //GTP RX FIFO CSR, buffer word count
-    
-    //tek mod dec2022
     k28_in= GTP0_RQ_CNT0E;          //uBun data req packet buffer word count
-    if(k28_in<9)                    //data avail? , assum if any data then full 9 words in fifo
-        return k28_in;
-        
-    //wait for ePHY Xmit FIFO empty  
+
+    //wait for ePHY Xmit FIFO empty
     if (PhyXmitBsy(HappyBus.PoeBrdCh))
-        uDelay(300);                //should never happen, its fast
-    
-    //may send multiple uBunch request in one packet to FEBs
-  //tek mode dec2022
-    while(1)
-  //while (uBReq.ReqCnt--)
+        uDelay(300);    //should never happen, its fast
+
+    while (k28_in)                  //data avail? , assum if any data then full 9 words in fifo
         {
-        LED_RED1
         uBunReq++;
-        
-        //tek mode dec 2022
-        dat16= GTP0_RQ_PAC0D;      //dump 1st k28.d2y word
-        dat16= GTP0_RQ_PAC0D;      //dump 2nd xFer byte cnt
-        dat16= GTP0_RQ_PAC0D;      //dump 3rd PAC type word
+     // dat16= GTP0_REQ_PAC;        //dump 1st k28.d2y word
+        dat16= GTP0_RQ_PAC0D;       //dump 2nd xFer byte cnt
+        dat16= GTP0_RQ_PAC0D;       //dump 3rd PAC type word
 
         //keep time stamp low word, middle word
-        dat16= GTP0_RQ_PAC0D;      //save uBun Number lower 16
+        dat16= GTP0_RQ_PAC0D;       //save uBun Number lower 16
         uBuPacArray2[uBunWrd++]= dat16;
-      //uBunIDs[idx++]= dat16;
 
-        dat16= GTP0_RQ_PAC0D;      //save uBun Number middle 16
+        dat16= GTP0_RQ_PAC0D;       //save uBun Number middle 16
         uBuPacArray2[uBunWrd++]= dat16;
-      //uBunIDs[idx++]= dat16;
 
         //dump rest of 8word xfer
-        dat16= GTP0_RQ_PAC0D;      //timestamp high
-        dat16= GTP0_RQ_PAC0D;      //resevered
-        dat16= GTP0_RQ_PAC0D;      //resevered
-        dat16= GTP0_RQ_PAC0D;      //resevered
-        dat16= GTP0_RQ_PAC0D;      //crc
-        
-        //******************************************************************
-        //******   Since fifo may have multiple uBunch reqs         ********
-        //******   Repeat reading min 9 word uB Req if data avail   ********
-        //******   until max uBunch reguest per packet reached      ********
-        //******************************************************************
-        //Tested ethernet port using TCP packet with packETH tool.
-        //If TCP packet delay between 50us, EMACCore0RxIsr is working fine.
-        //If TCP packet delay between 40us, EMACCore0RxIsr will stop working.        
-            
-         //tek mode 2022, allow max of 2 uBunch Request to be sent at once
-         if (uBunReq < Req_Per_Packet)      //concentrate max 2 uB Reqs before sending to FEB
-            {
-            k28_in= GTP0_RQ_CNT0E;          //uBun data req packet buffer word count
-            if(k28_in>8)                    //if more than 9 words in fifo, repeat
-                continue;
-            }
-         
-        //done reading fifo, reach max uB req or fifo does not have enough data
-        _disable_interrupt_();              //disable uC intr 
-        //send data on Phy link
-        h_TP48_HI   //scope test point for testing         
-        LED_RED1
-        if(uBReq.Flag & DAQuB_Trig_OLD)  
+        dat16= GTP0_RQ_PAC0D;       //timestamp high
+        dat16= GTP0_RQ_PAC0D;       //resevered
+        dat16= GTP0_RQ_PAC0D;       //resevered
+        dat16= GTP0_RQ_PAC0D;       //resevered
+        dat16= GTP0_RQ_PAC0D;       //crc
+
+        //************************************************
+        //******     fill minimun req size        ********
+        //************************************************
+        if (uBunWrd < (uBunMaxLWRDs2))  //maybe concentrate uB Reqs before sending to FEB
+             return k28_in;
+
+        h_TP48_HI   //scope test point for testing
+        if(uBReq.Flag & DAQuB_Trig_OLD)
             //TRIG command sets up standard packet mode with min packet size=64+ bytes (flag DAQuB_Trig)
             PHY_LOAD_DAQ_K28SEND_BCAST(eCMD_DAQ_DY2, HappyBus.PoeBrdCh, uBuPacArray2, uBunReq);     //cmdBuf,Port,echoMode
         else
             //TRIG1 command sets up non standard packet mode with min packet size= 6 bytes    (flag DAQuB_TrigNew)
             PHY_LOAD_DAQ_K28SEND_BCAST_MINI(eCMD_DAQ_DY2, HappyBus.PoeBrdCh, uBuPacArray2, uBunReq);//cmdBuf,Port,echoMode
-        
-        _enable_interrupt_();               //enable uC intr
-        
-        //Start 20uS Phy Xmit Timer hold off timer, check timeout flag on next entry
-        hDelayuS(20,0);
-        uBunWrd=0;                          //reset uB wrd counter
-        uBunReq=0;                          //reset uB req counter
-        h_TP48_LO                           //scope test point for testing
-        LEDs_OFF        //QUICK LED PULSE
-        break;
-        }  
-    LEDs_OFF            //QUICK LED PULSE
+
+        uBunWrd=0;
+        uBunReq=0;
+        k28_in= GTP0_RQ_CNT0E;
+        h_TP48_LO   //scope test point for testing
+        }
     return k28_in;
 }
 
