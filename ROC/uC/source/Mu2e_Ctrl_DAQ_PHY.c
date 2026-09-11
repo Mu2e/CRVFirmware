@@ -1,4 +1,4 @@
-
+  
 //********************************************************
 //  @file Mu2e_Cntrl_DAQ_PHY.c
 //  Fermilab Terry Kiper 2016-2026
@@ -546,7 +546,7 @@ int CheckAndProcessDCS()
             else if ((add & 0xf000) == 0x1000) // remote, FEB 
                 {
                  DCSrply.add = add;
-                 sprintf(tBuf,"LC RD %X", DCSrply.add);             //empty ePhy rec fifos
+                 sprintf(tBuf,"LC RD %X", (add & 0x0fff));             //empty ePhy rec fifos
                  DCSrply.cnt = 0;
                  
                  process(DCS, tBuf);
@@ -596,6 +596,11 @@ int CheckAndProcessDCS()
                     sprintf(tBuf,"LC OVC");     
                     process(DCS, tBuf); 
                     }
+                else if ((add & 0x1fff) == 0x1107) // remote, OVC
+                    {
+                    sprintf(tBuf,"LC BIAS");     
+                    process(DCS, tBuf); 
+                    }
                 //else if ((add & 0x1c00) == 0x0400) // single par from pool
                 else if ((add & 0x1800) == 0x0800)
                     { 
@@ -636,12 +641,12 @@ int CheckAndProcessDCS()
                 }
             else if ((add & 0xf000) == 0x1000) // remote, FEB 
                 {
-                 sprintf(tBuf,"LC WR %X %X", add, val);    
+                 sprintf(tBuf,"LC WR %X %X", (add & 0x0fff), val);    
                  process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                 }
             else if ((add & 0xf000) == 0x3000) // remote, FEB, broadcast 
                 {
-                 sprintf(tBuf,"LCB WR %X %X", add, val);    
+                 sprintf(tBuf,"LCB WR %X %X", (add & 0x0fff), val);    
                  process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                 }
             else if ((add & 0x8000) == 0x8000) // uC functions 
@@ -780,6 +785,13 @@ int CheckAndProcessDCS()
                     if ((add & 0x2000) == 0x2000) 
                          {sprintf(tBuf,"LCB CMBENA %d", val);} // broadcast
                     else {sprintf(tBuf,"LC CMBENA %d", val);}  // LC
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
+                    }
+                else if ((add & 0x1fff) == 0x1108) // remote, CMB
+                    {
+                    if ((add & 0x2000) == 0x2000) 
+                         {sprintf(tBuf,"LCB CMB %d", val);} // broadcast
+                    else {sprintf(tBuf,"LC CMB %d", val);}  // LC
                     process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 else if ((add & 0x1fff) == 0x0107) // local, POOLENA
