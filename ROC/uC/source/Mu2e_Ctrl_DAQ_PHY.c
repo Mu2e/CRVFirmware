@@ -366,10 +366,10 @@ int PhyXmitBsy(int PrtPOE)
 {
     u_32Bit wcnt=0, d16;
     do {
-        d16= *IOPs[PrtPOE].ePHY12_XMITp & BIT0; //xmit status done? 0=done
+        d16= *IOPs[PrtPOE].ePHY12_XMITp & BIT1; //bit1=PhyTxBuff_Empty (FPGA2 reg 0x12), 1=done
         if(wcnt++>500000)                       //need break if fpga not active
            return 1;
-	} while (d16);             
+	} while (d16!=BIT1);             
     return 0;
 }
 
@@ -598,9 +598,9 @@ int CheckAndProcessDCS()
                     sprintf(tBuf,"LC OVC");     
                     process(DCS, tBuf); 
                     }
-                else if ((add & 0x1fff) == 0x1107) // remote, OVC
+                else if ((add & 0x1fff) == 0x1107) // remote, BIAS
                     {
-                    sprintf(tBuf,"LC BIAS");     
+                    sprintf(tBuf,"LC BIAS");
                     process(DCS, tBuf); 
                     }
                 //else if ((add & 0x1c00) == 0x0400) // single par from pool
@@ -700,46 +700,22 @@ int CheckAndProcessDCS()
                 //    sprintf(tBuf,"UB%d", val);    
                 //    process(DCS, tBuf);
                 //    }
-                else if ((add & 0x0fff) == 0x0100) // local, DSAV
+                // 0x0100-0x0102 are local only; 0x1100-0x1102 belong to the remote table below
+                else if ((add & 0x1fff) == 0x0100) // local, DSAV
                     {
-                    if ((add & 0x1000) == 0x0000) // local
-                        {
-                        sprintf(tBuf,"DSAV");    
-                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
-                        } else {
-                        if ((add & 0x2000) == 0x2000) 
-                            {sprintf(tBuf,"LCB DSAV");} // broadcast
-                        else {sprintf(tBuf,"LC DSAV");}  // LC
-                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
-                        }
+                    sprintf(tBuf,"DSAV");
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
-                else if ((add & 0x1fff) == 0x0101) // local, DREV
+                else if ((add & 0x1fff) == 0x0101) // local, DREC
                     {
-                    if ((add & 0x1000) == 0x0000) // local
-                        {
-                        sprintf(tBuf,"DREC %d", val);    
-                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
-                        } else {
-                        if ((add & 0x2000) == 0x2000) 
-                            {sprintf(tBuf,"LCB DREC %d", val);} // broadcast
-                        else {sprintf(tBuf,"LC DREC %d", val);}  // LC
-                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
-                        }
+                    sprintf(tBuf,"DREC %d", val);
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
-                else if ((add & 0x0fff) == 0x0102) // local, FI
+                else if ((add & 0x1fff) == 0x0102) // local, FI
                     {
-                    if ((add & 0x1000) == 0x0000) // local
-                        {
-                        sprintf(tBuf,"FI");    
-                        process(NoPmt1, tBuf);
-                        } else                    // remote 
-                        {
-                        if ((add & 0x2000) == 0x2000) 
-                            {sprintf(tBuf,"LCB FI");} // broadcast
-                        else {sprintf(tBuf,"LC FI");}  // LC
-                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
-                        }
-                    }   
+                    sprintf(tBuf,"FI");
+                    process(NoPmt1, tBuf);
+                    }
                 else if ((add & 0x1fff) == 0x1100) // remote, AFERESET f
                     {
                     if ((add & 0x2000) == 0x2000) 
