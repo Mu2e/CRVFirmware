@@ -700,21 +700,45 @@ int CheckAndProcessDCS()
                 //    sprintf(tBuf,"UB%d", val);    
                 //    process(DCS, tBuf);
                 //    }
-                // 0x0100-0x0102 are local only; 0x1100-0x1102 belong to the remote table below
-                else if ((add & 0x1fff) == 0x0100) // local, DSAV
+                else if ((add & 0x0fff) == 0x0100) // local, DSAV
                     {
-                    sprintf(tBuf,"DSAV");
-                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
+                    if ((add & 0x1000) == 0x0000) // local
+                        {
+                        sprintf(tBuf,"DSAV");
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
+                        } else {
+                        if ((add & 0x2000) == 0x2000)
+                            {sprintf(tBuf,"LCB DSAV");} // broadcast
+                        else {sprintf(tBuf,"LC DSAV");}  // LC
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
+                        }
                     }
-                else if ((add & 0x1fff) == 0x0101) // local, DREC
+                else if ((add & 0x1fff) == 0x0101) // local, DREV
                     {
-                    sprintf(tBuf,"DREC %d", val);
-                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
+                    if ((add & 0x1000) == 0x0000) // local
+                        {
+                        sprintf(tBuf,"DREC %d", val);
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
+                        } else {
+                        if ((add & 0x2000) == 0x2000)
+                            {sprintf(tBuf,"LCB DREC %d", val);} // broadcast
+                        else {sprintf(tBuf,"LC DREC %d", val);}  // LC
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
+                        }
                     }
-                else if ((add & 0x1fff) == 0x0102) // local, FI
+                else if ((add & 0x0fff) == 0x0102) // local, FI
                     {
-                    sprintf(tBuf,"FI");
-                    process(NoPmt1, tBuf);
+                    if ((add & 0x1000) == 0x0000) // local
+                        {
+                        sprintf(tBuf,"FI");
+                        process(NoPmt1, tBuf);
+                        } else                    // remote
+                        {
+                        if ((add & 0x2000) == 0x2000)
+                            {sprintf(tBuf,"LCB FI");} // broadcast
+                        else {sprintf(tBuf,"LC FI");}  // LC
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
+                        }
                     }
                 else if ((add & 0x1fff) == 0x1100) // remote, AFERESET f
                     {
