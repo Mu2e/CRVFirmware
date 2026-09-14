@@ -278,10 +278,12 @@ int PoolDataReq(int Sock)
         PhyXmitBsy(POE09);                      //just check 2of3 xmits for busy
         PhyXmitBsy(POE17);                      //just check 3of3 xmits for busy
           
-        //reset lvds receive fifo's, (this fifo reset does work TEK Apr2021)
-        *(uSHT*)IOPs[POE01].FM41_PARp= FMRstBit8; //FPGA2 lvds fifo buf clear
-        *(uSHT*)IOPs[POE09].FM41_PARp= FMRstBit8; //FPGA3 lvds fifo buf clear
-        *(uSHT*)IOPs[POE17].FM41_PARp= FMRstBit8; //FPGA4 lvds fifo buf clear
+        //todo Why, Requires long delay if UB3 DAQ Request are active
+        //todo Unk, Does ephy xmits clear lvds return fifo ???
+        //this code mod now request data with 100mS between each req
+        //*(uSHT*)IOPs[POE01].FM41_PARp= FMRstBit8; //FPGA2 lvds fifo buf and parErr clr
+        //*(uSHT*)IOPs[POE09].FM41_PARp= FMRstBit8;
+        //*(uSHT*)IOPs[POE17].FM41_PARp= FMRstBit8;
 
         //request pooled data from all active FEBs
         PHY_LOADER_POOL_BCAST(POE01, 0);        //send command to all ePHY ports
@@ -492,7 +494,7 @@ int uBunXmitBufLoad(u_16Bit *uBDatPtr, int ldCnt)
 
 
 
-#define Req_Per_Packet      2       //max numb of uB req per xmit packet
+#define Req_Per_Packet      1       //max numb of uB req per xmit packet
 #define WrdsCntPer_Rq       2       //size, 2 words used per uB Req
 #define uBunMaxLWRDs2  (WrdsCntPer_Rq * Req_Per_Packet)
 
