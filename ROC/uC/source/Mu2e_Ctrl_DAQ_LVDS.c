@@ -150,7 +150,7 @@ int HappyBusCheck()
                 }
             if(err)
                 HappyBus.FMRecvErr++;
-            HappyBus.WaitCnt= 2500;        //wait 5mS(big rtn packets), ~200nS per HappyBusCheck()
+            HappyBus.WaitCnt= 20000;        //wait 10mS, ~500nS per HappyBusCheck() call
             }
         //header checking done, now handle returned data
         else 
