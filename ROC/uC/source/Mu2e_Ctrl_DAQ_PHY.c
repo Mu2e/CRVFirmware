@@ -577,7 +577,7 @@ int CheckAndProcessDCS()
             else if (((add & 0xf000) == 0x8000) || ((add & 0xf000) == 0x9000)) // uC functions, local or LC only
                 {
                 DCSrply.add = add;
-                DCSrply.cnt = 0;
+                DCSrply.cnt = DCS_RPLY_LEN;      // local reads reply directly, no FEB reply expected
                 DCSrply.base = 16;
                 if ((add & 0x1fff) == 0x0000)  // local, LP mapped to LPR
                     {
@@ -616,11 +616,13 @@ int CheckAndProcessDCS()
                     }
                 else if ((add & 0x1fff) == 0x1102) // remote, OVC
                     {
+                    DCSrply.cnt = 0;
                     sprintf(tBuf,"LC OVC");     
                     process(DCS, tBuf); 
                     }
                 else if ((add & 0x1fff) == 0x1107) // remote, BIAS
                     {
+                    DCSrply.cnt = 0;
                     sprintf(tBuf,"LC BIAS");
                     process(DCS, tBuf); 
                     }
