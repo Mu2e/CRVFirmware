@@ -44,7 +44,7 @@ extern struct    sLVDS_ePHY_REG IOPs[];  //testing link assignment regs structur
 extern struct   msTimers mStime;
 extern struct   sLVDS lvLnk;
 
-struct FebDCSRply DCSrply;           //pending FEB reply for a DCS read
+extern struct FebDCSRply DCSrply;
 
 //test code
 extern int g_tempDelay;
@@ -513,6 +513,7 @@ uSHT uBuPacArray2[uBunMaxLWRDs2 +4]; //uBun Req Packet Storage, max room 2 Reqs,
 //                   FEB uC regs RD 700, 710-713 reply in decimal
 //  0x8000 | id      uC functions, id = 12 bits, one function per id
 //                   +0x1000 = remote (LC), +0x2000 = broadcast (LCB)
+//                   only prefixes 0x8, 0x9, 0xB accepted (0x8, 0x9 for reads), others ignored
 //  write ids: 000 LP, 001 RESET*, 006 LI, 00A PWRRST, 00B TRIG*, 107 POOLENA,
 //             100 AFERESET+, 101 PWR+, 102 OVC+, 103 MUX+, 104 GAIN+, 105 LINK+,
 //             106 CMBENA+, 108 CMB+, 109 MDIO+, 110 DSAV*, 111 DREC*, 112 FI*
@@ -573,7 +574,7 @@ int CheckAndProcessDCS()
                  process(DCS, tBuf);
                  //process(tty, tBuf);      
                 }
-            else if ((add & 0x8000) == 0x8000) // uC functions 
+            else if (((add & 0xf000) == 0x8000) || ((add & 0xf000) == 0x9000)) // uC functions, local or LC only
                 {
                 DCSrply.add = add;
                 DCSrply.cnt = 0;
@@ -671,7 +672,7 @@ int CheckAndProcessDCS()
                  sprintf(tBuf,"LCB WR %X %X", (add & 0x0fff), val);    
                  process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                 }
-            else if ((add & 0x8000) == 0x8000) // uC functions 
+            else if (((add & 0xf000) == 0x8000) || ((add & 0xf000) == 0x9000) || ((add & 0xf000) == 0xB000)) // uC functions, local, LC or LCB only
                 {
                 if ((add & 0x1fff) == 0x0000)  // local, select port LP
                     {

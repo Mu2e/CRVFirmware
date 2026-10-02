@@ -8,7 +8,7 @@
 #ifndef _VER_IO
 #define _VER_IO
 
-#define MU2Ever   638
+#define MU2Ever   639
 
 //code version, Major(1), Minor(00)
 

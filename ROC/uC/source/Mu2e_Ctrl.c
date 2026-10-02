@@ -642,7 +642,7 @@ int         DMA_FPGA_OUT(int xWords);
 int         DMA_OTREE_IN(int xWords);
 
 //DCS
-struct FebDCSRply DCSrply = {0,0,0};
+struct FebDCSRply DCSrply = {DCS_RPLY_LEN, 0, 16};  //cnt=DCS_RPLY_LEN, no reply pending at boot
 
 adcData_t   adc_data[16];                   //read buf size ***must always be 16***    
 uint8_t     USB_inBuf[USB_inBufSz];
