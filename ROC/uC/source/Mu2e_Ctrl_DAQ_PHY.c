@@ -506,6 +506,20 @@ uSHT uBuPacArray2[uBunMaxLWRDs2 +4]; //uBun Req Packet Storage, max room 2 Reqs,
 #define DCS_Type   0x8040 // valid, dcs replay package type
 #define DCS_Length 0x10   // 
 #define DCS_Res    0x0
+//
+//DCS address map
+//  0x0xxx           ROC FPGA reg rd/wr
+//  0x1xxx / 0x3xxx  FEB FPGA reg rd/wr (LC RD/WR), 0x3xxx = broadcast write (LCB WR)
+//                   FEB uC regs RD 700, 710-713 reply in decimal
+//  0x8000 | id      uC functions, id = 12 bits, one function per id
+//                   +0x1000 = remote (LC), +0x2000 = broadcast (LCB)
+//  write ids: 000 LP, 001 RESET*, 006 LI, 00A PWRRST, 00B TRIG*, 107 POOLENA,
+//             100 AFERESET+, 101 PWR+, 102 OVC+, 103 MUX+, 104 GAIN+, 105 LINK+,
+//             106 CMBENA+, 108 CMB+, 109 MDIO+, 110 DSAV*, 111 DREC*, 112 FI*
+//             (* local/LC/LCB, + LC/LCB only)
+//  read ids:  000 LPR, 002-005 ID, 020-03F PWRV, 040-05F PWRA, 102 OVC+, 107 BIAS+,
+//             800-FFF POOLPAR (port bits 6-10, word bits 0-5)
+//
 int CheckAndProcessDCS()
     {
     int k28_in, dat16;
@@ -708,7 +722,7 @@ int CheckAndProcessDCS()
                 //    sprintf(tBuf,"UB%d", val);    
                 //    process(DCS, tBuf);
                 //    }
-                else if ((add & 0x0fff) == 0x0100) // local, DSAV
+                else if ((add & 0x0fff) == 0x0110) // DSAV, local/LC/LCB
                     {
                     if ((add & 0x1000) == 0x0000) // local
                         {
@@ -721,12 +735,20 @@ int CheckAndProcessDCS()
                         process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                         }
                     }
-                else if ((add & 0x1fff) == 0x0101) // local, DREC (0x1101 is remote PWR, remote DREC is 0x110A)
+                else if ((add & 0x0fff) == 0x0111) // DREC, local/LC/LCB
                     {
-                    sprintf(tBuf,"DREC %d", val);
-                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
+                    if ((add & 0x1000) == 0x0000) // local
+                        {
+                        sprintf(tBuf,"DREC %d", val);
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
+                        } else {
+                        if ((add & 0x2000) == 0x2000)
+                            {sprintf(tBuf,"LCB DREC %d", val);} // broadcast
+                        else {sprintf(tBuf,"LC DREC %d", val);}  // LC
+                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
+                        }
                     }
-                else if ((add & 0x0fff) == 0x0102) // local, FI
+                else if ((add & 0x0fff) == 0x0112) // FI, local/LC/LCB
                     {
                     if ((add & 0x1000) == 0x0000) // local
                         {
@@ -801,13 +823,6 @@ int CheckAndProcessDCS()
                     if ((add & 0x2000) == 0x2000)
                          {sprintf(tBuf,"LCB MDIO %d", val);} // broadcast
                     else {sprintf(tBuf,"LC MDIO %d", val);}  // LC
-                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
-                    }
-                else if ((add & 0x1fff) == 0x110A) // remote, DREC
-                    {
-                    if ((add & 0x2000) == 0x2000)
-                         {sprintf(tBuf,"LCB DREC %d", val);} // broadcast
-                    else {sprintf(tBuf,"LC DREC %d", val);}  // LC
                     process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 else if ((add & 0x1fff) == 0x0107) // local, POOLENA
