@@ -89,6 +89,38 @@ int pfmget(int rg45Port)                    //clears buffer if data avail
 //note: Commands are sent to FEB using command "LC" on ePHY link
 //only "LC" request data from FEB, data returns here on FM-LVDS link 
 //pooled data not received here, see 'lc_LSTAB()' in 'Mu2e_Ctrl_DAQ_PHY.c'
+//Collect FEB console reply chars for a pending DCS read, then send to DCS reply reg 0x53
+//  base 16: FPGA reg, reply is 4 hex chars
+//  base 10: uC reg 'RD 7xx', decimal, ends at 1st non-digit (max 5 digits, 16bit)
+//
+static void DCSrplyChar(char c)
+{
+    if (DCSrply.cnt >= DCS_RPLY_LEN-1)      //reply already sent
+        return;
+    if (DCSrply.base == 10)
+        {
+        if ((c >= '0') && (c <= '9'))
+            {
+            DCSrply.val[DCSrply.cnt++] = c;
+            if (DCSrply.cnt < 5)
+                return;
+            }
+        else if (DCSrply.cnt == 0)          //skip leading spaces, crlf
+            return;
+        }
+    else
+        {
+        DCSrply.val[DCSrply.cnt++] = c;
+        if (DCSrply.cnt < 4)
+            return;
+        }
+    DCSrply.val[DCSrply.cnt] = 0;
+    REG16(fpgaBase0+(0x53*2)) = DCSrply.add;
+    REG16(fpgaBase0+(0x53*2)) = (int)strtol(DCSrply.val, NULL, DCSrply.base);
+    DCSrply.cnt = DCS_RPLY_LEN;             //mark sent
+}
+
+
 //
 // Data received here has a 3 word header
 //      Word 1 Port Number 1of24
@@ -190,18 +222,8 @@ int HappyBusCheck()
                             putBuf(HappyBus.Socket,(char*)CHARS, 2); //HappyBus.ASCIIPrt ASCII xMIT I/O, ie SOCK,TTY,ePHY
                         else 
                             {
-                            if(DCSrply.cnt < 4)
-                                {
-                                DCSrply.val[DCSrply.cnt] = CHARS[0];
-                                DCSrply.val[DCSrply.cnt+1] = CHARS[1];
-                                DCSrply.cnt = DCSrply.cnt + 2;
-                                if(DCSrply.cnt == 4) 
-                                    {
-                                    //send
-                                    REG16(fpgaBase0+(0x53*2)) = DCSrply.add;
-                                    REG16(fpgaBase0+(0x53*2)) = (int)strtol(DCSrply.val,NULL, 16L);//
-                                    }
-                                }
+                            DCSrplyChar(CHARS[0]);
+                            DCSrplyChar(CHARS[1]);
                             }
                         }
                     else

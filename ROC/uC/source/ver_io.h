@@ -8,7 +8,7 @@
 #ifndef _VER_IO
 #define _VER_IO
 
-#define MU2Ever   636
+#define MU2Ever   637
 
 //code version, Major(1), Minor(00)
 
@@ -567,10 +567,12 @@ typedef struct FPGA_Registers{
 } FPGA_RegS;
 
 
+#define DCS_RPLY_LEN 8              //reply chars incl null terminator
 typedef struct FebDCSRply {
-    unsigned short cnt;
+    unsigned short cnt;             //chars collected, DCS_RPLY_LEN=reply sent
     int add;
-    char val[4];
+    int base;                       //16=FPGA reg (4 hex chars), 10=uC reg 'RD 7xx' (decimal)
+    char val[DCS_RPLY_LEN];
 } sFebDCSRply;
 
 //ePHY LINK Board numbering for 'Happy Bus

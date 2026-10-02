@@ -44,7 +44,7 @@ extern struct    sLVDS_ePHY_REG IOPs[];  //testing link assignment regs structur
 extern struct   msTimers mStime;
 extern struct   sLVDS lvLnk;
 
-extern struct FebDCSRply DCSrply;
+struct FebDCSRply DCSrply;           //pending FEB reply for a DCS read
 
 //test code
 extern int g_tempDelay;
@@ -550,6 +550,11 @@ int CheckAndProcessDCS()
                  DCSrply.add = add;
                  sprintf(tBuf,"LC RD %X", (add & 0x0fff));             //empty ePhy rec fifos
                  DCSrply.cnt = 0;
+                 // FEB uC registers RD 700, 710-713 reply in decimal, FPGA regs in hex
+                 if (((add & 0x0fff) == 0x700) || (((add & 0x0fff) >= 0x710) && ((add & 0x0fff) <= 0x713)))
+                     DCSrply.base = 10;
+                 else
+                     DCSrply.base = 16;
                  
                  process(DCS, tBuf);
                  //process(tty, tBuf);      
@@ -558,6 +563,7 @@ int CheckAndProcessDCS()
                 {
                 DCSrply.add = add;
                 DCSrply.cnt = 0;
+                DCSrply.base = 16;
                 if ((add & 0x1fff) == 0x0000)  // local, LP mapped to LPR
                     {
                     sprintf(tBuf,"LPR");             //empty ePhy rec fifos
@@ -672,7 +678,9 @@ int CheckAndProcessDCS()
                         }
                     else // remote
                         {
-                        sprintf(tBuf,"LC RESET");    
+                        if ((add & 0x2000) == 0x2000) 
+                            {sprintf(tBuf,"LCB RESET");} // broadcast
+                        else {sprintf(tBuf,"LC RESET");}  // LC
                         process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                         }
                     }
@@ -713,18 +721,10 @@ int CheckAndProcessDCS()
                         process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                         }
                     }
-                else if ((add & 0x1fff) == 0x0101) // local, DREV
+                else if ((add & 0x1fff) == 0x0101) // local, DREC (0x1101 is remote PWR, remote DREC is 0x110A)
                     {
-                    if ((add & 0x1000) == 0x0000) // local
-                        {
-                        sprintf(tBuf,"DREC %d", val);
-                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
-                        } else {
-                        if ((add & 0x2000) == 0x2000)
-                            {sprintf(tBuf,"LCB DREC %d", val);} // broadcast
-                        else {sprintf(tBuf,"LC DREC %d", val);}  // LC
-                        process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
-                        }
+                    sprintf(tBuf,"DREC %d", val);
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 else if ((add & 0x0fff) == 0x0102) // local, FI
                     {
@@ -794,6 +794,20 @@ int CheckAndProcessDCS()
                     if ((add & 0x2000) == 0x2000) 
                          {sprintf(tBuf,"LCB CMB %d", val);} // broadcast
                     else {sprintf(tBuf,"LC CMB %d", val);}  // LC
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
+                    }
+                else if ((add & 0x1fff) == 0x1109) // remote, MDIO
+                    {
+                    if ((add & 0x2000) == 0x2000)
+                         {sprintf(tBuf,"LCB MDIO %d", val);} // broadcast
+                    else {sprintf(tBuf,"LC MDIO %d", val);}  // LC
+                    process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
+                    }
+                else if ((add & 0x1fff) == 0x110A) // remote, DREC
+                    {
+                    if ((add & 0x2000) == 0x2000)
+                         {sprintf(tBuf,"LCB DREC %d", val);} // broadcast
+                    else {sprintf(tBuf,"LC DREC %d", val);}  // LC
                     process(NoPmt1, tBuf); // NoPmt1 since DCS writes dont allow responses
                     }
                 else if ((add & 0x1fff) == 0x0107) // local, POOLENA
