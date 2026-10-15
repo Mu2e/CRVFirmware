@@ -1301,7 +1301,7 @@ int SendFile_SrcSector71(int prt, int poePrt, int count, u_16Bit cksum, u_32Bit 
                //     len= SockKeyWait(3000, prt, &key); 
                break;
                }
-           mDelay(2);        //Add extra time since multi feb may be programming and this is only checking one        
+           mDelay(3);        //Add extra time since multi feb may be programming and this is only checking one        
           }
       }
     
