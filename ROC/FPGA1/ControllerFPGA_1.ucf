@@ -278,9 +278,13 @@ TIMESPEC TS_tile0_txusrclk1_i = PERIOD "tile0_txusrclk1_i" 3.2 ns;
 NET "UsrClk2[1]" TNM_NET = "tile0_txusrclk21_i";
 TIMESPEC TS_tile0_txusrclk21_i = PERIOD "tile0_txusrclk21_i" 6.4 ns;
 
-# Specifying VXO frequency
-TIMESPEC TS_ClkB_P = PERIOD "ClkB_P" 10 ns HIGH 50 %;
+# ClkB is the 160 MHz input of SysPll2 (CLKIN_PERIOD 6.25 ns): SysClk 100 MHz, EthClk 160 MHz
+TIMESPEC TS_ClkB_P = PERIOD "ClkB_P" 6.25 ns HIGH 50 %;
 NET "ClkB_P" TNM_NET = "ClkB_P";
+
+# 80 MHz clock, EthClk divided by two in Clk80MHzGen (FM transmitters, heartbeat generator)
+NET "Clk80MHz" TNM_NET = "Clk80MHz";
+TIMESPEC TS_Clk80MHz = PERIOD "Clk80MHz" 12.5 ns HIGH 50 %;
 
 TIMESPEC TS_VXO_P = PERIOD "VXO_P" 10 ns HIGH 50 %;
 NET "VXO_P" TNM_NET = "VXO_P";

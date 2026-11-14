@@ -13,6 +13,11 @@ entity PacketFormer is
         reset            : in  std_logic; -- active high
         pktFormerSend    : in  std_logic; -- trigers package
         pktFormerTimeout : in  std_logic; 
+        -- drop the oldest event in the EventBuffer without sending anything.
+        -- Hold until DiscardDone = '1', then release.
+        pktFormerDiscard : in  std_logic := '0';
+        DiscardDone      : out std_logic;
+        pktFormerIdle    : out std_logic; -- '1' while the state machine is in Idle
 		  FormRst          : in  std_logic; 
         EventBuff_Out     : in  std_logic_vector(15 downto 0);
         EventBuff_RdEn   : out std_logic; 
@@ -24,6 +29,8 @@ entity PacketFormer is
         DCSBuff_Out       : in  std_logic_vector(15 downto 0);
         DCSBuff_rd_en     : out std_logic;
         DRdone           : out std_logic; -- used to clear DR handler  
+        DReqCount        : out std_logic_vector(31 downto 0); -- number of data headers sent
+        FormStat         : out std_logic_vector( 2 downto 0); -- FormStatReg, for read back
         TxCRCEn          : out std_logic;
         TxCRCRst         : out std_logic;
 		  TxCRCDat         : out std_logic_vector(15 downto 0);
@@ -46,7 +53,8 @@ end entity PacketFormer;
 architecture rtl of PacketFormer is
     Type Packet_Former_Seq is (Idle,WrtPktCnt,WrtPktCntTimeout,WrtHdrPkt,WrtHdrPktTimeout,WrtCtrlHdrPkt,
 	                            WrtDatPkt,WrtDCSPkt,WrtGRPkt,WrtGRPkt2,
-	                            Loopback,Loopback2);
+	                            Loopback,Loopback2,
+	                            DiscardCnt,Discard,DiscardEnd);
     signal current_state, next_state : Packet_Former_Seq;
     --signal FormStatRegNext : std_logic_vector(2 downto 0);
     signal FormStatReg     : std_logic_vector(2 downto 0);
@@ -62,17 +70,32 @@ architecture rtl of PacketFormer is
 	 signal GTPTx_Pipe      : std_logic_vector(15 downto 0);
     signal TxCharIsK_Pipe  : std_logic_vector(1 downto 0);
 	 signal MarkerSync      : std_logic;
+	 -- words left to read while discarding an event: payload count + 5 header words
+	 signal DiscardWds      : std_logic_vector(14 downto 0);
+	 -- The event to discard may still be arriving: read a word only when one is
+	 -- there. DiscardRd is the read enable of the previous clock; reading at most
+	 -- every second clock keeps the empty flag valid for the next decision.
+	 signal DiscardRd       : std_logic;
+	 signal DiscardNow      : std_logic;
 begin
+
+    pktFormerIdle <= '1' when current_state = Idle else '0';
+    DiscardNow    <= '1' when current_state = Discard and DiscardWds /= 0
+                              and EventBuff_Empty = '0' and DiscardRd = '0' else '0';
+    DReqCount     <= DReq_Count;
+    FormStat      <= FormStatReg;
 
     -- Next state logic (combinational)
     next_state_process: process(current_state, pktFormerSend, pktFormerTimeout, EvTxWdCnt, FormStatReg, 
-	                             FormRst, EventBuffErr, Pkt_Timer, MarkerSync)
+	                             FormRst, EventBuffErr, Pkt_Timer, MarkerSync,
+	                             pktFormerDiscard, DiscardWds, DCSBuffRdCnt, DiscardRd)
 										  -- MarkerSync
     begin
         Case current_state is
             when Idle =>                                          --FormStatRegNext <= "000"; 
             if    pktFormerSend = '1' and pktFormerTimeout = '0' then next_state <= WrtPktCnt;
             elsif pktFormerSend = '1' and pktFormerTimeout = '1' then next_state <= WrtPktCntTimeout; -- 
+            elsif pktFormerDiscard = '1'                          then next_state <= DiscardCnt;
             elsif DCSBuffRdCnt > 1                                then next_state <= WrtDCSPkt;
 				elsif MarkerSync = '1'                               then next_state <= Loopback;
             --elsif (LoopbackMode = "1" and Marker = '1') then Packet_Former <= Loopback;
@@ -87,10 +110,22 @@ begin
         when Loopback2 =>
     --    --if (LoopbackMode = "0" or Marker = '0') then Packet_Former <= Idle;
         if MarkerSync = '0' then  next_state <= Idle;
-        else                      next_state <= next_state;
+        else                      next_state <= Loopback2;
         end if;
             
     -- Divide by eight to get the number of packets
+    -- Discard the oldest event in the EventBuffer: read count + 5 words, send nothing.
+    -- DiscardEnd waits for the request to be released so that it cannot retrigger.
+        when DiscardCnt =>        next_state <= Discard;
+        when Discard =>
+            if (DiscardWds = 0 and DiscardRd = '0') or FormRst = '1' then next_state <= DiscardEnd;
+            else                                    next_state <= Discard;
+            end if;
+        when DiscardEnd =>
+            if pktFormerDiscard = '0' then next_state <= Idle;
+            else                           next_state <= DiscardEnd;
+            end if;
+
         when WrtPktCnt        => next_state <= WrtHdrPkt;         --FormStatRegNext <= "001";  
         when WrtPktCntTimeout => next_state <= WrtHdrPktTimeout;  --FormStatRegNext <= "001";
     -- Send the packet header, packet type, packet count, time stamp and status
@@ -175,6 +210,9 @@ begin
 				TStmpBuff_rd_en <= '0';
 				GTPTxBuff_wr_en <= '0';
 				MarkerSync <= '0';
+				DiscardWds <= (others => '0');
+				DiscardDone <= '0';
+				DiscardRd <= '0';
 
         elsif rising_edge(clk) then
             current_state <= next_state;
@@ -194,6 +232,8 @@ begin
                 when WrtPktCntTimeout => FormStatReg <= "001";
 					 when WrtHdrPkt =>        FormStatReg <= "010"; 
 					 when WrtHdrPktTimeout => FormStatReg <= "010";
+					 when WrtCtrlHdrPkt =>    FormStatReg <= "011";
+					 when DiscardCnt | Discard | DiscardEnd => FormStatReg <= "101";
 					 when WrtDatPkt =>        FormStatReg <= "100";
 					 when WrtDCSPkt =>        FormStatReg <= "111";
 					 when others =>           FormStatReg <= "000";
@@ -206,6 +246,19 @@ begin
             -- this is used to advance the DR_Handler state machine
             if current_state = WrtHdrPkt or current_state = WrtHdrPktTimeout then DRdone <= '1'; --used 
             else                                                                  DRdone <= '0';
+            end if;
+
+            -- Discard: an event in the EventBuffer is
+            -- [payload word count, status hi, status lo, uB, uB, payload ...]
+            if    current_state = DiscardCnt                   then DiscardWds <= ('0' & EventBuff_Out(13 downto 0)) + 5;
+            elsif DiscardNow = '1'                             then DiscardWds <= DiscardWds - 1;
+            else                                                    DiscardWds <= DiscardWds;
+            end if;
+
+            DiscardRd <= DiscardNow;
+
+            if current_state = DiscardEnd then DiscardDone <= '1';
+            else                               DiscardDone <= '0';
             end if;
 
             -- Sum word counts, divide by eight and add 1 for the controller header packet
@@ -445,6 +498,10 @@ begin
                         if EventBuff_Empty = '0' then EventBuffErr <= '0';
                         else                          EventBuffErr <= '1';
                         end if;
+            -- discard: exactly DiscardWds reads, nothing is transmitted
+            elsif DiscardNow = '1'
+                    then                              EventBuff_RdEn <= '1';
+                                                      EventBuffErr <= EventBuffErr;
             else                                      EventBuff_RdEn <= '0';               
                                                       EventBuffErr <= EventBuffErr;
             end if;

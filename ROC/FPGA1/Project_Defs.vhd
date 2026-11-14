@@ -135,6 +135,10 @@ constant DCSSpyAd            : AddrPtr := "00" & X"5F"; -- remove me again
 constant DRGeneratorAdd      : AddrPtr := "00" & X"60";
 constant DRGeneratorHiAdd    : AddrPtr := "00" & X"61";
 
+constant HrtBtGenEnAddr      : AddrPtr := "00" & X"62";
+constant HrtBtGenPerLoAddr     : AddrPtr := "00" & X"63";
+constant HrtBtGenPerHiAddr     : AddrPtr := "00" & X"64";
+
 constant SpillTrigCntAdHi : AddrPtr := "00" & X"66";
 constant SpillTrigCntAdLo : AddrPtr := "00" & X"67";
 
@@ -179,6 +183,15 @@ constant EvBuildUbDebug4Add : AddrPtr  := "00" & X"8c";
 constant EvBuildUbDebug5Add : AddrPtr  := "00" & X"8d";
 constant EvBuildUbDebug6Add : AddrPtr  := "00" & X"8e";
 
+-- EWT matching (DRHandler)
+constant EwtDropCntAd : AddrPtr        := "00" & X"8F"; -- requests dropped, no event was built for them
+constant EvDropCntAd : AddrPtr         := "00" & X"90"; -- events dropped, their request was gone
+constant EwtMatchPendAd : AddrPtr      := "00" & X"91"; -- [15:8] built events waiting, [7:0] pending EWT words
+constant EwtMatchStateAd : AddrPtr     := "00" & X"92"; -- state machines, see read mux
+constant EwtMatchCtrlAd : AddrPtr      := "00" & X"93"; -- [0] drop late events (default 1), [1] bypass matching (default 0),
+                                                        -- [2] flush link FIFOs on bad tag / stale data (default 1),
+                                                        -- [3] drop an event no request can have produced (default 1)
+
 constant DRCntAdd : AddrPtr        := "00" & X"94";
 constant DebugCntAdd : AddrPtr        := "00" & X"95";
 
@@ -186,6 +199,24 @@ constant GitHashHiAddr : AddrPtr      := "00" & X"96";
 constant GitHashLoAddr : AddrPtr      := "00" & X"97";
 constant GTPRstCntAd : AddrPtr        := "00" & X"98";
 constant DebugVersionAd : AddrPtr     := "00" & X"99"; 
+constant LastDropEvUbAd : AddrPtr     := "00" & X"9A"; -- event uB (low 16 bits) at the last drop
+constant LastDropReqEwtAd : AddrPtr   := "00" & X"9B"; -- requested EWT (low 16 bits) at the last drop
+constant DReqRxCntAd : AddrPtr        := "00" & X"9C"; -- data requests received from the DTC
+constant EvBuiltCntAd : AddrPtr       := "00" & X"9D"; -- events built by the event builder
+-- Flush of the link FIFOs (LinkFlushCtrl), counters cleared by GTPRxRst
+constant LinkFlushCntAd : AddrPtr     := "00" & X"9E"; -- resets of the link FIFOs (any cause)
+constant BadTagCntAd : AddrPtr        := "00" & X"9F"; -- events newer than the request with no newer request queued
+constant StaleDRCntAd : AddrPtr       := "00" & X"A0"; -- requests that found data in the link FIFOs with the builder idle or waiting
+constant TruncCntAd : AddrPtr         := "00" & X"A1"; -- events cut at the size limit
+-- at the last bad tag / stale trigger
+constant FlushSnapCauseAd : AddrPtr   := "00" & X"A2"; -- [0] bad tag, [1] stale, [2] flush enabled, [7:4] builder state,
+                                                        -- [10:8] link FIFO empty, [15:12] pending EWT words (stops at 15)
+constant FlushSnapHead0Ad : AddrPtr   := "00" & X"A3"; -- first word of link FIFO 0
+constant FlushSnapHead1Ad : AddrPtr   := "00" & X"A4";
+constant FlushSnapHead2Ad : AddrPtr   := "00" & X"A5";
+constant FlushSnapWds0Ad : AddrPtr    := "00" & X"A6"; -- words in link FIFO 0
+constant FlushSnapWds1Ad : AddrPtr    := "00" & X"A7";
+constant FlushSnapWds2Ad : AddrPtr    := "00" & X"A8";
 
 ---------------------- Broadcast addresses ------------------------------
 

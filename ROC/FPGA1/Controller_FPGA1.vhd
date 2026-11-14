@@ -219,8 +219,26 @@ signal EventBuff_Dat,EventBuff_Out : std_logic_vector (15 downto 0);
 -- DR_Handler
 signal pktFormerTimeout, pktFormerSend, DRdone : std_logic;
 signal DRcnt : std_logic_vector (15 downto 0);
-Type DR_Handler_Seq is (Idle,StartCounter,Waiting,Send,Timeout);
-signal DR_Handler : DR_Handler_Seq;
+-- EWT matching: the handler (DRHandler.vhd) sends an event only with the EWT it was requested with
+signal pktFormerDiscard, DiscardDone, pktFormerIdle : std_logic;
+signal DR_TStmpBuff_rd_en : std_logic; -- handler drops an EWT
+signal EvUb_Dat, EvUbBuff_Out : std_logic_vector (15 downto 0);
+signal EvUb_WrEn, EvUbBuff_rd_en, EvUbBuff_Full, EvUbBuff_Empty : std_logic;
+signal EvUbWds : std_logic_vector (8 downto 0);
+signal EvBuildState, DRHandlerState : std_logic_vector (3 downto 0);
+signal FormStat : std_logic_vector (2 downto 0);
+signal DReq_Count : std_logic_vector (31 downto 0);
+signal EwtDropCnt, EvDropCnt, LastDropEvUb, LastDropReqEwt : std_logic_vector (15 downto 0);
+signal DReqRxCnt, EvBuiltCnt : std_logic_vector (15 downto 0);
+signal DReqRxHit : std_logic;
+signal LinkFlushBusy : std_logic; -- the event builder is resetting the link FIFOs
+signal DropLateEn, MatchBypassReg, MatchBypass : std_logic;
+-- flush of the link FIFOs (LinkFlushCtrl)
+signal LinkFlushEn, TagGuardEn, BadTag, FlushReq, FlushAck, FlushNow, EvTruncated : std_logic;
+signal LinkFlushCnt, BadTagCnt, StaleDRCnt, TruncCnt, FlushSnapCause : std_logic_vector (15 downto 0);
+signal FlushSnapHead : Array_3x16;
+signal FlushSnapWds : Array_3x14;
+signal TStmpWdsSat, EvUbWdsSat : std_logic_vector (7 downto 0);
 
 -- Front panel LED Shifter signals
 signal CMDwr_en,CMDrd_en,CMD_Full,CMD_Empty : std_logic;
@@ -284,6 +302,13 @@ signal HrtBtTxOuts,DreqTxOuts : TxOutRec;
 signal HrtBtDone,HrtBtTxReq,HrtBtTxAck,HrtBtFMTxEn,TxEnReq,DReqTxEn,LinkBusy : std_logic;
 signal HrtBtData : std_logic_vector (23 downto 0);
 signal TrigFMDat : std_logic_vector (15 downto 0);
+
+signal HrtBtGeneratorEn : std_logic; 
+signal HrtBtPeriod : std_logic_vector (31 downto 0);
+signal HrtBtFMTxEn_muxed : std_logic;
+signal HrtBtData_muxed : std_logic_vector (23 downto 0);
+signal HrtBtGeneratorData : std_logic_vector (23 downto 0);
+signal HrtBtGenereatorFMTxEn : std_logic;
 
 -- Trigger request packet buffer, FIFO status bits
 signal DReqBuff_Out, DReqBuff_In : std_logic_vector (15 downto 0);
@@ -481,6 +506,10 @@ EventBuilderInst : EventBuilder
             LinkFIFOEmpty    => LinkFIFOEmpty,
             LinkFIFORdReq    => LinkFIFORdReq,
 				LinkFIFORst      => LinkFIFORst,
+				FlushReq         => FlushReq,
+				FlushAck         => FlushAck,
+				FlushNow         => FlushNow,
+				Truncated        => EvTruncated,
             EventBuff_Dat     => EventBuff_Dat,
             EventBuff_WrtEn   => EventBuff_WrtEn,
             TStmpWds         => TStmpWds,
@@ -503,6 +532,10 @@ EventBuilderInst : EventBuilder
 				InjectionTs      => InjectionTs_first, -- InjectionTs, --_first,
 				InjectionWindow  => InjectionWindow,
 				FakeNum          => FakeNum,
+				-- EWT matching
+				EvUb_Dat         => EvUb_Dat,
+				EvUb_WrEn        => EvUb_WrEn,
+				EvBuildState     => EvBuildState,
 				-- debug
 				uBDebugOut       => uBDebugOut
         );
@@ -513,6 +546,9 @@ PacketFormerInst : PacketFormer
         reset            => GTPRxRst,
         pktFormerSend    => pktFormerSend,
         pktFormerTimeout => pktFormerTimeout,
+        pktFormerDiscard => pktFormerDiscard,
+        DiscardDone      => DiscardDone,
+        pktFormerIdle    => pktFormerIdle,
 		  FormRst          => FormRst,
         EventBuff_Out     => EventBuff_Out,
         EventBuff_RdEn    => EventBuff_RdEn,
@@ -524,6 +560,8 @@ PacketFormerInst : PacketFormer
         DCSBuff_Out       => DCSBuff_Out,
         DCSBuff_rd_en    => DCSBuff_rd_en,
         DRdone           => DRdone, 
+        DReqCount        => DReq_Count,
+        FormStat         => FormStat,
         TxCRCEn          => TxCRCEn(0),
         TxCRCRst         => TxCRCRst(0),
 		  TxCRCDat         => TxCRCDat(0),
@@ -541,6 +579,72 @@ PacketFormerInst : PacketFormer
 		  uBwrt            => uBwrt, 
         IDReg            => IDReg
 		  );
+
+-- Data request handler: sends an event only with the EWT it was requested with
+DRHandlerInst : DRHandler
+    port map (
+        clk              => UsrClk2(0),
+        reset            => GTPRxRst,
+        TStmpWds         => TStmpWds,
+        TStmpBuff_Out    => TStmpBuff_Out,
+        TStmpBuff_rd_en  => DR_TStmpBuff_rd_en,
+        EvUbBuff_Out     => EvUbBuff_Out,
+        EvUbBuff_Empty   => EvUbBuff_Empty,
+        EvUbBuff_rd_en   => EvUbBuff_rd_en,
+        EventBuff_Empty  => EventBuff_Empty,
+        pktFormerIdle    => pktFormerIdle,
+        DRdone           => DRdone,
+        DiscardDone      => DiscardDone,
+        pktFormerSend    => pktFormerSend,
+        pktFormerTimeout => pktFormerTimeout,
+        pktFormerDiscard => pktFormerDiscard,
+        DRHold           => DRHold,
+        DRTimeout        => DRTimeout,
+        MatchBypass      => MatchBypass,
+        DropLateEn       => DropLateEn,
+        TagGuardEn       => TagGuardEn,
+        BadTag           => BadTag,
+        DRcnt            => DRcnt,
+        EwtDropCnt       => EwtDropCnt,
+        EvDropCnt        => EvDropCnt,
+        LastDropEvUb     => LastDropEvUb,
+        LastDropReqEwt   => LastDropReqEwt,
+        State            => DRHandlerState
+        );
+
+-- GR/fake events are not built from requests, keep the order-only behaviour for them
+MatchBypass <= MatchBypassReg or sendGR;
+
+-- Empties the link FIFOs when they hold something no pending request can have produced
+LinkFlushCtrlInst : LinkFlushCtrl
+    port map (
+        clk              => UsrClk2(0),
+        reset            => GTPRxRst,
+        DReqRx           => DReqRxHit,
+        BadTag           => BadTag,
+        FlushEn          => LinkFlushEn,
+        sendGR           => sendGR,
+        EvBuildState     => EvBuildState,
+        FlushReq         => FlushReq,
+        FlushAck         => FlushAck,
+        FlushNow         => FlushNow,
+        Truncated        => EvTruncated,
+        LinkFIFORst      => LinkFIFORst,
+        LinkFIFOEmpty    => LinkFIFOEmpty,
+        LinkFIFOOut      => LinkFIFOOut,
+        LinkFIFORdCnt    => LinkFIFORdCnt,
+        TStmpWds         => TStmpWds,
+        LinkFlushCnt     => LinkFlushCnt,
+        BadTagCnt        => BadTagCnt,
+        StaleCnt         => StaleDRCnt,
+        TruncCnt         => TruncCnt,
+        SnapCause        => FlushSnapCause,
+        SnapHead         => FlushSnapHead,
+        SnapWds          => FlushSnapWds
+        );
+
+TStmpWdsSat <= X"FF" when TStmpWds(8) = '1' else TStmpWds(7 downto 0);
+EvUbWdsSat  <= X"FF" when EvUbWds(8) = '1'  else EvUbWds(7 downto 0);
 
 
 BunchClkIn : IDDR2
@@ -597,13 +701,16 @@ HrtBtData(21) <= '0' when ExtuBunchCount(31 downto 20) = 0 else '1';
 HrtBtData(23 downto 22) <= "00";
 -- FM transmitter for boadcasting microbunch numbers to the FEBs
 
+HrtBtData_muxed   <= HrtBtData when HrtBtGeneratorEn = '0' else HrtBtGeneratorData;
+HrtBtFMTxEn_muxed <= HrtBtFMTxEn when HrtBtGeneratorEn = '0' else HrtBtGenereatorFMTxEn;
+
 --Clk80MHzFMTx <= Clk80MHzPLL;
 HeartBeatTx : FM_Tx 
 	generic map (Pwidth => 24)
 		 port map(clock => Clk80MHz, 
 					 reset => ResetHi,
-					 Enable => HrtBtFMTxEn,
-					 Data => HrtBtData, 
+					 Enable => HrtBtFMTxEn_muxed,
+					 Data => HrtBtData_muxed, 
 					 Tx_Out => HrtBtTxOuts);
 HeartBeatFM <= HrtBtTxOuts.FM when ExtTmg = '0' else GPI;
 --GPO(0) <= HeartBeatFM;
@@ -727,11 +834,24 @@ TimeStampBuff : TrigPktBuff
     clk => UsrClk2(0),
     din => TStmpBuff_In,
     wr_en => TStmpBuff_wr_en or drgenerator_ts_wr_en,
-    rd_en => TStmpBuff_rd_en,
+    rd_en => TStmpBuff_rd_en or DR_TStmpBuff_rd_en, -- PacketFormer (header) or DRHandler (dropped EWT)
     dout => TStmpBuff_Out,
     full => TStmpBuff_Full,
     empty => TStmpBuff_Emtpy,
 	 data_count => TStmpWds);
+
+-- One entry per built event: the low 16 bits of its event window tag.
+-- Written by the EventBuilder when the event is complete, read by the DRHandler.
+EvUbBuff : TrigPktBuff
+  PORT MAP (rst => ResetHi or GTPRxRst,
+    clk => UsrClk2(0),
+    din => EvUb_Dat,
+    wr_en => EvUb_WrEn,
+    rd_en => EvUbBuff_rd_en,
+    dout => EvUbBuff_Out,
+    full => EvUbBuff_Full,
+    empty => EvUbBuff_Empty,
+	 data_count => EvUbWds);
 	 
 TStmpBuff_In <= drgenerator_wr_data when drgenerator_ts_wr_en = '1' else GTPRxReg(0);
 
@@ -1005,6 +1125,16 @@ DRpacketGenerator_inst : DRpacketGenerator
 
 -- GTP logic processes
 
+HrtBtGen_inst : HrtBtGen
+    port map(
+        clk         => Clk80MHz,
+        rst_n       => CpldRst,
+        enable      => HrtBtGeneratorEn,
+        period      => HrtBtPeriod,
+        data_out    => HrtBtGeneratorData,
+        tx_en_out   => HrtBtGenereatorFMTxEn
+    );
+
 -- GTP event handling process
 TrigReqTx : process (UsrClk2(0), CpldRst)
 
@@ -1041,10 +1171,10 @@ begin
 	debugRst <= '1'; -- active high
 	debugBuff_rd_en <= '0';
 	DDRSel <= '0'; -- 0 is bunch clock, 1 is marker line
-	DRCnt <= (others =>'0');
-	pktFormerTimeout <= '0';
-	pktFormerSend <= '0';
-	DR_Handler <= Idle;
+	DReqRxCnt <= (others =>'0');
+	DReqRxHit <= '0';
+	LinkFlushBusy <= '0';
+	EvBuiltCnt <= (others =>'0');
 	--debug_cnt <= (others =>'0');
 
 elsif rising_edge (UsrClk2(0)) then
@@ -1133,6 +1263,29 @@ end if;
 	elsif Rx_IsComma(0) = "00" and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and TrigReqWdCnt /= 0  
 	then TrigReqWdCnt <= TrigReqWdCnt - 1;
 	else TrigReqWdCnt <= TrigReqWdCnt;
+	end if;
+
+-- Diagnostic counters, cleared at run start (GTPRxRst):
+-- data requests received from the DTC (same condition as the load of TrigReqWdCnt).
+-- The condition is registered first, the receiver outputs are too slow to drive a counter.
+	if RxLOS(0)(1) = '0' and Rx_IsComma(0) = "00" and ReFrame(0) = '0' and Rx_IsCtrl(0) = "10" and GTPRx(0)(4 downto 0) = 2
+	then DReqRxHit <= '1';
+	else DReqRxHit <= '0';
+	end if;
+-- High while the event builder resets the link FIFOs (state F: reset and the
+-- time for the FIFOs to come back). Used to hold off the data FPGAs, see LinkBusy.
+	if EvBuildState = X"F" then LinkFlushBusy <= '1';
+	else                        LinkFlushBusy <= '0';
+	end if;
+	if GTPRxRst = '1' then DReqRxCnt <= (others =>'0');
+	elsif DReqRxHit = '1'
+	then DReqRxCnt <= DReqRxCnt + 1;
+	else DReqRxCnt <= DReqRxCnt;
+	end if;
+-- events built by the event builder
+	if GTPRxRst = '1' then EvBuiltCnt <= (others =>'0');
+	elsif EvUb_WrEn = '1' then EvBuiltCnt <= EvBuiltCnt + 1;
+	else EvBuiltCnt <= EvBuiltCnt;
 	end if;
 
 	if (Rx_IsComma(0) = "00" and RxLOS(0)(1) = '0' and ReFrame(0) = '0' and Rx_IsCtrl(0) = "00" and TrigReqWdCnt > 0) -- or
@@ -1274,51 +1427,9 @@ end if;
 --Debug(3 downto 1) <= LinkFIFOEmpty;
 
 -------------------------------------
--- TODO Statemachine handling DR 
+-- The data request handler moved to DRHandler.vhd (DRHandlerInst),
+-- it now matches each event with the EWT it was requested with.
 -------------------------------------
-Case DR_Handler is
-   when Idle =>
-	    if TStmpWds >= 3 and DRdone = '0' and DRHold = '0' then
-		     DR_Handler <= StartCounter;
-		 else
-		     DR_Handler <= Idle;
-		 end if;
-	when StartCounter =>
-	    DR_Handler <= Waiting;
-	when Waiting =>
-	    if EventBuff_Empty = '0' then DR_Handler <= Send; -- data avaiable
-		 elsif DRcnt = 0         then DR_Handler <= Timeout;
-		 else                         DR_Handler <= Waiting;
-		 end if;
-	when Send =>
-	    if DRdone = '1' then DR_Handler <= Idle;
-		 else                 DR_Handler <= Send;
-		 end if;
-	when Timeout =>
-	    if DRdone = '1' then DR_Handler <= Idle;
-		 else                 DR_Handler <= Timeout;
-		 end if;
-	when others => 
-	    DR_Handler <= Idle;
-end Case;
-
-if DR_Handler = StartCounter then
-    DRcnt <= DRTimeout; -- X"FF";
-elsif DR_Handler = Waiting and DRTimeout /= X"FFFF" then
-    DRcnt <= DRcnt - 1;
-else DRcnt <= DRcnt;
-end if;
-
-if  DR_Handler = Send then
-    pktFormerSend    <= '1';
-	 pktFormerTimeout <= '0';
-elsif DR_Handler = Timeout then
-    pktFormerSend    <= '1';
-	 pktFormerTimeout <= '1';
-else
-    pktFormerSend    <= '0';
-	 pktFormerTimeout <= '0';
-end if;
 
 ---------------------------------------------------------------------------
 
@@ -1338,6 +1449,8 @@ if (UsrRDDL(0) = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = GTPT
 then GTPTxBuff_rd_en <= '1';
 else GTPTxBuff_rd_en <= '0'; 
 end if;
+
+
 
     if GTPRstArm = '1' then
 	     GTPRstCnter <= (others=>'0');
@@ -2254,6 +2367,7 @@ main : process(SysClk, CpldRst)
 	--DCS_Status <= X"0040"; -- cnt [:7], status[6:5], op[4:0] => cnt = 1
 	--DCS_EvCnt  <= X"0010"; -- 8 words, 16 bytes
 	sendGR <= '0';
+	DropLateEn <= '1'; MatchBypassReg <= '0'; LinkFlushEn <= '1'; TagGuardEn <= '1';
 	DRTimeout <= X"FFFE"; -- units of 6.4ns, corresponds to 419us
 	sendGRCnt <= (others => '0');
 	EventBuffSpy_RdEn <= '0';
@@ -2287,6 +2401,10 @@ main : process(SysClk, CpldRst)
    drgenerator_uCD <= (others => '0');
 	drgenerator_mid_uCD <= (others => '0');
 	
+	HrtBtGeneratorEn <= '0';
+	HrtBtPeriod <= (others => '0');
+	
+	
  elsif rising_edge (SysClk) then 
 
 -- Synchronous edge detectors for read and write strobes
@@ -2303,7 +2421,9 @@ WRDL(1) <= WRDL(0);
 --	uCD_reg <= uCD_reg;
 --end if;
 
-LinkBusy <= LinkFIFOEmpty(0) and LinkFIFOEmpty(1) and LinkFIFOEmpty(2);
+-- Permission for the data FPGAs to send: all three link FIFOs are empty. A FIFO
+-- in reset reports empty as well, so no permission while they are being reset.
+LinkBusy <= LinkFIFOEmpty(0) and LinkFIFOEmpty(1) and LinkFIFOEmpty(2) and not LinkFlushBusy;
 
 -- Select between LEMO and LVDS inputs for the triggers 
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = TrigCtrlAddr 
@@ -2487,6 +2607,23 @@ if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = LoopbackAdd
 	else LoopbackMode <= LoopbackMode;
 end if;
 
+-- Auto Heartbeat Generator Enable
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtGenEnAddr then
+    HrtBtGeneratorEn <= uCD(0);
+else
+    HrtBtGeneratorEn <= HrtBtGeneratorEn;
+end if;
+
+-- Auto Heartbeat Generator Period (32-bit requires two registers)
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtGenPerHiAddr then
+--if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtGenPerAddr then
+    HrtBtPeriod(31 downto 16) <= uCD;
+elsif WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = HrtBtGenPerLoAddr then
+    HrtBtPeriod(15 downto 0) <= uCD;
+else
+    HrtBtPeriod <= HrtBtPeriod;
+end if;
+
 --	Read of the trigger request FIFO
 	if RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = TRigReqBuffAd 
 	then DReqBuff_uCRd <= '1';
@@ -2554,6 +2691,18 @@ end if;
 	if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DRTimeoutAdd 
 	then DRTimeout <= uCD(15 downto 0);
 	else DRTimeout <= DRTimeout;
+	end if;
+
+	-- EWT matching control. Change the bypass bit only while no requests are pending.
+	if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = EwtMatchCtrlAd 
+	then DropLateEn <= uCD(0);
+	     MatchBypassReg <= uCD(1);
+	     LinkFlushEn <= uCD(2);
+	     TagGuardEn <= uCD(3);
+	else DropLateEn <= DropLateEn;
+	     MatchBypassReg <= MatchBypassReg;
+	     LinkFlushEn <= LinkFlushEn;
+	     TagGuardEn <= TagGuardEn;
 	end if;
 
 -- 1us time base
@@ -3066,8 +3215,29 @@ iCD <= X"0" &
        EventBuffSpy_Out(15 downto 0) when EventBuffSpyAd,
 		 --DCSSpy_Out(15 downto 0) when DCSSpyAd,
 		 ExtuBunchOffset when HrtBtOffsetAd,
-		 --DReq_Count(15 downto 0) when DReqCountLowAd,
-		 --DReq_Count(31 downto 16) when DReqCountHiAd,
+		 DReq_Count(15 downto 0) when DReqCountLowAd,   -- data headers sent
+		 DReq_Count(31 downto 16) when DReqCountHiAd,
+		 EwtDropCnt when EwtDropCntAd,
+		 EvDropCnt when EvDropCntAd,
+		 EvUbWdsSat & TStmpWdsSat when EwtMatchPendAd,
+		 "00" & EventBuff_Empty & EvUbBuff_Empty & EvBuildState 
+	  & pktFormerIdle & FormStat & DRHandlerState when EwtMatchStateAd,
+		 X"000" & TagGuardEn & LinkFlushEn & MatchBypassReg & DropLateEn when EwtMatchCtrlAd,
+		 LinkFlushCnt when LinkFlushCntAd,
+		 BadTagCnt when BadTagCntAd,
+		 StaleDRCnt when StaleDRCntAd,
+		 TruncCnt when TruncCntAd,
+		 FlushSnapCause when FlushSnapCauseAd,
+		 FlushSnapHead(0) when FlushSnapHead0Ad,
+		 FlushSnapHead(1) when FlushSnapHead1Ad,
+		 FlushSnapHead(2) when FlushSnapHead2Ad,
+		 "00" & FlushSnapWds(0) when FlushSnapWds0Ad,
+		 "00" & FlushSnapWds(1) when FlushSnapWds1Ad,
+		 "00" & FlushSnapWds(2) when FlushSnapWds2Ad,
+		 LastDropEvUb when LastDropEvUbAd,
+		 LastDropReqEwt when LastDropReqEwtAd,
+		 DReqRxCnt when DReqRxCntAd,
+		 EvBuiltCnt when EvBuiltCntAd,
 		 GTPTxBuff_Out when GTPTxRdAddr,
 		 DReqBuffTrace_Out when DReqBuffTraceAd,
 		 LinkFIFOTraceOut when LinkFIFOTraceAd,
@@ -3112,10 +3282,13 @@ iCD <= X"0" &
 		 uBDebugOut(79 downto 64) when EvBuildUbDebug4Add,
 		 uBDebugOut(95 downto 80) when EvBuildUbDebug5Add,
 		 X"000" & "000" & uBDebugOut(96) when EvBuildUbDebug6Add,
-		 X"00a5" when DebugVersionAd,
+		 X"00a8" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 DRcnt when DRCntAdd,
+		 X"000" & "000" & HrtBtGeneratorEn when HrtBtGenEnAddr,
+		 HrtBtPeriod(15 downto 0)  when HrtBtGenPerLoAddr,
+		 HrtBtPeriod(31 downto 16) when HrtBtGenPerHiAddr,
 		 --X"00" & debug_cnt when DebugCntAdd,
 		 X"0000" when others;
 

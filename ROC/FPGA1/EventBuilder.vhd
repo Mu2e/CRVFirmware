@@ -17,7 +17,15 @@ entity EventBuilder is
         LinkFIFORdCnt   : in  Array_3x14;
         LinkFIFOEmpty   : in  std_logic_vector(2 downto 0);
         LinkFIFORdReq   : out std_logic_vector(2 downto 0);
-		  LinkFIFORst     : out std_logic;
+		  LinkFIFORst     : out std_logic; -- reset of the three link FIFOs, 32 clocks long
+		  -- Flush of the link FIFOs on request (LinkFlushCtrl), never during an event.
+		  -- FlushReq: level, honoured in Idle or WaitEvent, FlushAck is given in all cases.
+		  -- FlushNow: one clock, honoured only if the builder is in Idle or WaitEvent then.
+		  -- Nothing is reset with sendGR = '1' or when the link FIFOs are empty.
+		  FlushReq        : in  std_logic := '0';
+		  FlushAck        : out std_logic;
+		  FlushNow        : in  std_logic := '0';
+		  Truncated       : out std_logic; -- high while an event is cut at MAX_EVENT_SUM
         -- EventBuffer
         EventBuff_Dat    : out std_logic_vector (15 downto 0);
         EventBuff_WrtEn  : out std_logic;
@@ -44,6 +52,12 @@ entity EventBuilder is
 		  InjectionTs     : in  std_logic_vector(15 downto 0);
 		  InjectionWindow : in  std_logic_vector(15 downto 0);
 		  FakeNum         : out std_logic_vector( 7 downto 0);  -- counts how many events were generated
+		  -- EWT matching: one entry per built (real) event, written at the start of
+		  -- the event, when its word count is in the EventBuffer and its uB is known.
+		  -- Data are the low 16 bits of the event window tag of that event.
+		  EvUb_Dat        : out std_logic_vector(15 downto 0);
+		  EvUb_WrEn       : out std_logic;
+		  EvBuildState    : out std_logic_vector( 3 downto 0);  -- coarse state, for read back
 		  -- debug
 		  uBDebugOut      : out std_logic_vector (96 downto 0)
     );
@@ -53,7 +67,7 @@ architecture rtl of EventBuilder is
     Type Event_Builder_Seq is (Idle,RdInWdCnt0,RdInWdCnt1,RdInWdCnt2,SumWdCnt,CheckWdCnt,WrtWdCnt,--,WrtWdCnt0,WrtWdCnt1,WrtWdCnt2,
 	 RdStat0,RdStat1,RdStat2,WrtStat,WrtStat2,WrtUbLow,WrtUbHigh,WaitEvent,ReadFIFO,ReadFIFO0,ReadFIFO1,ReadFIFO2,
 	  RduB,RdUbLow,RdUbHigh,VerifyUb,
-     Fake,FakeWrite,FakeReset);
+     Fake,FakeWrite,FakeReset,FlushLinks);
     signal current_state, next_state : Event_Builder_Seq;
 
     -- signal StatOr, Stat0 : std_logic_vector (7 downto 0); 
@@ -95,6 +109,15 @@ architecture rtl of EventBuilder is
 	  constant MAX_EVENT_SUM : std_logic_vector(15 downto 0) := X"3fe5"; --X"0021"; -- X"3fe5"; -- see above, needs to be <= 2^11*8
 	  constant HEADER_WORDS : std_logic_vector(15 downto 0) := X"0005"; -- 5 "header" words
 	  signal abort: std_logic;
+
+	  -- EWT matching side channel
+	  signal EvUbLatch    : std_logic_vector(15 downto 0); -- EWT(15 downto 0) of the event being built
+
+	  -- flush of the link FIFOs
+	  signal FlushPend    : std_logic; -- after a truncated event
+	  signal FlushAck_i   : std_logic;
+	  signal FlushGo      : std_logic;
+	  signal FlushCnt     : std_logic_vector(5 downto 0);
 	  
 
 begin
@@ -105,19 +128,39 @@ begin
 	 FakeNum <= FakeCntCalls_debug;
 	 
 	 uBDebugOut <= uBDebugReg;
+
+	 EvUb_Dat <= EvUbLatch;
+
+	 FlushAck  <= FlushAck_i;
+	 Truncated <= abort;
+	 -- The rest of a truncated event is always thrown away. A request from outside
+	 -- is taken once (FlushAck_i), and only if there is something to throw away.
+	 FlushGo <= '1' when FlushPend = '1'
+	                     or (FlushReq = '1' and FlushAck_i = '0' and sendGR = '0' and LinkFIFOEmpty /= 7)
+	                     or (FlushNow = '1' and sendGR = '0' and LinkFIFOEmpty /= 7)
+	            else '0';
 	 
     
     -- Next state logic (combinational)
     next_state_process: process(current_state, LinkFIFOEmpty, TStmpWds, FakeCnt, 
                                 LinkFIFOOut, LinkFIFORdCnt, FormRst, 
-                                FIFOCount, MarkerDelayed(0))
+                                FIFOCount, MarkerDelayed(0),
+                                LinkFIFORdReq_b, FormHold, sendGR, sendGrCnt, active_flag, abort,
+                                FlushGo, FlushCnt)
 --										  -- removed ActiveReg, FormHold, sendGR, uBinHeader
     begin
         --next_state <= current_state;  -- Default assignment
 
         Case current_state is
             when Idle => --Debug(10 downto 7) <= X"0";
-                if LinkFIFOEmpty /= 7 and FormHold = '0' and TStmpWds >= 3 and sendGR = '0'
+                -- LinkFIFORdReq_b = 0: the last read of the previous event is done, without
+                -- this the empty flag of that link is still low in the first Idle clock
+                -- and the builder left Idle with empty link FIFOs whenever a request was
+                -- still queued at the end of an event.
+                if FlushGo = '1' and LinkFIFORdReq_b = 0
+                                   then next_state <= FlushLinks;
+                elsif LinkFIFOEmpty /= 7 and FormHold = '0' and TStmpWds >= 3 and sendGR = '0'
+                   and LinkFIFORdReq_b = 0
                                    then next_state <= WaitEvent;
                 elsif sendGR = '1' and MarkerDelayed(0 downto 0) /= 0 then next_state <= Fake;
                 else                    next_state <= Idle;
@@ -140,7 +183,8 @@ begin
                 --end if;
             when WaitEvent => --Debug(10 downto 7) <= X"1";
                 -- Wait for a complete event to be in all link FIFOs from active ports
-                if ((LinkFIFOOut(0)(12 downto 0) <= LinkFIFORdCnt(0) and LinkFIFOEmpty(0) = '0') or active_flag(0) = '0') -- ActiveReg(7 downto 0) = 0)
+                if FlushGo = '1' then                       next_state <= FlushLinks;
+                elsif ((LinkFIFOOut(0)(12 downto 0) <= LinkFIFORdCnt(0) and LinkFIFOEmpty(0) = '0') or active_flag(0) = '0') -- ActiveReg(7 downto 0) = 0)
                    and ((LinkFIFOOut(1)(12 downto 0) <= LinkFIFORdCnt(1) and LinkFIFOEmpty(1) = '0') or active_flag(1) = '0') -- ActiveReg(15 downto 8) = 0)
                    and ((LinkFIFOOut(2)(12 downto 0) <= LinkFIFORdCnt(2) and LinkFIFOEmpty(2) = '0') or active_flag(2) = '0') -- ActiveReg(23 downto 16) = 0) 
                   then
@@ -270,6 +314,12 @@ begin
                 elsif (FormRst = '1' or abort = '1')                        then  next_state <= Idle; 
                 else                                                             next_state <= ReadFIFO2;
                 end if;
+        -- Reset of the link FIFOs: 32 clocks of reset, 32 clocks for the FIFOs to
+        -- come back (two clock FIFOs, write clock 100 MHz: 20 write clocks each).
+            when FlushLinks =>
+                if FlushCnt = 0 then                                             next_state <= Idle;
+                else                                                             next_state <= FlushLinks;
+                end if;
             when others => --Debug(10 downto 7) <= X"E";
                                                                                  next_state <= Idle;
           end case;
@@ -314,6 +364,13 @@ begin
 				truncate <= '0';
 				WordsWrittenTotal <= (others => '0');
 				abort <= '0';
+				EvUbLatch <= (others => '0');
+				EvUb_WrEn <= '0';
+				FlushPend <= '0';
+				FlushAck_i <= '0';
+				FlushCnt <= (others => '1');
+				LinkFIFORst <= '0';
+				EvBuildState <= (others => '0');
 				---first_injection <= '0';
 				
 
@@ -650,7 +707,11 @@ begin
     else                               EvBuffWrtGate <= EvBuffWrtGate;
     end if;
 
-    if current_state = Idle then
+    -- The last two words of an event are written after the builder is back in
+    -- Idle. Idle can last a single clock (the last link FIFO read is still
+    -- pending and a request is queued), so also clear in WaitEvent, otherwise
+    -- the count carries over and the next event loses its last word.
+    if current_state = Idle or current_state = WaitEvent then
         WordsWrittenTotal <= (others => '0');
     elsif EventBuff_WrtEn_b = '1' then
         WordsWrittenTotal <= WordsWrittenTotal + 1;
@@ -667,17 +728,84 @@ begin
     else EventBuff_WrtEn_b <= '0';  --Debug(6) <= '0';
     end if;
 	 
-	 if WordsWrittenTotal >= (EventSum + HEADER_WORDS - 1) and EvBuffWrtGate = '1' then
+	 -- Only for an event that was cut at MAX_EVENT_SUM. Without "truncate" this was
+	 -- also true for every event without data (EventSum = 0), and the link FIFOs
+	 -- got a reset of two clocks after each of them.
+	 if truncate = '1' and WordsWrittenTotal >= (EventSum + HEADER_WORDS - 1) and EvBuffWrtGate = '1' then
         abort <= '1';
     else
         abort <= '0';
+    end if;
+
+    -- The rest of a truncated event is thrown away once the builder is back in Idle.
+    if current_state = FlushLinks then FlushPend <= '0';
+    elsif abort = '1'             then FlushPend <= '1';
+    else                               FlushPend <= FlushPend;
+    end if;
+
+    if current_state = FlushLinks then
+        if FlushCnt /= 0 then FlushCnt <= FlushCnt - 1;
+        else                  FlushCnt <= FlushCnt;
+        end if;
+    else
+        FlushCnt <= (others => '1');
+    end if;
+
+    if current_state = FlushLinks and FlushCnt(5) = '1' then LinkFIFORst <= '1';
+    else                                                     LinkFIFORst <= '0';
+    end if;
+
+    -- A request is decided in the first clock in which the builder is in Idle
+    -- with no read pending (flush, or nothing to flush), or by a flush from WaitEvent.
+    if FlushReq = '0'                                    then FlushAck_i <= '0';
+    elsif current_state = FlushLinks                     then FlushAck_i <= '1';
+    elsif current_state = Idle and LinkFIFORdReq_b = 0   then FlushAck_i <= '1';
+    else                                                      FlushAck_i <= FlushAck_i;
     end if;
 	 
 	 	 
 	 -- pipeline for EventBuffer, might help with timing constraints?
 	 EventBuff_Dat_reg    <= EventBuff_Dat_b;   -- could add a pipeline for EventBuffer
 	 EventBuff_WrtEn_reg  <= EventBuff_WrtEn_b; -- could add a pipeline for EventBuffer
-	 LinkFIFORst <= abort;
+
+    ---------------------------------------------------------------------
+    -- EWT matching side channel (used by DRHandler)
+    -- NOTE: uBcheck(31 downto 16) holds EWT bits 15..0, uBcheck(15 downto 0)
+    -- holds EWT bits 31..16: the FEBs send the high word first, it is read in
+    -- RdUbLow into uBx(15 downto 0), the low word in RdUbHigh into uBx(31 downto 16).
+    -- uBcheck is valid from WrtStat on and is reset in Idle.
+    if current_state = WrtStat then EvUbLatch <= uBcheck(31 downto 16);
+    else                            EvUbLatch <= EvUbLatch;
+    end if;
+
+    -- One write per real event (the GR/fake events never come here), early in
+    -- the event: the word count went to the EventBuffer several clocks ago, the
+    -- payload follows. The header can then be sent while the payload is still
+    -- being copied, as before; the packet former reads slower than the builder
+    -- writes.
+    if current_state = WrtUbLow then EvUb_WrEn <= '1';
+    else                             EvUb_WrEn <= '0';
+    end if;
+
+    Case current_state is
+        when Idle       => EvBuildState <= X"0";
+        when WaitEvent  => EvBuildState <= X"1";
+        when RdInWdCnt0 => EvBuildState <= X"2";
+        when RdInWdCnt1 => EvBuildState <= X"3";
+        when RdInWdCnt2 => EvBuildState <= X"4";
+        when SumWdCnt | CheckWdCnt => EvBuildState <= X"5";
+        when WrtWdCnt   => EvBuildState <= X"6";
+        when RdStat0    => EvBuildState <= X"7";
+        when RdStat1    => EvBuildState <= X"8";
+        when RdStat2    => EvBuildState <= X"9";
+        when RduB | RdUbLow | RdUbHigh | VerifyUb | WrtStat | WrtStat2
+             | WrtUbLow | WrtUbHigh | ReadFIFO => EvBuildState <= X"A";
+        when ReadFIFO0  => EvBuildState <= X"B";
+        when ReadFIFO1  => EvBuildState <= X"C";
+        when ReadFIFO2  => EvBuildState <= X"D";
+        when FlushLinks => EvBuildState <= X"F";
+        when others     => EvBuildState <= X"E"; -- GR/fake
+    end case;
 
 end if; -- rising edge
 end process state_and_output_process;

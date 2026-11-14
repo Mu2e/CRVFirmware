@@ -325,6 +325,10 @@ component EventBuilder is
         LinkFIFOEmpty   : in  std_logic_vector(2 downto 0);
         LinkFIFORdReq   : out std_logic_vector(2 downto 0);
 		  LinkFIFORst     : out std_logic;
+		  FlushReq        : in  std_logic := '0';
+		  FlushAck        : out std_logic;
+		  FlushNow        : in  std_logic := '0';
+		  Truncated       : out std_logic;
         -- EventBuffer
         EventBuff_Dat    : out std_logic_vector (15 downto 0);
         EventBuff_WrtEn  : out std_logic;
@@ -351,6 +355,9 @@ component EventBuilder is
 		  InjectionTs     : in  std_logic_vector(15 downto 0);
 		  InjectionWindow : in  std_logic_vector(15 downto 0);
 		  FakeNum         : out std_logic_vector( 7 downto 0);
+		  EvUb_Dat        : out std_logic_vector(15 downto 0);
+		  EvUb_WrEn       : out std_logic;
+		  EvBuildState    : out std_logic_vector( 3 downto 0);
 		  -- debug
 		  uBDebugOut      : out std_logic_vector (96 downto 0)
     );
@@ -362,6 +369,9 @@ component PacketFormer is
         reset            : in  std_logic; -- active high
         pktFormerSend    : in  std_logic; -- trigers package
         pktFormerTimeout : in  std_logic; 
+        pktFormerDiscard : in  std_logic := '0';
+        DiscardDone      : out std_logic;
+        pktFormerIdle    : out std_logic;
 		  FormRst          : in  std_logic; 
         EventBuff_Out     : in  std_logic_vector(15 downto 0);
         EventBuff_RdEn    : out std_logic; 
@@ -373,6 +383,8 @@ component PacketFormer is
         DCSBuff_Out       : in  std_logic_vector(15 downto 0);
         DCSBuff_rd_en     : out std_logic;
         DRdone           : out std_logic; -- used to clear DR handler  
+        DReqCount        : out std_logic_vector(31 downto 0);
+        FormStat         : out std_logic_vector( 2 downto 0);
         TxCRCEn          : out std_logic;
         TxCRCRst         : out std_logic;
 		  TxCRCDat         : out std_logic_vector(15 downto 0);
@@ -391,6 +403,66 @@ component PacketFormer is
         IDReg            : in  std_logic_vector( 3 downto 0)
     );
 end component PacketFormer;
+
+component DRHandler is
+    port (
+        clk              : in  std_logic;
+        reset            : in  std_logic;
+        TStmpWds         : in  std_logic_vector( 8 downto 0);
+        TStmpBuff_Out    : in  std_logic_vector(15 downto 0);
+        TStmpBuff_rd_en  : out std_logic;
+        EvUbBuff_Out     : in  std_logic_vector(15 downto 0);
+        EvUbBuff_Empty   : in  std_logic;
+        EvUbBuff_rd_en   : out std_logic;
+        EventBuff_Empty  : in  std_logic;
+        pktFormerIdle    : in  std_logic;
+        DRdone           : in  std_logic;
+        DiscardDone      : in  std_logic;
+        pktFormerSend    : out std_logic;
+        pktFormerTimeout : out std_logic;
+        pktFormerDiscard : out std_logic;
+        DRHold           : in  std_logic;
+        DRTimeout        : in  std_logic_vector(15 downto 0);
+        MatchBypass      : in  std_logic;
+        DropLateEn       : in  std_logic;
+        TagGuardEn       : in  std_logic := '1';
+        BadTag           : out std_logic;
+        DRcnt            : out std_logic_vector(15 downto 0);
+        EwtDropCnt       : out std_logic_vector(15 downto 0);
+        EvDropCnt        : out std_logic_vector(15 downto 0);
+        LastDropEvUb     : out std_logic_vector(15 downto 0);
+        LastDropReqEwt   : out std_logic_vector(15 downto 0);
+        State            : out std_logic_vector( 3 downto 0)
+    );
+end component DRHandler;
+
+component LinkFlushCtrl is
+    port (
+        clk           : in  std_logic;
+        reset         : in  std_logic;
+        DReqRx        : in  std_logic;
+        BadTag        : in  std_logic;
+        FlushEn       : in  std_logic;
+        sendGR        : in  std_logic;
+        EvBuildState  : in  std_logic_vector( 3 downto 0);
+        FlushReq      : out std_logic;
+        FlushAck      : in  std_logic;
+        FlushNow      : out std_logic;
+        Truncated     : in  std_logic;
+        LinkFIFORst   : in  std_logic;
+        LinkFIFOEmpty : in  std_logic_vector( 2 downto 0);
+        LinkFIFOOut   : in  Array_3x16;
+        LinkFIFORdCnt : in  Array_3x14;
+        TStmpWds      : in  std_logic_vector( 8 downto 0);
+        LinkFlushCnt  : out std_logic_vector(15 downto 0);
+        BadTagCnt     : out std_logic_vector(15 downto 0);
+        StaleCnt      : out std_logic_vector(15 downto 0);
+        TruncCnt      : out std_logic_vector(15 downto 0);
+        SnapCause     : out std_logic_vector(15 downto 0);
+        SnapHead      : out Array_3x16;
+        SnapWds       : out Array_3x14
+    );
+end component LinkFlushCtrl;
 
 component debugMarkerkInputBuffer
    port(
@@ -425,6 +497,17 @@ component DRpacketGenerator is
         wr_en       : out std_logic;
 		  ts_wr_en    : out std_logic;
         wr_data     : out std_logic_vector(15 downto 0)
+    );
+end component;
+
+component HrtBtGen is 
+    port(
+        clk         : in  std_logic;
+        rst_n       : in  std_logic;
+        enable      : in  std_logic;
+        period      : in  std_logic_vector(31 downto 0);
+        data_out    : out std_logic_vector(23 downto 0);
+        tx_en_out   : out std_logic
     );
 end component;
 
