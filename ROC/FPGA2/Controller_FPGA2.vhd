@@ -142,6 +142,15 @@ signal EventWdCnt,EventStat : std_logic_vector (15 downto 0);
 signal uBunch : std_logic_vector(31 downto 0);
 signal PortWdCounter : Array_8x16;
 signal EventRdy,FirstActive : std_logic;
+
+-- Port match: header registers of the port buffers, list of open requests
+signal PM_Rd,PM_Incl,PM_Miss,PhyRxBuff_rden : std_logic_vector(7 downto 0);
+signal PM_Go,PM_En,PM_SeqIdle,PM_WrStb,PM_Tick : std_logic;
+signal PM_EvEwt : std_logic_vector(31 downto 0);
+signal PM_RdData : std_logic_vector(15 downto 0);
+signal PM_Dout,PM_HdrWdF,PM_HdrUbHiF,PM_HdrUbLoF,PM_HdrStatF : std_logic_vector(127 downto 0);
+signal PM_RdCnt : std_logic_vector(103 downto 0);
+signal PM_HdrWd,PM_HdrUbHi,PM_HdrUbLo,PM_HdrStat : Array_8x16;
 signal PhyActivityCounter: Array_8x16;
 
 Type Write_Seq_FSM is (Idle,ChkWrtBuff,SndCmd,WtCmdMtpy,CheckActive0,IncrPort0,
@@ -502,10 +511,18 @@ RxCRC : CRC32_D4
 FEBRx_Buff : PhyRxBuff
   PORT MAP (rst => RxBuffRst, rd_clk => SysClk,
     wr_clk => RxFMClk, din => RxPipeline(2)(i),
-    wr_en => PhyRxBuff_wreq(i), rd_en => PhyRxBuff_rdreq(i),
+    wr_en => PhyRxBuff_wreq(i), rd_en => PhyRxBuff_rden(i),
     dout => PhyRxBuff_Out(i), full => PhyRxBuff_Full(i),
     empty => PhyRxBuff_Empty(i),
 	 rd_data_count => PhyRxBuff_RdCnt(i));
+
+-- Port match: flat vectors to and from PortMatch
+PM_Dout(16*i+15 downto 16*i)  <= PhyRxBuff_Out(i);
+PM_RdCnt(13*i+12 downto 13*i) <= PhyRxBuff_RdCnt(i);
+PM_HdrWd(i)   <= PM_HdrWdF(16*i+15 downto 16*i);
+PM_HdrUbHi(i) <= PM_HdrUbHiF(16*i+15 downto 16*i);
+PM_HdrUbLo(i) <= PM_HdrUbLoF(16*i+15 downto 16*i);
+PM_HdrStat(i) <= PM_HdrStatF(16*i+15 downto 16*i);
 
 -- FM receivers for FEB FM links
 FEBFMRx : FM_Rx
@@ -899,6 +916,23 @@ SPIMOSI <= SPI_Shift(15);
 ----------------------- 100 Mhz clocked logic -----------------------------
 
 ResetHi <= not CpldRst;  -- Generate and active high reset for the Xilinx macros
+
+-- Port match: reads the headers of the FEB answers and decides which ports
+-- go into the next event
+PhyRxBuff_rden <= PhyRxBuff_rdreq or PM_Rd;
+PM_SeqIdle <= '1' when DDR_Write_Seq = Idle else '0';
+PM_WrStb   <= '1' when WRDL = 1 else '0';
+PM_Tick    <= '1' when Counter10us = Count10us else '0';
+
+PortMatch_i : entity work.PortMatch
+  port map (clk => SysClk, rst_n => CpldRst,
+    WrStb => PM_WrStb, uCA => uCA, GA => GA, uCD => uCD, RdData => PM_RdData,
+    Tick10us => PM_Tick,
+    Active => Rx_active, WrtEn => DDRWrt_En, BuffRst => RxBuffRst,
+    Empty => PhyRxBuff_Empty, Dout => PM_Dout, RdCnt => PM_RdCnt, Rd => PM_Rd,
+    SeqIdle => PM_SeqIdle, Go => PM_Go, En => PM_En,
+    Incl => PM_Incl, Miss => PM_Miss, EvEwt => PM_EvEwt,
+    HdrWd => PM_HdrWdF, HdrUbHi => PM_HdrUbHiF, HdrUbLo => PM_HdrUbLoF, HdrStat => PM_HdrStatF);
 
 main : process(SysClk, CpldRst)
 
@@ -1477,7 +1511,8 @@ elsif LinkTxEmpty = '1' then TxValid <= '0';
 else  TxValid <= TxValid;
 end if;
 
-if DDR_Write_Seq = Rd_WdCount then WrtAddrReg <= SDWrtAd(29 downto 2);
+-- CheckActive0: an event without any port does not pass Rd_WdCount
+if DDR_Write_Seq = Rd_WdCount or DDR_Write_Seq = CheckActive0 then WrtAddrReg <= SDWrtAd(29 downto 2);
 else WrtAddrReg <= WrtAddrReg;
 end if;
 
@@ -1597,8 +1632,8 @@ end if;
 -- concatenated data are appended
 if DDR_Write_Seq = Idle 
 	  then EventWdCnt <= (others => '0');
-  elsif DDR_Write_Seq = Rd_WdCount and PhyRxBuff_Out(PortNo) >= 4
-	  then EventWdCnt <= EventWdCnt + (PhyRxBuff_Out(PortNo) - 4);
+  elsif DDR_Write_Seq = Rd_WdCount and PM_HdrWd(PortNo) >= 4
+	  then EventWdCnt <= EventWdCnt + (PM_HdrWd(PortNo) - 4);
   elsif DDR_Write_Seq = CheckActive0 and PortNo = 7 
 	  then EventWdCnt <= EventWdCnt + 4;
  else EventWdCnt <= EventWdCnt;
@@ -1611,9 +1646,11 @@ end if;
  end if;	
 
 -- Load the microbunch number from the first active port
-	if FirstActive = '1' then
-	  if DDR_Write_Seq = Rd_uBunchHi then uBunch <= PhyRxBuff_Out(PortNo) & uBunch(15 downto 0); 
-	   elsif DDR_Write_Seq = Rd_uBunchLo then uBunch <= uBunch(31 downto 16) & PhyRxBuff_Out(PortNo);
+-- With the port match on it is the EWT of the request, also if no port answered
+	if PM_En = '1' and DDR_Write_Seq = CheckActive0 then uBunch <= PM_EvEwt;
+	elsif FirstActive = '1' then
+	  if DDR_Write_Seq = Rd_uBunchHi then uBunch <= PM_HdrUbHi(PortNo) & uBunch(15 downto 0); 
+	   elsif DDR_Write_Seq = Rd_uBunchLo then uBunch <= uBunch(31 downto 16) & PM_HdrUbLo(PortNo);
      end if;
     else uBunch <= uBunch;
 	end if;
@@ -1627,18 +1664,24 @@ end if;
 if DDR_Write_Seq = Idle then EventStat <= (others => '0'); 
 elsif	DDR_Write_Seq = Rd_Stat then
     -- OR each EventStat bit with the corresponding 4-bit group
-	 EventStat(PortNo) <= PhyRxBuff_Out(PortNo)(0)  or PhyRxBuff_Out(PortNo)(1)  or PhyRxBuff_Out(PortNo)(2)  or PhyRxBuff_Out(PortNo)(3) or
-	                      PhyRxBuff_Out(PortNo)(4)  or PhyRxBuff_Out(PortNo)(5)  or PhyRxBuff_Out(PortNo)(6)  or PhyRxBuff_Out(PortNo)(7) or
-                         PhyRxBuff_Out(PortNo)(8)  or PhyRxBuff_Out(PortNo)(9)  or PhyRxBuff_Out(PortNo)(10) or PhyRxBuff_Out(PortNo)(11) or
-                         PhyRxBuff_Out(PortNo)(12) or PhyRxBuff_Out(PortNo)(13) or PhyRxBuff_Out(PortNo)(14) or PhyRxBuff_Out(PortNo)(15);								 
-	 EventStat(8)  <= EventStat(8) or PhyRxBuff_Out(PortNo)(3)  or PhyRxBuff_Out(PortNo)(2)  or PhyRxBuff_Out(PortNo)(1)  or PhyRxBuff_Out(PortNo)(0);
-	 EventStat(9)  <= EventStat(9) or PhyRxBuff_Out(PortNo)(7)  or PhyRxBuff_Out(PortNo)(6)  or PhyRxBuff_Out(PortNo)(5)  or PhyRxBuff_Out(PortNo)(4)
-	                              or PhyRxBuff_Out(PortNo)(11) or PhyRxBuff_Out(PortNo)(10) or PhyRxBuff_Out(PortNo)(9)  or PhyRxBuff_Out(PortNo)(8);
-	 EventStat(10) <= EventStat(10) or PhyRxBuff_Out(PortNo)(15) or PhyRxBuff_Out(PortNo)(14) or PhyRxBuff_Out(PortNo)(13) or PhyRxBuff_Out(PortNo)(12);
+	 EventStat(PortNo) <= PM_HdrStat(PortNo)(0)  or PM_HdrStat(PortNo)(1)  or PM_HdrStat(PortNo)(2)  or PM_HdrStat(PortNo)(3) or
+	                      PM_HdrStat(PortNo)(4)  or PM_HdrStat(PortNo)(5)  or PM_HdrStat(PortNo)(6)  or PM_HdrStat(PortNo)(7) or
+                         PM_HdrStat(PortNo)(8)  or PM_HdrStat(PortNo)(9)  or PM_HdrStat(PortNo)(10) or PM_HdrStat(PortNo)(11) or
+                         PM_HdrStat(PortNo)(12) or PM_HdrStat(PortNo)(13) or PM_HdrStat(PortNo)(14) or PM_HdrStat(PortNo)(15);								 
+	 EventStat(8)  <= EventStat(8) or PM_HdrStat(PortNo)(3)  or PM_HdrStat(PortNo)(2)  or PM_HdrStat(PortNo)(1)  or PM_HdrStat(PortNo)(0);
+	 EventStat(9)  <= EventStat(9) or PM_HdrStat(PortNo)(7)  or PM_HdrStat(PortNo)(6)  or PM_HdrStat(PortNo)(5)  or PM_HdrStat(PortNo)(4)
+	                              or PM_HdrStat(PortNo)(11) or PM_HdrStat(PortNo)(10) or PM_HdrStat(PortNo)(9)  or PM_HdrStat(PortNo)(8);
+	 EventStat(10) <= EventStat(10) or PM_HdrStat(PortNo)(15) or PM_HdrStat(PortNo)(14) or PM_HdrStat(PortNo)(13) or PM_HdrStat(PortNo)(12);
     EventStat(15 downto 11) <= EventStat(15 downto 11); -- Keep upper bits unchanged
+-- Active ports that are not in this event: their port bit, bit 9 (no data from
+-- the FEB, as "buffer issue" in the event status) and bit 13
+elsif DDR_Write_Seq = Write_Wd_Count and PM_Miss /= 0 then
+    EventStat(7 downto 0) <= EventStat(7 downto 0) or PM_Miss;
+    EventStat(9) <= '1';
+    EventStat(13) <= '1';
 elsif FirstActive = '0' then
-	 if (DDR_Write_Seq = Rd_uBunchHi and uBunch(31 downto 16) /= PhyRxBuff_Out(PortNo))
-	 or (DDR_Write_Seq = Rd_uBunchLo and uBunch(15 downto 0) /= PhyRxBuff_Out(PortNo))
+	 if (DDR_Write_Seq = Rd_uBunchHi and uBunch(31 downto 16) /= PM_HdrUbHi(PortNo))
+	 or (DDR_Write_Seq = Rd_uBunchLo and uBunch(15 downto 0) /= PM_HdrUbLo(PortNo))
 	  then  -- EventStat(7 downto 0) <= EventStat(7 downto 0) or UB_MISMATCH_STATUS_BIT; 
 	      EventStat(11) <= EventStat(11) or '1';
 	 end if;
@@ -1661,11 +1704,9 @@ for i in 0 to 7 loop
 
 -- Sequencer read to microcontroller reads of the PhyRx FIFOs  
 if (RDDL = 2 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = PhyRxRdAddr(i))
+-- The four header words are read by PortMatch, only the data words are read here
 or (PortNo = i and 
-  ((DDR_Write_Seq = CheckActive0 and Rx_active(PortNo) = '1') 
-or (DDR_Write_Seq = CheckActive1 and Rx_active(PortNo) = '1' and HitFlag(PortNo) = '1')
-  or DDR_Write_Seq = Rd_WdCount or DDR_Write_Seq = Rd_uBunchHi 
-  or DDR_Write_Seq = Rd_uBunchLo 
+  ((DDR_Write_Seq = CheckActive1 and Rx_active(PortNo) = '1' and HitFlag(PortNo) = '1')
   or (DDR_Write_Seq = WrtDDR and PortWdCounter(PortNo) > 1 )))
 then PhyRxBuff_rdreq(i) <= '1';
 else PhyRxBuff_rdreq(i) <= '0';
@@ -1685,28 +1726,28 @@ end loop;
  elsif DDR_Write_Seq = Rd_WdCount 
 	 then 
 		Case PortNo is
-		 when 0 => if PhyRxBuff_Out(0) > 4 then HitFlag(0) <= '1';
+		 when 0 => if PM_HdrWd(0) > 4 then HitFlag(0) <= '1';
 						else HitFlag(0) <= '0';
 						end if;
-		 when 1 => if PhyRxBuff_Out(1) > 4 then HitFlag(1) <= '1';
+		 when 1 => if PM_HdrWd(1) > 4 then HitFlag(1) <= '1';
 						else HitFlag(1) <= '0';
 						end if;
-		 when 2 => if PhyRxBuff_Out(2) > 4 then HitFlag(2) <= '1';
+		 when 2 => if PM_HdrWd(2) > 4 then HitFlag(2) <= '1';
 						else HitFlag(2) <= '0';
 						end if;
-		 when 3 => if PhyRxBuff_Out(3) > 4 then HitFlag(3) <= '1';
+		 when 3 => if PM_HdrWd(3) > 4 then HitFlag(3) <= '1';
 						else HitFlag(3) <= '0';
 						end if;
-		 when 4 => if PhyRxBuff_Out(4) > 4 then HitFlag(4) <= '1';
+		 when 4 => if PM_HdrWd(4) > 4 then HitFlag(4) <= '1';
 						else HitFlag(4) <= '0';
 						end if;
-		 when 5 => if PhyRxBuff_Out(5) > 4 then HitFlag(5) <= '1';
+		 when 5 => if PM_HdrWd(5) > 4 then HitFlag(5) <= '1';
 						else HitFlag(5) <= '0';
 						end if;
-		 when 6 => if PhyRxBuff_Out(6) > 4 then HitFlag(6) <= '1';
+		 when 6 => if PM_HdrWd(6) > 4 then HitFlag(6) <= '1';
 						else HitFlag(6) <= '0';
 						end if;
-		 when 7 => if PhyRxBuff_Out(7) > 4 then HitFlag(7) <= '1';
+		 when 7 => if PM_HdrWd(7) > 4 then HitFlag(7) <= '1';
 						else HitFlag(7) <= '0';
 						end if;
 		end Case;
@@ -1714,7 +1755,7 @@ end loop;
  end if;
 
 -- Signal to indicate if all active ports have an event ready
-  if Rx_active = PhyRxBuff_RdStat then EventRdy <= '1'; 
+  if PM_Go = '1' then EventRdy <= '1';  
   else EventRdy <= '0'; 
   end if; 
 
@@ -1727,9 +1768,10 @@ end if;
 
 -- Load the words counts from the headers into eight counters, one for each port
 	if DDR_Write_Seq = Idle then PortWdCounter <= (others => (others => '0'));
-	  elsif DDR_Write_Seq = Rd_WdCount and PhyRxBuff_Out(PortNo) /= 0
-		then PortWdCounter(PortNo) <= PhyRxBuff_Out(PortNo) - 1;
-	  elsif DDR_Write_Seq = Rd_WdCount and PhyRxBuff_Out(PortNo) = 0
+-- number of data words, the four header words are already taken out
+	  elsif DDR_Write_Seq = Rd_WdCount and PM_HdrWd(PortNo) > 4
+		then PortWdCounter(PortNo) <= PM_HdrWd(PortNo) - 4;
+	  elsif DDR_Write_Seq = Rd_WdCount
 		then PortWdCounter(PortNo) <= (others => '0');
 	  elsif PortWdCounter(PortNo) /= 0 and PhyRxBuff_rdreq(PortNo) = '1' and PhyRxBuff_Empty(PortNo) = '0' 
 		then PortWdCounter(PortNo) <= PortWdCounter(PortNo) - 1;
@@ -1763,9 +1805,9 @@ Case DDR_Write_Seq is
 	When IncrPort0 => DDR_Write_Seq <= CheckActive0; DDRWrtStat <= X"1"; Debug(10 downto 7) <= X"1";
 	When CheckActive0 => DDRWrtStat <= X"2"; Debug(10 downto 7) <= X"2"; 
 			if Rx_active = 0 then DDR_Write_Seq <= Idle;
-			elsif Rx_active(PortNo) = '1'
+			elsif PM_Incl(PortNo) = '1'
 			 then DDR_Write_Seq <= Rd_WdCount;
-			elsif Rx_active(PortNo) = '0' and PortNo /= 7 
+			elsif PM_Incl(PortNo) = '0' and PortNo /= 7  
 			 then DDR_Write_Seq <= IncrPort0;
 			else DDR_Write_Seq <= Write_Wd_Count;
 			end if;
@@ -1923,7 +1965,10 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 LinkTxFullCnt & "00" & LinkTxFull & LinkTxEmpty & 
 				           "000" & LinkStatEn when LinkCtrlAd,		
 		 tx_overflow_cnt when OverflowCntAd,
-       X"0010" when DebugVersion,							  
+		 PM_RdData when PMCsrAd | PMTimeoutAd | PMLastTimeAd | PMMaxTimeAd | PMEvCntAd | PMReqCntAd
+		              | PMDrainCntAd | PMMissCntAd | PMTimeoutCntAd | PMListDropCntAd | PMPortsAd
+		              | PMBadEwtHiAd | PMBadEwtLoAd | PMBadPortAd | PMOldestHiAd | PMOldestLoAd | PMTxWord0Ad,
+       X"0012" when DebugVersion,							  
 		 X"0000" when others;
 
 uCD <= iCD when uCRd = '0' and CpldCS = '0' and uCA(11 downto 10) = GA 

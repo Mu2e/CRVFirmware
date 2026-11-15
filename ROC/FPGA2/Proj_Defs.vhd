@@ -119,6 +119,25 @@ constant PHYActivityCntAdd : AddrArrayType := ("00" & X"70","00" & X"71","00" & 
 															  
 constant OverflowCntAd : AddrPtr  := "00" & X"80";
 
+-- Port match (PortMatch.vhd)
+constant PMCsrAd         : AddrPtr := "00" & X"81"; -- W: [0] enable, [15] clear status. R: [0] enable, [3:2] state, [6:4] open requests, [15:8] ports with a header
+constant PMTimeoutAd     : AddrPtr := "00" & X"82"; -- time out in 10 us, 0: none
+constant PMLastTimeAd    : AddrPtr := "00" & X"83"; -- request to event, last, in 10 us
+constant PMMaxTimeAd     : AddrPtr := "00" & X"84"; -- request to event, maximum
+constant PMEvCntAd       : AddrPtr := "00" & X"85"; -- events built
+constant PMReqCntAd      : AddrPtr := "00" & X"86"; -- requests seen
+constant PMDrainCntAd    : AddrPtr := "00" & X"87"; -- port buffers emptied
+constant PMMissCntAd     : AddrPtr := "00" & X"88"; -- events with missing ports
+constant PMTimeoutCntAd  : AddrPtr := "00" & X"89"; -- events built by the time out
+constant PMListDropCntAd : AddrPtr := "00" & X"8A"; -- requests dropped from a full list
+constant PMPortsAd       : AddrPtr := "00" & X"8B"; -- [7:0] missing ports of the last such event, [15:8] ports emptied
+constant PMBadEwtHiAd    : AddrPtr := "00" & X"8C"; -- EWT of the last header that was not in the list
+constant PMBadEwtLoAd    : AddrPtr := "00" & X"8D";
+constant PMBadPortAd     : AddrPtr := "00" & X"8E"; -- [10:8] its port, [7:0] ports being emptied
+constant PMOldestHiAd    : AddrPtr := "00" & X"8F"; -- oldest open request
+constant PMOldestLoAd    : AddrPtr := "00" & X"90";
+constant PMTxWord0Ad     : AddrPtr := "00" & X"91"; -- first word of the last packet loaded for the FEBs
+
 -- Register collecting SMI data returned from the PHY chips
 constant SMIRdDataAd0 : AddrPtr  := "00" & X"FD";
 constant SMIRdDataAd1 : AddrPtr  := "00" & X"FE";
