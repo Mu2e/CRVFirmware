@@ -20,7 +20,7 @@ FPGA (0 = FPGA1, 1..3 = data FPGAs, i.e. offsets `0x000`, `0x400`, `0x800`,
 the three data FPGAs.
 
 **FPGA2:** this document describes the FPGA2 source on this branch (version
-register `0x0012`; `0x0010` on `origin/main`). Build products are not tracked
+register `0x0012`; `0x0010` before the port match). Build products are not tracked
 in git.
 
 ## 2. Data path
@@ -254,7 +254,7 @@ Bus offsets `0x400`, `0x800`, `0xC00`. Source on this branch, see section 1.
 | 0x61 | R | [15:12] request word counter, [11] request source (CSR bit 6 of FPGA1), [9:0] debug pins |
 | 0x6C / 0x6D | R | uptime in seconds, high / low |
 | 0x43 / 0x44 | R/W | test counter high / low |
-| 0x99 | R | firmware version (`0x0012`; `0x0010` on `origin/main`) |
+| 0x99 | R | firmware version (`0x0012`; `0x0010` before the port match) |
 
 CSR 0x00:
 
@@ -447,12 +447,12 @@ the uB numbers with the halves in that swapped order.
   with GHDL (local, or the `ghdl/ghdl` container via podman or docker). It
   covers `EventBuilder`, `PacketFormer`, `DRHandler` and `LinkFlushCtrl` with
   FIFO models, and compares the transmitted words for normal, DCS and fake
-  events with the firmware on `origin/main`. `run_ghdl.sh full` runs only the
+  events with the firmware of commit `513c2ce` (before the EWT match). `run_ghdl.sh full` runs only the
   test cases. Not covered: the Xilinx FIFO cores, the top level.
 - **Simulation (FPGA2):** `bash FPGA2/sim/run_ghdl.sh` runs `PortMatch_tb.vhd`
   on the complete FPGA2 top level with behavioural models of the Xilinx cores
   (`FPGA2/sim/core_models.vhd`): the port match cases, then a comparison of the
-  events sent to FPGA1 with the firmware on `origin/main`. Not covered: the
+  events sent to FPGA1 with the firmware of commit `513c2ce` (before the port match). Not covered: the
   real cores, the PHY transmit side, the link serializer.
 - **Timing (FPGA2 `0x0012`):** all constraints met; the smallest slack (0.10 ns
   on `SysClk`, 0.12 ns on `RxFMClk`) is in the crossings between these two

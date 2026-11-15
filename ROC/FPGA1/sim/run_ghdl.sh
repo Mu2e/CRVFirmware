@@ -5,14 +5,15 @@
 #                           normal / DCS / GR stimulus on the firmware before
 #                           the change and a comparison of the transmitted words
 #   sim/run_ghdl.sh full    all cases on the current sources only
-#   BASE=<git ref> sim/run_ghdl.sh    reference firmware (default origin/main)
+#   BASE=<git ref> sim/run_ghdl.sh    reference firmware (default: 513c2ce, the last
+#                                     commit before the EWT match and the port match)
 #
 # Uses a local ghdl if there is one, otherwise the ghdl/ghdl container image
 # with podman or docker (the files are piped into the container, nothing is
 # mounted). The Xilinx FIFO cores are replaced by sim/fifo_models.vhd.
 set -e
 cd "$(dirname "$0")/.."
-BASE=${BASE:-origin/main}
+BASE=${BASE:-513c2cedbdd0e5d0d10835e67ab49759707f4668}
 IMAGE=${GHDL_IMAGE:-docker.io/ghdl/ghdl:buster-mcode}
 STAGE=${STAGE:-sim/build}
 
