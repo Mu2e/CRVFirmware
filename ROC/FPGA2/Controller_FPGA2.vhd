@@ -86,6 +86,11 @@ Type Array_3x8x16 is Array(0 to 2) of Array_8x16;
 signal SysClk, i50MhzClk,ResetHi,GTPRxRst,LinkRst : std_logic;
 -- Synchronous edge detectors of uC read and write strobes
 Signal RDDL,WRDL : std_logic_vector (1 downto 0);
+-- RDDL(0) and WRDL(0) sample the asynchronous strobes of the uC. Copies of them made by
+-- the synthesis can see an edge in different clocks, which gives two or no strobes.
+attribute register_duplication : string;
+attribute register_duplication of RDDL : signal is "no";
+attribute register_duplication of WRDL : signal is "no";
 -- uC data bus
 signal iCD,CDStage : std_logic_vector(15 downto 0);
 signal AddrReg : std_logic_vector(11 downto 0);
@@ -145,7 +150,7 @@ signal EventRdy,FirstActive : std_logic;
 
 -- Port match: header registers of the port buffers, list of open requests
 signal PM_Rd,PM_Incl,PM_Miss,PhyRxBuff_rden : std_logic_vector(7 downto 0);
-signal PM_Go,PM_En,PM_SeqIdle,PM_WrStb,PM_Tick : std_logic;
+signal PM_Go,PM_En,PM_SeqIdle,PM_Tick : std_logic;
 signal PM_EvEwt : std_logic_vector(31 downto 0);
 signal PM_RdData : std_logic_vector(15 downto 0);
 signal PM_Dout,PM_HdrWdF,PM_HdrUbHiF,PM_HdrUbLoF,PM_HdrStatF : std_logic_vector(127 downto 0);
@@ -921,12 +926,11 @@ ResetHi <= not CpldRst;  -- Generate and active high reset for the Xilinx macros
 -- go into the next event
 PhyRxBuff_rden <= PhyRxBuff_rdreq or PM_Rd;
 PM_SeqIdle <= '1' when DDR_Write_Seq = Idle else '0';
-PM_WrStb   <= '1' when WRDL = 1 else '0';
 PM_Tick    <= '1' when Counter10us = Count10us else '0';
 
 PortMatch_i : entity work.PortMatch
   port map (clk => SysClk, rst_n => CpldRst,
-    WrStb => PM_WrStb, uCA => uCA, GA => GA, uCD => uCD, RdData => PM_RdData,
+    uCWR => uCWR, CpldCS => CpldCS, uCA => uCA, GA => GA, uCD => uCD, RdData => PM_RdData,
     Tick10us => PM_Tick,
     Active => Rx_active, WrtEn => DDRWrt_En, BuffRst => RxBuffRst,
     Empty => PhyRxBuff_Empty, Dout => PM_Dout, RdCnt => PM_RdCnt, Rd => PM_Rd,
@@ -1968,7 +1972,7 @@ iCD <= X"0" & '0' & DatReqBuff_Empty & "00" & DDRRd_en & PhyDatSel & DDRWrt_En &
 		 PM_RdData when PMCsrAd | PMTimeoutAd | PMLastTimeAd | PMMaxTimeAd | PMEvCntAd | PMReqCntAd
 		              | PMDrainCntAd | PMMissCntAd | PMTimeoutCntAd | PMListDropCntAd | PMPortsAd
 		              | PMBadEwtHiAd | PMBadEwtLoAd | PMBadPortAd | PMOldestHiAd | PMOldestLoAd | PMTxWord0Ad,
-       X"0012" when DebugVersion,							  
+       X"0013" when DebugVersion,							  
 		 X"0000" when others;
 
 uCD <= iCD when uCRd = '0' and CpldCS = '0' and uCA(11 downto 10) = GA 

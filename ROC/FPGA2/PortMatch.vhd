@@ -15,7 +15,9 @@
 -- words from the buffer.
 --
 -- Enable = '0': an event is built when all active ports hold a complete
--- answer, as before. Nothing is compared, nothing is emptied.
+-- answer, as before. Nothing is compared, nothing is emptied. The event
+-- empties the list, so that the time in LastTime/MaxTime is the time from the
+-- oldest request since the last event.
 --
 -- Enable = '1', E is the oldest open request. For every active port:
 --   header with the EWT of E            the port is ready (when its data is complete)
@@ -28,6 +30,17 @@
 -- The event for E is built when every active port is ready or missing. Then E
 -- is removed from the list. If all ports are missing an event without data is
 -- built.
+--
+-- The list is emptied by the reset of the port buffers, while the write to the
+-- DDR is off and by the run start reset (GTPRxRst, write of bit 0 to bus
+-- address 0x002), which also clears the counters. With no active port nothing
+-- is pushed and nothing is built.
+--
+-- Write strobe: the write strobe of the uC is asynchronous to clk. It is taken
+-- through two flip-flops here before its edge is detected, and these must not
+-- be duplicated or merged with other flip-flops by the synthesis: two copies
+-- of the first one can see the edge in different clocks, and logic that takes
+-- the copies in the wrong combination sees two strobes for one write.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -41,7 +54,8 @@ entity PortMatch is
         clk      : in  std_logic;
         rst_n    : in  std_logic; -- CpldRst
         -- uC bus
-        WrStb    : in  std_logic; -- one clock for every uC write (WRDL = 1)
+        uCWR     : in  std_logic; -- write strobe and chip select of the uC bus, active low,
+        CpldCS   : in  std_logic; -- asynchronous
         uCA      : in  std_logic_vector(11 downto 0);
         GA       : in  std_logic_vector(1 downto 0);
         uCD      : in  std_logic_vector(15 downto 0);
@@ -78,6 +92,17 @@ architecture rtl of PortMatch is
     type StType  is (S_Dec, S_Go, S_Busy);
 
     signal St        : StType;
+    -- write strobe of the uC: WrS(0) samples the pins, WrS(1) is the clean copy
+    signal WrS       : std_logic_vector(2 downto 0);
+    signal WrStb     : std_logic;
+    attribute register_duplication : string;
+    attribute register_duplication of WrS : signal is "no";
+    attribute equivalent_register_removal : string;
+    attribute equivalent_register_removal of WrS : signal is "no";
+    attribute shreg_extract : string;
+    attribute shreg_extract of WrS : signal is "no";
+    attribute keep : string;
+    attribute keep of WrS : signal is "true";
     -- settings
     signal EnR, ClrStat : std_logic;
     signal TimeoutR  : std_logic_vector(15 downto 0);
@@ -115,6 +140,9 @@ architecture rtl of PortMatch is
     end function;
 
 begin
+
+    -- one clock for every uC write, address and data are stable around it
+    WrStb <= WrS(1) and not WrS(2);
 
     Go    <= '1' when St = S_Go else '0';
     En    <= EnR;
@@ -169,10 +197,12 @@ begin
         variable vRdy, vMissN, vStart : std_logic_vector(7 downto 0);
         variable vWd      : std_logic_vector(15 downto 0);
         variable vEwt     : std_logic_vector(31 downto 0);
+        variable vRunRst  : boolean;
     begin
         if rst_n = '0' then
             St <= S_Dec;
-            EnR <= '0'; ClrStat <= '0'; TimeoutR <= (others => '0');
+            WrS <= "000";
+            EnR <= '1'; ClrStat <= '0'; TimeoutR <= X"012C"; -- on, 3 ms
             First <= '1'; IsReq <= '0'; Remain <= (others => '0');
             LoLatch <= (others => '0'); LastW0 <= (others => '0');
             L <= (others => (others => '0')); LCnt <= 0;
@@ -192,8 +222,15 @@ begin
             vL := L; vCnt := LCnt; vHeadChg := false; vListChg := false;
             vStart := X"00";
 
+            WrS <= WrS(1 downto 0) & (not uCWR and not CpldCS);
+
+            -- run start: the reset the uC writes to FPGA 1 (GTPRxRst)
+            vRunRst := WrStb = '1' and uCA(11 downto 10) = "00" and uCA(9 downto 0) = GTPFIFOAddr
+                       and uCD(0) = '1';
+
             ---------------- settings ----------------
             ClrStat <= '0';
+            if vRunRst then ClrStat <= '1'; end if;
             if WrStb = '1' and uCA(11 downto 10) = GA then
                 if uCA(9 downto 0) = PMCsrAd then
                     EnR <= uCD(0); ClrStat <= uCD(15);
@@ -223,7 +260,8 @@ begin
                     Remain <= Remain - 1;
                     if Remain(0) = '0' then
                         LoLatch <= uCD;
-                    else
+                    elsif Active /= 0 then
+                        ReqCnt <= inc16(ReqCnt);
                         if vCnt = 4 then
                             vL(0) := vL(1); vL(1) := vL(2); vL(2) := vL(3);
                             vL(3) := uCD & LoLatch;
@@ -235,6 +273,8 @@ begin
                             vCnt := vCnt + 1;
                         end if;
                         vListChg := true;
+                    else
+                        -- no active port: counted, not put in the list
                         ReqCnt <= inc16(ReqCnt);
                     end if;
                 end if;
@@ -289,6 +329,10 @@ begin
                             InclR <= Active; MissR <= X"00";
                             TimeGo <= TimeE;
                             St <= S_Go;
+                            -- the list is not used: start again with the next request
+                            if vCnt /= 0 then
+                                vCnt := 0; vHeadChg := true; vListChg := true;
+                            end if;
                         end if;
                     else
                         vRdy   := Active and EqR and CmpR and not Drain;
@@ -301,7 +345,7 @@ begin
                                 BadPort <= conv_std_logic_vector(i, 3);
                             end if;
                         end loop;
-                        if vCnt /= 0 and LCnt /= 0 then
+                        if vCnt /= 0 and LCnt /= 0 and Active /= 0 then
                             vAllOk := (vRdy or vMissN) = Active;
                             vTO    := TimeoutR /= 0 and TimeE >= TimeoutR;
                             if vAllOk or vTO then
@@ -339,7 +383,7 @@ begin
                     for i in 0 to 7 loop
                         if InclR(i) = '1' then HCnt(i) <= "000"; end if;
                     end loop;
-                    if vCnt /= 0 and (EnR = '0' or vL(0) = EvEwtR) then
+                    if vCnt /= 0 and EnR = '1' and vL(0) = EvEwtR then
                         vL(0) := vL(1); vL(1) := vL(2); vL(2) := vL(3);
                         vCnt := vCnt - 1;
                         vHeadChg := true; vListChg := true;
@@ -361,6 +405,11 @@ begin
             end if;
 
             ---------------- list, timer ----------------
+            -- requests of an earlier run or from before the write to the DDR was on
+            if BuffRst = '1' or WrtEn = '0' or vRunRst then
+                if vCnt /= 0 then vListChg := true; end if;
+                vCnt := 0;
+            end if;
             L <= vL; LCnt <= vCnt;
 
             if vHeadChg or vCnt = 0 then TimeE <= (others => '0');

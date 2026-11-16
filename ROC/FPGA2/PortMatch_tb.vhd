@@ -168,6 +168,7 @@ begin
     stim : process
         variable rd : std_logic_vector(15 downto 0);
         variable seen : integer := 0;
+        variable wr_low : time := 60 ns; -- length of the write strobe
 
         procedure fail(msg : string) is
         begin
@@ -179,7 +180,7 @@ begin
         procedure uc_write(a : std_logic_vector(11 downto 0); d : std_logic_vector(15 downto 0)) is
         begin
             uCA <= a; uCD <= d; CpldCS <= '0'; uCWr <= '0';
-            wait for 60 ns;
+            wait for wr_low;
             CpldCS <= '1'; uCWr <= '1';
             wait for 20 ns;
             uCD <= (others => 'Z');
@@ -206,6 +207,15 @@ begin
             uc_read(GA & std_logic_vector(to_unsigned(a, 10)), v);
             if to_integer(unsigned(v)) /= exp then
                 fail(name & " reads " & hex(v) & ", expected " & integer'image(exp));
+            end if;
+        end procedure;
+
+        procedure check_range(a : integer; lo, hi : integer; name : string) is
+            variable v : std_logic_vector(15 downto 0);
+        begin
+            uc_read(GA & std_logic_vector(to_unsigned(a, 10)), v);
+            if to_integer(unsigned(v)) < lo or to_integer(unsigned(v)) > hi then
+                fail(name & " reads " & hex(v) & ", expected " & integer'image(lo) & " to " & integer'image(hi));
             end if;
         end procedure;
 
@@ -287,7 +297,14 @@ begin
         wait for 5 us;
         reg(16#00#, 16#01A8#);            -- init, DDR write and read on
         wait for 20 us;
-        if PMEN = 1 then reg(16#81#, 1); end if;
+        if MODE = "full" then
+            -- after reset: port match on, time out 3 ms
+            check_reg(16#81#, 1, "0x81 after reset");
+            check_reg(16#82#, 300, "time out after reset");
+            check_reg(16#99#, 16#0013#, "version");
+            reg(16#82#, 0);
+        end if;
+        if PMEN = 0 then reg(16#81#, 0); end if;
 
         if MODE = "reg" then
             for k in 0 to 11 loop
@@ -410,6 +427,90 @@ begin
             request(130); answer_all(130, 2);
             expect(130, 0, 4 + 4*2 + SUM4);
             expect_none(100 us);
+
+            title("L  port match off, a request without answer: the list stays in step");
+            reg(16#81#, 16#8000#);                   -- clear the counters, match stays off
+            request(131);
+            expect_none(200 us);
+            check_reg(16#81#, 16#0010#, "0x81, one open request");
+            request(132); answer_all(132, 1);
+            expect(132, 0, 4 + 4*1 + SUM4);
+            check_reg(16#81#, 16#0000#, "0x81, list empty after the event");
+            check_reg(16#8A#, 0, "requests dropped from the list");
+            check_range(16#83#, 15, 40, "time of the event, counted from request 131");
+            request(133); answer_all(133, 1);
+            expect(133, 0, 4 + 4*1 + SUM4);
+            check_range(16#83#, 0, 2, "time of the event for request 133");
+            check_range(16#84#, 15, 40, "maximum time");
+
+            title("M  run start with old requests in the list");
+            reg(16#81#, 1);
+            request(140); request(141);
+            expect_none(50 us);
+            check_reg(16#81#, 16#0021#, "0x81, two open requests");
+            uc_write(X"002", X"0001");               -- GTPRxRst, as written to FPGA 1 at run start
+            check_reg(16#81#, 16#0001#, "0x81 after the run start reset");
+            check_reg(16#86#, 0, "requests seen after the run start reset");
+            check_reg(16#84#, 0, "maximum time after the run start reset");
+            check_reg(16#82#, 0, "time out after the run start reset");
+            request(142); answer_all(142, 1);
+            expect(142, 0, 4 + 4*1 + SUM4);
+            expect_none(100 us);
+            request(143);                            -- reset of the port buffers
+            reg(16#00#, 16#00A9#);
+            check_reg(16#81#, 16#0001#, "0x81 after the port buffer reset");
+            request(144); answer_all(144, 1);
+            expect(144, 0, 4 + 4*1 + SUM4);
+            request(145);                            -- write to the DDR off and on
+            reg(16#00#, 16#0088#);
+            check_reg(16#81#, 16#0001#, "0x81 with the DDR write off");
+            request(146);
+            check_reg(16#81#, 16#0001#, "0x81, request with the DDR write off");
+            reg(16#00#, 16#00A8#);
+            request(147); answer_all(147, 1);
+            expect(147, 0, 4 + 4*1 + SUM4);
+            expect_none(100 us);
+
+            title("N  nobody answers, time out 300 (3 ms, the reset value)");
+            reg(16#82#, 300);
+            request(150);
+            expect_none(2900 us);
+            expect(150, 16#2227#, 4, 300 us);
+            check_reg(16#89#, 1, "events built by the time out");
+            request(151); answer_all(151, 1);
+            expect(151, 0, 4 + 4*1 + SUM4);
+
+            title("O  no active port: nothing in the list, no event");
+            reg(16#81#, 16#8001#);
+            reg(16#17#, 0);                          -- input mask
+            for k in 0 to 4 loop request(160 + k); end loop;
+            expect_none(100 us);
+            check_reg(16#81#, 16#0001#, "0x81 without active port");
+            check_reg(16#8A#, 0, "requests dropped from the list");
+            check_reg(16#86#, 5, "requests seen");
+            reg(16#17#, 16#FF#);
+            wait for 400 us;
+            request(165); answer_all(165, 1);
+            expect(165, 0, 4 + 4*1 + SUM4);
+
+            -- The double strobe of version 0x0012 came from two copies of the flip-flop
+            -- that samples the write strobe (see PortMatch.vhd); a simulation of the
+            -- source cannot show it. This only checks one push per request for a short
+            -- strobe at all phases of the clock.
+            title("P  45 ns write strobe at all phases of the clock");
+            reg(16#81#, 16#8001#);
+            wr_low := 45 ns;
+            for k in 0 to 14 loop
+                wait for 700 ps;
+                request(170 + k); answer_all(170 + k, 1);
+                expect(170 + k, 0, 4 + 4*1 + SUM4);
+            end loop;
+            wr_low := 60 ns;
+            check_reg(16#86#, 15, "requests seen");
+            check_reg(16#85#, 15, "events built");
+            check_reg(16#87#, 0, "port buffers emptied");
+            check_reg(16#88#, 0, "events with missing ports");
+            check_reg(16#8A#, 0, "requests dropped from the list");
         end if;
 
         wait for 1 ns;

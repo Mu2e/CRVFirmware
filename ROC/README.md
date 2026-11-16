@@ -20,7 +20,7 @@ FPGA (0 = FPGA1, 1..3 = data FPGAs, i.e. offsets `0x000`, `0x400`, `0x800`,
 the three data FPGAs.
 
 **FPGA2:** this document describes the FPGA2 source on this branch (version
-register `0x0012`; `0x0010` before the port match). Build products are not tracked
+register `0x0013`; `0x0010` before the port match). Build products are not tracked
 in git.
 
 ## 2. Data path
@@ -254,7 +254,7 @@ Bus offsets `0x400`, `0x800`, `0xC00`. Source on this branch, see section 1.
 | 0x61 | R | [15:12] request word counter, [11] request source (CSR bit 6 of FPGA1), [9:0] debug pins |
 | 0x6C / 0x6D | R | uptime in seconds, high / low |
 | 0x43 / 0x44 | R/W | test counter high / low |
-| 0x99 | R | firmware version (`0x0012`; `0x0010` before the port match) |
+| 0x99 | R | firmware version (`0x0013`; `0x0012` first version with the port match, `0x0010` before it) |
 
 CSR 0x00:
 
@@ -309,9 +309,10 @@ CSR 0x00:
 Aim: for every request sent to the FEBs one event part goes to FPGA1, in the
 order of the requests. `PortMatch` reads the four header words of each FEB
 answer into registers and keeps a list of the four newest open requests, taken
-from the request packets the uC loads (first word low byte `0x82`). With the
-match off an event is built when all active ports hold a complete answer, as
-before. With it on, for the oldest open request E:
+from the request packets the uC loads (first word low byte `0x82`). The match
+is on after reset. With the match off an event is built when all active ports
+hold a complete answer, as before; the event then empties the list. With it on,
+for the oldest open request E:
 
 | Header of an active port | What happens |
 |---|---|
@@ -325,13 +326,22 @@ its port bit, bit 9 and bit 13 in the status word of the part (bit 9 becomes
 bit 25 of the event status in FPGA1). If all ports are missing a part without
 data is sent. The list drops its oldest entry when a fifth request is pushed.
 
+The list is emptied by the reset of the port buffers (CSR bit 0), while the
+write to the DDR is off (CSR bit 5 = 0), and by the run start reset that the uC
+writes to FPGA1 (bit 0 to bus address `0x002`, `GTPRxRst`). The run start reset
+also clears 0x83..0x8B. It does not change the enable bit or the time out.
+Requests loaded while the write to the DDR is off are not kept; with the match
+on, their answers are emptied from the port buffers as "not in the list".
+
+A data FPGA without active port puts nothing in the list and builds nothing.
+
 | Addr | R/W | Meaning |
 |---|---|---|
-| 0x81 | R/W | W [0] port match on (reset: off), [15] clear the status registers 0x83..0x8B. R [0] on, [3:2] state (0 deciding, 1 event offered, 2 event being written), [6:4] open requests, [15:8] ports with a header |
-| 0x82 | R/W | time out in units of 10 us, 0 = none (reset) |
-| 0x83 / 0x84 | R | time from the oldest request becoming the oldest to the event, last / maximum, in 10 us. Also counted with the match off |
+| 0x81 | R/W | W [0] port match on (reset: on; 0 gives the old rule), [15] clear the status registers 0x83..0x8B. R [0] on, [3:2] state (0 deciding, 1 event offered, 2 event being written), [6:4] open requests, [15:8] ports with a header |
+| 0x82 | R/W | time out in units of 10 us, 0 = none. Reset: 300 (3 ms, an estimate) |
+| 0x83 / 0x84 | R | time from the oldest open request becoming the oldest to the event, last / maximum, in 10 us. With the match off: from the first request after the previous event |
 | 0x85 | R | events built |
-| 0x86 | R | requests seen |
+| 0x86 | R | requests seen (also counted without active port) |
 | 0x87 | R | port buffers emptied |
 | 0x88 | R | events with missing ports |
 | 0x89 | R | events built by the time out |
@@ -339,15 +349,24 @@ data is sent. The list drops its oldest entry when a fifth request is pushed.
 | 0x8B | R | [7:0] missing ports of the last event with missing ports, [15:8] ports emptied since the last clear |
 | 0x8C / 0x8D | R | EWT of the last header that was not in the list, high / low |
 | 0x8E | R | [10:8] port of that header, [7:0] ports being emptied now |
-| 0x8F / 0x90 | R | oldest open request, high / low |
+| 0x8F / 0x90 | R | oldest open request, high / low. Valid if 0x81 [6:4] is not 0, otherwise an old value |
 | 0x91 | R | first word of the last packet loaded for the FEBs |
 
-Counters stop at `0xFFFF`. The enable bit and the time out are cleared by the
-reset from the CPLD (`CpldRst`) and must be written again after it.
+Counters stop at `0xFFFF`. The enable bit and the time out return to their
+reset values with the reset from the CPLD (`CpldRst`).
 
 Only the short request packet (command `0x82`, section 6) is recognised. If
 0x86 does not count or 0x91 does not read `0x0182` for one request per packet,
-the list stays empty and the match must stay off.
+the list stays empty and the match must be switched off.
+
+**Write strobe.** The write strobe of the uC is asynchronous to `SysClk`. In
+version `0x0012` the synthesis had made two copies of the flip-flop that samples
+it (`WRDL(0)`); the copies could see the edge in different clocks and the port
+match then took one write twice (list entries like `0xA5870182`). From `0x0013`
+`PortMatch` has its own two flip-flops for the strobe, and neither these nor
+`WRDL`/`RDDL` of the top level may be duplicated (attributes in the source).
+The strobe of `PortMatch` comes one clock later than `WRDL = 1`, so the write
+strobe must be low for at least 30 ns (the uC is set to 5 bus clocks).
 
 With the time out at 0 a part can be late: if a FEB missed request E, the part
 for E is completed only when the answers to the next request arrive, and is
@@ -454,8 +473,9 @@ the uB numbers with the halves in that swapped order.
   (`FPGA2/sim/core_models.vhd`): the port match cases, then a comparison of the
   events sent to FPGA1 with the firmware of commit `513c2ce` (before the port match). Not covered: the
   real cores, the PHY transmit side, the link serializer.
-- **Timing (FPGA2 `0x0012`):** all constraints met; the smallest slack (0.10 ns
-  on `SysClk`, 0.12 ns on `RxFMClk`) is in the crossings between these two
-  clocks (port buffer pointers, `RxBuffRst`), which are timed as related
-  clocks. One path in the memory controller is relaxed to 13.6 ns in the
-  constraint file (`TS_MIG_DRP_FIX`).
+- **Timing (FPGA2, build of `0x0013`):** all constraints met. Smallest setup
+  slack 0.31 ns on `SysClk` and 0.18 ns on `RxFMClk`, in the crossings between
+  these two clocks (port buffer pointers), which are timed as related clocks.
+  Hold slack on `SysClk` is 0.00 ns, in the FM receiver of a port (0.01 ns in
+  the build of `0x0012`). One path in the memory controller is relaxed to
+  13.6 ns in the constraint file (`TS_MIG_DRP_FIX`).
