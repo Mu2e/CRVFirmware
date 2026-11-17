@@ -1,7 +1,7 @@
 # CRV ROC firmware
 
 Firmware of the Mu2e CRV readout controller (ROC). Written from the sources on
-branch `sc/ewt-match`, commit `d7399cd` (FPGA1 version `a8`).
+branch `sc/ewt-match`, commit `d7399cd` (FPGA1 version `a9`).
 
 ## 1. What this is
 
@@ -101,7 +101,7 @@ Bus offset `0x000`. 16-bit registers. Addresses that are defined in
 | 0x19 | R/W | [0] PLL chip power down; R also [4] PLL status |
 | 0x27 | R/W | link FIFOs: W [8] reset deserialisers, [9] reset link FIFOs. R [6:4] full, [2:0] empty |
 | 0x6C / 0x6D | R | uptime in seconds, high / low |
-| 0x99 | R | firmware version (`0x00A8`) |
+| 0x99 | R | firmware version (`0x00A9`) |
 | 0x96 / 0x97 | R | git hash, bits 31..16 / 15..0, see section 7 |
 
 CSR 0x00:

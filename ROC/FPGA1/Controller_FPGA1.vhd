@@ -2681,20 +2681,20 @@ end if;
 	--    DCS_Status <= DCS_EvCnt;
 	--end if;
 
-	if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = sendGRAdd 
+	if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = sendGRAdd 
 	then sendGR <= uCD(0);
 	     sendGrCnt <= uCD(15 downto 8);
 	else sendGR <= sendGR;
 	     sendGrCnt <= sendGrCnt;
 	end if;
 	
-	if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = DRTimeoutAdd 
+	if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = DRTimeoutAdd 
 	then DRTimeout <= uCD(15 downto 0);
 	else DRTimeout <= DRTimeout;
 	end if;
 
 	-- EWT matching control. Change the bypass bit only while no requests are pending.
-	if WRDL = 1 and AddrReg(11 downto 10) = GA and AddrReg(9 downto 0) = EwtMatchCtrlAd 
+	if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = EwtMatchCtrlAd 
 	then DropLateEn <= uCD(0);
 	     MatchBypassReg <= uCD(1);
 	     LinkFlushEn <= uCD(2);
@@ -3282,7 +3282,7 @@ iCD <= X"0" &
 		 uBDebugOut(79 downto 64) when EvBuildUbDebug4Add,
 		 uBDebugOut(95 downto 80) when EvBuildUbDebug5Add,
 		 X"000" & "000" & uBDebugOut(96) when EvBuildUbDebug6Add,
-		 X"00a8" when DebugVersionAd,
+		 X"00a9" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 DRcnt when DRCntAdd,
