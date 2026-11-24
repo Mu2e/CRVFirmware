@@ -20,7 +20,7 @@ STAGE=${STAGE:-sim/build}
 rm -rf "$STAGE"
 mkdir -p "$STAGE/src/sim" "$STAGE/old"
 cp Project_Defs.vhd Project_Components.vhd crc.vhd EventBuilder.vhd PacketFormer.vhd \
-   DRHandler.vhd LinkFlushCtrl.vhd EwtMatch_tb.vhd "$STAGE/src/"
+   DRHandler.vhd LinkFlushCtrl.vhd EwtMatch_tb.vhd MarkerSample.vhd MarkerSample_tb.vhd "$STAGE/src/"
 cp sim/unisim_stub.vhd sim/fifo_models.vhd sim/legacy_wrap.vhd "$STAGE/src/sim/"
 cp sim/ghdl_inner.sh "$STAGE/"
 for f in EventBuilder PacketFormer; do

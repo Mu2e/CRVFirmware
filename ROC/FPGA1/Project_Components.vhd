@@ -436,6 +436,21 @@ component DRHandler is
     );
 end component DRHandler;
 
+component MarkerSample is
+    generic (
+        MEAS_BITS : integer := 16
+    );
+    port (
+        clk      : in  std_logic;
+        rst_n    : in  std_logic;
+        Restart  : in  std_logic;
+        DDR      : in  std_logic_vector( 1 downto 0);
+        Samp     : out std_logic;
+        Stat     : out std_logic_vector(15 downto 0);
+        EdgeJump : out std_logic_vector(15 downto 0)
+    );
+end component MarkerSample;
+
 component LinkFlushCtrl is
     port (
         clk           : in  std_logic;

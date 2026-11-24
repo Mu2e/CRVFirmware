@@ -134,6 +134,8 @@ attribute ASYNC_REG of MarkerLast : signal is "TRUE";
 signal MarkerCnt, MarkerCnt2, MarkerCnt3, MarkerCnt4, MarkerCnt5, LoopbackMarkerCnt : std_logic_vector(7 downto 0); -- counts decoded markers
 --signal loopbackMarker_detected : std_logic;
 signal BnchMarkerLast : std_logic_vector(15 downto 0);
+signal MarkerSamp, MarkerCalRst : std_logic;
+signal MarkerSampStat, MarkerEdgeJump : std_logic_vector(15 downto 0);
 signal MarkerDelayedCnt : std_logic_vector(15 downto 0); --
 signal HeartBeatCnt : std_logic_vector(15 downto 0);    -- counts heartbeats sent out, these are the delayed 
 signal HeartBtCnt : std_logic_vector(15 downto 0);      -- counts heart beat packages from fibers
@@ -495,6 +497,17 @@ Clk80MHzGenSync : Clk80MHzGen
           MarkerBits => MarkerBits,
           clk80 => Clk80MHz,
 			 shiftCnt => Clk80MHzAlignCnt);
+
+-- chooses which of the two samples of the marker line the marker decoder uses
+MarkerSampleInst : MarkerSample
+  port map(
+          clk => EthClk,
+          rst_n => CpldRst,
+          Restart => MarkerCalRst,
+          DDR => DDRBitsM,
+          Samp => MarkerSamp,
+          Stat => MarkerSampStat,
+          EdgeJump => MarkerEdgeJump);
 
 EventBuilderInst : EventBuilder
     port map (
@@ -1957,7 +1970,7 @@ EthProc : process(EthClk, CpldRst)
 	--end if;
 	
 	-- new style, punch or dedicated marker on separate line
-	BnchMarkerLast(0) <= BnchMarker;
+	BnchMarkerLast(0) <= MarkerSamp;
 	BnchMarkerLast(15 downto 1) <= BnchMarkerLast(14 downto 0);
 	
 	-- full marker
@@ -1972,11 +1985,11 @@ EthProc : process(EthClk, CpldRst)
 	-- 00001111
 	--if Marker = '0' and (BnchMarkerLast = "11101000" or
 	--   BnchMarkerLast = "10001110") then
-	if Marker = '0' and BnchMarkerLast(7 downto 0) = "00001111" then
+	if Marker = '0' and BnchMarkerLast(6 downto 0) = "0001111" then
 	   MarkerCnt <= MarkerCnt + 1;
 		Marker <= '1'; 
 	--elsif Marker = '1' and BnchMarkerLast() = "11001100" then
-	elsif Marker = '1' and BnchMarkerLast(15 downto 8) = "00001111" then
+	elsif Marker = '1' and BnchMarkerLast(14 downto 8) = "0001111" then
 	   Marker <= '0';
 		MarkerCnt <= MarkerCnt;
 	else
@@ -2359,7 +2372,7 @@ main : process(SysClk, CpldRst)
 	LEDShiftReg <= (others => '0');	LED_Shift <= Idle;
 	DReqBuff_uCRd <= '0'; LinkBusy <= '0'; HrtBtTxInh <= '0';
 	DCSPktBuff_uCRd <= '0'; MarkerDelay <= (others => '0'); 
-	Clk80MHzAlign <= '1';
+	Clk80MHzAlign <= '1'; MarkerCalRst <= '0';
 	--Clk80MHzSel <= '0';
 	LoopbackMode <= (others => '0');
 	DCSBuff_wr_en <= '0'; DCSBuff_In <= (others => '0');
@@ -2589,6 +2602,12 @@ end if;
 if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = MarkerDelayAd
 	then MarkerDelay <= uCD(7 downto 0);
 	else MarkerDelay <= MarkerDelay;
+end if;
+
+-- A write starts the choice of the marker sample again
+if WRDL = 1 and uCA(11 downto 10) = GA and uCA(9 downto 0) = MarkerSampAd
+	then MarkerCalRst <= '1';
+	else MarkerCalRst <= '0';
 end if;
 
 -- Enable/Disable 80MHz alignment
@@ -3209,6 +3228,8 @@ iCD <= X"0" &
 		 HrtBtBuff_Emtpy & "000" & "00" & HrtBtBuffRdCnt when HrtBtBuffStatAd,
 		 HrtBtBuff_Out when HrtBtFIFORdAd,
 		 X"00" & MarkerDelay when MarkerDelayAd,
+		 MarkerSampStat when MarkerSampAd,
+		 MarkerEdgeJump when MarkerEdgeJumpAd,
 		 CRCErrCnt & X"0" & LosCounter when LinkErrAd,
 		 "000" & DCSPktRdCnt when DCSPktWdUsedAd,
 		 DCSPktBuff_Out(15 downto 0) when DCSPktBuffAd,
@@ -3282,7 +3303,7 @@ iCD <= X"0" &
 		 uBDebugOut(79 downto 64) when EvBuildUbDebug4Add,
 		 uBDebugOut(95 downto 80) when EvBuildUbDebug5Add,
 		 X"000" & "000" & uBDebugOut(96) when EvBuildUbDebug6Add,
-		 X"00a9" when DebugVersionAd,
+		 X"00aa" when DebugVersionAd,
 		 GIT_HASH(31 downto 16) when GitHashHiAddr,
 		 GIT_HASH(15 downto 0)  when GitHashLoAddr,
 		 DRcnt when DRCntAdd,

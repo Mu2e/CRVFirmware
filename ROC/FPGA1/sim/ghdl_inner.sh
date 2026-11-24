@@ -21,6 +21,12 @@ sim() { # work directory, generics
 }
 COMMON="$TOP/src/Project_Defs.vhd $TOP/src/Project_Components.vhd $TOP/src/crc.vhd $TOP/src/sim/fifo_models.vhd"
 
+echo "##### marker sampling"
+mkdir -p "$TOP/ms"
+(cd "$TOP/ms" && ghdl -a $FLAGS "$TOP/src/MarkerSample.vhd" "$TOP/src/MarkerSample_tb.vhd" \
+              && ghdl -e $FLAGS MarkerSample_tb \
+              && ghdl -r $FLAGS MarkerSample_tb --ieee-asserts=disable-at-0 2>&1) | sed 's/^.*:(report note): //'
+
 echo "##### current sources, all cases"
 build "$TOP/new" $COMMON "$TOP/src/EventBuilder.vhd" "$TOP/src/PacketFormer.vhd" \
       "$TOP/src/DRHandler.vhd" "$TOP/src/LinkFlushCtrl.vhd" "$TOP/src/EwtMatch_tb.vhd"

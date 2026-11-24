@@ -1,7 +1,7 @@
 # CRV ROC firmware
 
 Firmware of the Mu2e CRV readout controller (ROC). Written from the sources on
-branch `sc/ewt-match`, commit `d7399cd` (FPGA1 version `a9`).
+branch `sc/ewt-match`, commit `d7399cd` (FPGA1 version `aa`).
 
 ## 1. What this is
 
@@ -70,7 +70,7 @@ FPGA2 constraints; not checked against the schematic).
 | `RxOutClk(0..2)` | 100 MHz | recovered from each data FPGA link | link deserialisers, write side of the link FIFOs |
 | `SysClk` | 100 MHz | `ClkB` x 5/8 | uC bus and registers, DCS buffers, request FM transmitter, time bases, PLL and LED serial ports |
 | `EthClk` | 160 MHz | `ClkB`, 90 degrees | marker input sampling, Orange Tree port |
-| `Clk80MHz` | 80 MHz | `EthClk` divided by two in `Clk80MHzGen`, phase aligned to the marker | heartbeat and trigger FM transmitters, heartbeat generator |
+| `Clk80MHz` | 80 MHz | `EthClk` divided by two in `Clk80MHzGen`, phase aligned to the bunch clock input | heartbeat and trigger FM transmitters, heartbeat generator |
 
 ### FPGA2
 
@@ -101,7 +101,7 @@ Bus offset `0x000`. 16-bit registers. Addresses that are defined in
 | 0x19 | R/W | [0] PLL chip power down; R also [4] PLL status |
 | 0x27 | R/W | link FIFOs: W [8] reset deserialisers, [9] reset link FIFOs. R [6:4] full, [2:0] empty |
 | 0x6C / 0x6D | R | uptime in seconds, high / low |
-| 0x99 | R | firmware version (`0x00A9`) |
+| 0x99 | R | firmware version (`0x00AA`) |
 | 0x96 / 0x97 | R | git hash, bits 31..16 / 15..0, see section 7 |
 
 CSR 0x00:
@@ -201,7 +201,9 @@ Counters stop at `0xFFFF` and are cleared by `GTPRxRst`.
 | 0x5A | R | `InjectionWindow` |
 | 0x5B | R | [15:12] last four samples of the NIM trigger input, [9] GPI input, [8] NIM trigger input, [7:0] injection duty (never assigned, reads 0). Purpose unclear |
 | 0x78 | R/W | [7:0] marker delay |
-| 0x45 | R/W | [0] align the 80 MHz clock to the marker; R [15:8] alignment shift counter |
+| 0x7C | R/W | choice of the marker sample (`MarkerSample.vhd`): [0] sample in use (0 = rising edge of the 160 MHz clock, 1 = falling edge before it), [1] locked, [2] / [3] rising edge sample / falling edge sample was not clean in the measurement, [4] a measurement had to be repeated, [15:8] changes of the marker position since lock. A write of any value starts the measurement again |
+| 0x7D | R | changes of the clock edge position since lock: [7:0] rising edge sample, [15:8] falling edge sample. Stop at `0xFF` |
+| 0x45 | R/W | [0] align the 80 MHz clock to the bunch clock input; R [15:8] counter of the alignment matches that did not change the phase |
 | 0x47 | R/W | [2:0] loopback mode |
 | 0x4A | R | [7:0] loopback marker counter |
 | 0x80 | R | [15:8] CRC error counter (constant 0 in this version), [3:0] loss-of-signal counter |
@@ -211,6 +213,21 @@ Counters stop at `0xFFFF` and are cleared by `GTPRxRst`.
 | 0x3A / 0x3B | W | `FreqReg` high / low (reset value `0x00000237`). Purpose unclear |
 | 0x40 | R/W | [8:0] data request prescale |
 | 0x34 / 0x35 | R/W | test counter high / low |
+
+**Marker sampling.** FPGA1 has two timing inputs. The bunch clock input
+(`BnchClk_P/N`) is only used to set the phase of the 80 MHz clock. The marker is
+decoded from the marker line (`Marker_P/N`): a 40 MHz clock with stable rising
+edges in which a marker is a long low followed by a long high (3 samples low,
+then 4 samples high, at one sample per 160 MHz clock). The phase of the marker
+line against the 160 MHz clock depends on the cable. The line is sampled on
+both edges of the 160 MHz clock in the input pad. After reset `MarkerSample`
+checks for 2 x 65536 clock periods (3.3 ms, the first half is thrown away)
+which of the two samples sees the rising edge always in the same clock, takes
+the rising edge sample if that one is clean and the other one if not, and then
+keeps the choice until the next reset or a write to 0x7C. While running it only
+counts (0x7C, 0x7D). If the count for the sample in use or the marker count in
+0x7C [15:8] does not stay 0, the edge is close to both decisions for this cable
+and the marker can move by 6.25 ns.
 
 ### DCS and traces
 
@@ -468,6 +485,9 @@ the uB numbers with the halves in that swapped order.
   FIFO models, and compares the transmitted words for normal, DCS and fake
   events with the firmware of commit `513c2ce` (before the EWT match). `run_ghdl.sh full` runs only the
   test cases. Not covered: the Xilinx FIFO cores, the top level.
+  It first runs `MarkerSample_tb.vhd` (marker line at different phases against
+  the 160 MHz clock, with jitter and punches); the shape of the punch in that
+  test is an assumption.
 - **Simulation (FPGA2):** `bash FPGA2/sim/run_ghdl.sh` runs `PortMatch_tb.vhd`
   on the complete FPGA2 top level with behavioural models of the Xilinx cores
   (`FPGA2/sim/core_models.vhd`): the port match cases, then a comparison of the

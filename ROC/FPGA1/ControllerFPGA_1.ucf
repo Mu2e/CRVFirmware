@@ -313,6 +313,7 @@ TIMESPEC "TS_loopback_multicycle" = FROM "loopback_marker_cnt" TO "loopback_mark
 ## don't enforce timing for settings
 NET "Clk80MHzAlign" TIG; #NET "*syncEnable" TIG;
 NET "FormHold" TIG;
+NET "MarkerCalRst" TIG;
 NET "sendGR" TIG;
 NET "uBwrt" TIG;
 #NET "LoopbackMode*" TIG;

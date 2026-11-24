@@ -160,6 +160,8 @@ constant SpillStatAddr : AddrPtr := "00" & X"76";
 
 constant MarkerBitsAd : AddrPtr  := "00" & X"77";
 constant MarkerDelayAd : AddrPtr := "00" & X"78";
+constant MarkerSampAd : AddrPtr := "00" & X"7C";     -- choice of the marker sample, see MarkerSample.vhd; a write starts it again
+constant MarkerEdgeJumpAd : AddrPtr := "00" & X"7D"; -- changes of the edge position: [7:0] stream A, [15:8] stream B
 
 -- event builder debugging
 constant FormatRegAddr : AddrPtr := "00" & X"79";
